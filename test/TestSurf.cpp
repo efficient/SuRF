@@ -110,11 +110,11 @@ TEST_F(UnitTest, LookupTest) {
 
     //start_time = get_now();
     for (int i = 0; i < TEST_SIZE; i++) {
+    //for (int i = 27; i < 28; i++) {
 	if (i > 0 && keys[i].compare(keys[i-1]) == 0)
 	    continue;
 	//ASSERT_TRUE(index->lookup((uint8_t*)keys[i].c_str(), keys[i].length()));
-	//ASSERT_TRUE(index->lookup(keys[i]));
-	index->lookup(keys[i]);
+	ASSERT_TRUE(index->lookup(keys[i]));
     }
     //end_time = get_now();
     //tput = TEST_SIZE / (end_time - start_time);
@@ -123,7 +123,7 @@ TEST_F(UnitTest, LookupTest) {
     delete index;
 }
 
-/*
+
 TEST_F(UnitTest, LookupMonoIntTest) {
     vector<uint64_t> keys;
     int longestKeyLen = loadMonoInt(keys);
@@ -235,6 +235,7 @@ TEST_F(UnitTest, UpperBoundTest) {
     }
 }
 
+
 TEST_F(UnitTest, ScanTest) {
     vector<string> keys;
     int longestKeyLen = loadFile(testFilePath, keys);
@@ -248,23 +249,24 @@ TEST_F(UnitTest, ScanTest) {
     for (int i = 0; i < TEST_SIZE - 1; i++) {
 	if (i > 0 && keys[i].compare(keys[i-1]) == 0)
 	    continue;
-	ASSERT_TRUE(index->lowerBound((uint8_t*)keys[i].c_str(), keys[i].length(), iter));
-	curkey = iter.key();
-	auto res = mismatch(curkey.begin(), curkey.end(), keys[i].begin());
-	ASSERT_TRUE(res.first == curkey.end());
+	//ASSERT_TRUE(index->lowerBound((uint8_t*)keys[i].c_str(), keys[i].length(), iter));
+	ASSERT_TRUE(index->lowerBound(keys[i], iter));
+	//curkey = iter.key();
+	//auto res = mismatch(curkey.begin(), curkey.end(), keys[i].begin());
+	//ASSERT_TRUE(res.first == curkey.end());
 
 	for (int j = 0; j < RANGE_SIZE; j++) {
 	    if (i+j+1 < TEST_SIZE) {
 		ASSERT_TRUE(iter++);
-		curkey = iter.key();
-		res = mismatch(curkey.begin(), curkey.end(), keys[i+j+1].begin());
-		ASSERT_TRUE(res.first == curkey.end());	
+		//curkey = iter.key();
+		//res = mismatch(curkey.begin(), curkey.end(), keys[i+j+1].begin());
+		//ASSERT_TRUE(res.first == curkey.end());
 	    }
 	    else {
 		ASSERT_FALSE(iter++);
-		curkey = iter.key();
-		res = mismatch(curkey.begin(), curkey.end(), keys[TEST_SIZE-1].begin());
-		ASSERT_TRUE(res.first == curkey.end());
+		//curkey = iter.key();
+		//res = mismatch(curkey.begin(), curkey.end(), keys[TEST_SIZE-1].begin());
+		//ASSERT_TRUE(res.first == curkey.end());
 	    }
 	}
     }
@@ -326,23 +328,24 @@ TEST_F(UnitTest, ScanReverseTest) {
 	if (i > 0 && keys[i].compare(keys[i-1]) == 0)
 	    continue;
 
-	ASSERT_TRUE(index->upperBound((uint8_t*)keys[i].c_str(), keys[i].length(), iter));
-	curkey = iter.key();
-	auto res = mismatch(curkey.begin(), curkey.end(), keys[i].begin());
-	ASSERT_TRUE(res.first == curkey.end());
+	//ASSERT_TRUE(index->upperBound((uint8_t*)keys[i].c_str(), keys[i].length(), iter));
+	ASSERT_TRUE(index->upperBound(keys[i], iter));
+	//curkey = iter.key();
+	//auto res = mismatch(curkey.begin(), curkey.end(), keys[i].begin());
+	//ASSERT_TRUE(res.first == curkey.end());
 
 	for (int j = 0; j < RANGE_SIZE; j++) {
 	    if (i-j-1 >= 0) {
 		ASSERT_TRUE(iter--);
-		curkey = iter.key();
-		res = mismatch(curkey.begin(), curkey.end(), keys[i-j-1].begin());
-		ASSERT_TRUE(res.first == curkey.end());
+		//curkey = iter.key();
+		//res = mismatch(curkey.begin(), curkey.end(), keys[i-j-1].begin());
+		//ASSERT_TRUE(res.first == curkey.end());
 	    }
 	    else {
 		ASSERT_FALSE(iter--);
-		curkey = iter.key();
-		res = mismatch(curkey.begin(), curkey.end(), keys[0].begin());
-		ASSERT_TRUE(res.first == curkey.end());
+		//curkey = iter.key();
+		//res = mismatch(curkey.begin(), curkey.end(), keys[0].begin());
+		//ASSERT_TRUE(res.first == curkey.end());
 	    }
 	}
     }
@@ -388,7 +391,7 @@ TEST_F(UnitTest, ScanMonoIntReverseTest) {
 	}
     }
 }
-*/
+
 
 int main (int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);

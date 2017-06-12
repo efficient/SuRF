@@ -1,8 +1,8 @@
 #include <surf.hpp>
 #include <cassert>
 
-inline bool insertChar_cond(const uint8_t ch, vector<uint8_t> &c, vector<uint64_t> &t, vector<uint64_t> &s, uint64_t &pos, uint64_t &nc) {
-    if (c.empty() || c.back() != ch) {
+inline bool insertChar_cond(const uint8_t ch, vector<uint8_t> &c, vector<uint64_t> &t, vector<uint64_t> &s, uint64_t &pos, uint64_t &is_term, uint64_t &nc) {
+    if (c.empty() || is_term > 0 || c.back() != ch) {
 	c.push_back(ch);
 	if (c.size() == 1) {
 	    setBit(s.back(), pos % 64);
@@ -13,6 +13,7 @@ inline bool insertChar_cond(const uint8_t ch, vector<uint8_t> &c, vector<uint64_
 	    t.push_back(0);
 	    s.push_back(0);
 	}
+	is_term = 0;
 	return true;
     }
     else {
@@ -66,6 +67,7 @@ SuRF* load(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool hu
     vector<vector<uint8_t> > suf;
 
     vector<uint64_t> pos_list;
+    vector<uint64_t> is_back_term;
     vector<uint64_t> nc; //node count
 
     // init
@@ -76,6 +78,7 @@ SuRF* load(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool hu
 	suf.push_back(vector<uint8_t>());
 
 	pos_list.push_back(0);
+	is_back_term.push_back(0);
 	nc.push_back(0);
 
 	t[i].push_back(0);
@@ -93,7 +96,7 @@ SuRF* load(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool hu
 	    continue;
 
 	int i = 0;
-	while (i < key.length() && !insertChar_cond((uint8_t)key[i], c[i], t[i], s[i], pos_list[i], nc[i]))
+	while (i < key.length() && !insertChar_cond((uint8_t)key[i], c[i], t[i], s[i], pos_list[i], is_back_term[i], nc[i]))
 	    i++;
 
 	if (i < key.length()) {
@@ -113,8 +116,10 @@ SuRF* load(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool hu
 		    else {
 			if (i < key.length())
 			    insertChar((uint8_t)key[i], true, c[i], t[i], s[i], pos_list[i], nc[i]);
-			else
+			else {
+			    is_back_term[i] = 1;
 			    insertChar(TERM, true, c[i], t[i], s[i], pos_list[i], nc[i]);
+			}
 		    }
 		}
 	    }
@@ -1081,6 +1086,12 @@ inline bool SuRF::linearSearch_upperBound(uint64_t &pos, uint64_t size, uint8_t 
 // NODE SEARCH
 //******************************************************
 inline bool SuRF::nodeSearch(uint64_t &pos, int size, uint8_t target) {
+    //try fixing terminator issue
+    if (size > 1 && cbytes_()[pos] == TERM) {
+	pos++;
+	size--;
+    }
+
     if (size < 3)
 	return linearSearch(pos, size, target);
     else if (size < 12)
@@ -1111,14 +1122,6 @@ bool SuRF::lookup(string &key) {
     if (hufConfig_) {
 	string key_huf;
 	encode(key_huf, key, hufLen_, hufTable_);
-
-	// cout << "key = " << key << "\t";
-	// cout << "key_huf = ";
-	// for (int i = 0; i < key_huf.size(); i++) {
-	//     cout << (uint16_t)(uint8_t)key_huf[i] << " ";
-	// }
-	// cout << "\n";
-
 	return lookup((uint8_t*)key_huf.c_str(), key_huf.length());
     }
     else
@@ -1239,7 +1242,17 @@ bool SuRF::lookup(const uint8_t* key, const int keylen) {
     while (keypos < keylen) {
 	kc = key[keypos];
 
+	//cout << "keypos = " << keypos << "\tkc = " << (uint16_t)(uint8_t)kc << "\n";
+
 	int nsize = nodeSize(pos);
+
+	// cout << "nsize = " << nsize << "\tpos = " << pos << "\tchar = " << (uint16_t)(uint8_t)cbytes_()[pos] << "\n";
+	// cout << "node: ";
+	// for (int j = 0; j < nsize; j++) {
+	//     cout << (uint16_t)(uint8_t)cbytes_()[pos + j] << " ";
+	// }
+	// cout << "\n";
+
 	if (!nodeSearch(pos, nsize, kc))
 	    return false;
 
@@ -1285,13 +1298,24 @@ bool SuRF::lookup(const uint8_t* key, const int keylen) {
 	    return true;
 	}
 
+	// cout << "\tbefore pos = " << pos << "\tchar = " << (uint16_t)(uint8_t)cbytes_()[pos] << "\n";
+	// cout << "childCountU_ = " << childCountU_ << "\tchildNodeNum(pos) = " << childNodeNum(pos) << "\tchildpos(childNodeNum(pos) + childCountU_) = " << childpos(childNodeNum(pos) + childCountU_) << "\n";
+
 	pos = childpos(childNodeNum(pos) + childCountU_);
+
+	//cout << "\tafter pos = " << pos << "\tchar = " << (uint16_t)(uint8_t)cbytes_()[pos] << "\n";
+
 	keypos++;
 
 	__builtin_prefetch(cbytes_() + pos, 0, 1);
 	__builtin_prefetch(tbits_() + (pos >> 6), 0, 1);
 	__builtin_prefetch(trankLUT_() + ((pos + 1) >> 9), 0);
     }
+
+    // cout << "pos = " << pos << "\n";
+    // for (int j = -10; j < 10; j++)
+    // 	cout << (uint16_t)(uint8_t)cbytes_()[pos+j] << " ";
+    // cout << "\n";
 
     if (cbytes_()[pos] == TERM && !isTbitSet(pos)) {
 	//suffix config
@@ -1766,6 +1790,16 @@ inline bool SuRF::prevNode(int level, uint64_t pos, SuRFIter* iter) {
 //******************************************************
 // LOWER BOUND
 //******************************************************
+bool SuRF::lowerBound(string &key, SuRFIter &iter) {
+    if (hufConfig_) {
+	string key_huf;
+	encode(key_huf, key, hufLen_, hufTable_);
+	return lowerBound((uint8_t*)key_huf.c_str(), key_huf.length(), iter);
+    }
+    else
+	return lowerBound((uint8_t*)key.c_str(), key.length(), iter);
+}
+
 bool SuRF::lowerBound(const uint8_t* key, const int keylen, SuRFIter &iter) {
     //uint64_t key64 = __builtin_bswap64(*reinterpret_cast<const uint64_t*>(key));
     //cout << "LowerBound\tkey = " << hex << key64 << "==========================\n";
@@ -1899,6 +1933,16 @@ bool SuRF::lowerBound(const uint64_t key, SuRFIter &iter) {
 //******************************************************
 // UPPER BOUND
 //******************************************************
+bool SuRF::upperBound(string &key, SuRFIter &iter) {
+    if (hufConfig_) {
+	string key_huf;
+	encode(key_huf, key, hufLen_, hufTable_);
+	return upperBound((uint8_t*)key_huf.c_str(), key_huf.length(), iter);
+    }
+    else
+	return upperBound((uint8_t*)key.c_str(), key.length(), iter);
+}
+
 bool SuRF::upperBound(const uint8_t* key, const int keylen, SuRFIter &iter) {
     iter.clear();
     int keypos = 0;

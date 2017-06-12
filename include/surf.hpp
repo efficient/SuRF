@@ -12,6 +12,8 @@
 
 #include "common.h"
 #include "popcount.h"
+#include "hash.h"
+#include "ophuf.h"
 
 using namespace std;
 
@@ -21,9 +23,10 @@ class SuRF;
 //******************************************************
 // Constants for SuRF
 //******************************************************
-const uint8_t TERM = 36; //$
-//const int CUTOFF_RATIO = 64;
-const int CUTOFF_RATIO = 10000000;
+//const uint8_t TERM = 0; //prefix termination indicator
+const uint8_t TERM = 255; //prefix termination indicator
+const int CUTOFF_RATIO = 64;
+//const int CUTOFF_RATIO = 10000000;
 //const int MIN_PATH_LEN = 0;
 
 const uint8_t CHECK_BITS_MASK = 0xFF; //8
@@ -51,335 +54,6 @@ const int skip = 64;
 const int kSkipBits = 6;
 const uint32_t kSkipMask = ((uint32_t)1 << kSkipBits) - 1;
 
-
-//******************************************************
-//HASH FUNCTION FROM LEVELDB
-//******************************************************
-inline uint32_t DecodeFixed32(const char* ptr) {
-    uint32_t result;
-    memcpy(&result, ptr, sizeof(result));  // gcc optimizes this to a plain load
-    return result;
-}
-
-inline uint32_t Hash(const char* data, size_t n, uint32_t seed) {
-    // Similar to murmur hash
-    const uint32_t m = 0xc6a4a793;
-    const uint32_t r = 24;
-    const char* limit = data + n;
-    uint32_t h = seed ^ (n * m);
-
-    // Pick up four bytes at a time
-    while (data + 4 <= limit) {
-	uint32_t w = DecodeFixed32(data);
-	data += 4;
-	h += w;
-	h *= m;
-	h ^= (h >> 16);
-    }
-
-    // Pick up remaining bytes
-    switch (limit - data) {
-    case 3:
-	h += static_cast<unsigned char>(data[2]) << 16;
-    case 2:
-	h += static_cast<unsigned char>(data[1]) << 8;
-    case 1:
-	h += static_cast<unsigned char>(data[0]);
-	h *= m;
-	h ^= (h >> r);
-	break;
-    }
-    return h;
-}
-
-inline uint32_t suffixHash(const string &key) {
-    return Hash(key.c_str(), key.size(), 0xbc9f1d34);
-}
-
-inline uint32_t suffixHash(const char* key, const int keylen) {
-    return Hash(key, keylen, 0xbc9f1d34);
-}
-
-
-//******************************************************
-// Order-preserving Huffman Encoding
-//******************************************************
-typedef struct ht_node {
-    bool isLeaf;
-    uint16_t leftLabel; //inclusive
-    uint16_t rightLabel; //non-inclusive
-    uint64_t count;
-    ht_node* leftChild;
-    ht_node* rightChild;
-} ht_node;
-
-inline bool build_ht(vector<string> &keys, uint8_t* hufLen, char* hufTable) {
-    if (!hufLen || !hufTable) {
-	cout << "Error: unallocated buffer(s)\n";
-	return false;
-    }
-
-    for (int i = 0; i < 256; i++) {
-	hufLen[i] = 0;
-	hufTable[i] = 0;
-	hufTable[i+i] = 0;
-    }
-
-    //collect frequency stats
-    uint64_t freq[256];
-    for (int i = 0; i < 256; i++)
-	freq[i] = 0;
-
-    for (int k = 0; k < (int)keys.size(); k++) {
-	string key = keys[k];
-	for (int j = 0; j < (int)key.length(); j++)
-	    freq[(uint8_t)key[j]]++;
-    }
-
-    //for (int i = 0; i < 256; i ++)
-    //cout << i << ": " << freq[i] << "\n";
-
-    vector<ht_node*> nodeList;
-    vector<ht_node*> tempNodeList;
-    vector<ht_node*> allNodeList;
-    //init huffman tree leaf nodes
-    uint16_t c = 0;
-    for (int i = 0; i < 256; i++) {
-	ht_node* n = new ht_node();
-	n->isLeaf = true;
-	n->leftLabel = c;
-	n->rightLabel = c + 1;
-	n->count = freq[i];
-	n->leftChild = NULL;
-	n->rightChild = NULL;
-	nodeList.push_back(n);
-	allNodeList.push_back(n);
-	c++;
-    }
-
-    //merge adjacent low-frequency nodes to build huffman tree
-    while (nodeList.size() > 1) {
-	uint64_t lowest_freq_sum = ULLONG_MAX;
-	for (int i = 0; i < (int)nodeList.size() - 1; i++) {
-	    uint64_t s = nodeList[i]->count + nodeList[i+1]->count;
-	    if (s < lowest_freq_sum)
-		lowest_freq_sum = s;
-	}
-
-	//cout << "lowest_freq_sum = " << lowest_freq_sum << "\n";
-	//cout << "nodeList.size() = " << nodeList.size() << "\n";
-
-	int pos = 0;
-	while (pos < (int)nodeList.size() - 1) {
-	    uint64_t s = nodeList[pos]->count + nodeList[pos+1]->count;
-	    if (s <= lowest_freq_sum) {
-		ht_node* n = new ht_node();
-		n->isLeaf = false;
-		n->leftLabel = nodeList[pos]->leftLabel;
-		n->rightLabel = nodeList[pos+1]->rightLabel;
-		n->count = s;
-		n->leftChild = nodeList[pos];
-		n->rightChild = nodeList[pos+1];
-		tempNodeList.push_back(n);
-		allNodeList.push_back(n);
-		pos += 2;
-	    }
-	    else {
-		tempNodeList.push_back(nodeList[pos]);
-		pos++;
-	    }
-	}
-
-	if (pos == (int)nodeList.size() - 1)
-	    tempNodeList.push_back(nodeList[pos]);
-
-	nodeList = tempNodeList;
-	tempNodeList.clear();
-    }
-
-    //generate huffman table
-    ht_node* root;
-    if (nodeList.size() > 0)
-	root = nodeList[0];
-    else {
-	cout << "Error: empty node list\n";
-	return false;
-    }
-
-    //print huffman tree
-    // vector<ht_node*> printList;
-    // vector<ht_node*> tempPrintList;
-    // printList.push_back(root);
-    // while (printList.size() > 0) {
-    // 	for (int i = 0; i < (int)printList.size(); i++) {
-    // 	    ht_node* node = printList[i];
-    // 	    cout << "[" << node->leftLabel << ", " << node->rightLabel << ") ";
-    // 	    if (node->leftChild)
-    // 		tempPrintList.push_back(node->leftChild);
-    // 	    if (node->rightChild)
-    // 		tempPrintList.push_back(node->rightChild);
-    // 	}
-    // 	printList = tempPrintList;
-    // 	tempPrintList.clear();
-    // 	cout << "\n-------------------------------------------------------------\n";
-    // }
-
-    uint8_t byte_mask = 0x80;
-    for (int i = 0; i < 256; i++) {
-	//cout << "i = " << i << "============================================\n";
-	ht_node* node = root;
-	while (!node->isLeaf) {
-	    ht_node* left = node->leftChild;
-	    ht_node* right = node->rightChild;
-
-	    //cout << "left range = " << "[" << left->leftLabel << ", " << left->rightLabel << ")\t";
-	    //cout << "right range = " << "[" << right->leftLabel << ", " << right->rightLabel << ")\n";
-
-	    if (left && i >= left->leftLabel && i < left->rightLabel) {
-		hufLen[i]++;
-		node = left;
-	    }
-	    else if (right && i >= right->leftLabel && i < right->rightLabel) {
-		if (hufLen[i] == 0)
-		    hufTable[i+i] |= byte_mask;
-		else if (hufLen[i] < 8) {
-		    hufTable[i+i] |= (byte_mask >> hufLen[i]);
-		}
-		else if (hufLen[i] == 8)
-		    hufTable[i+i+1] |= byte_mask;
-		else {
-		    hufTable[i+i+1] |= (byte_mask >> (hufLen[i] - 8));
-		}
-		hufLen[i]++;
-		node = right;
-	    }
-	    else {
-		cout << "ERROR: tree navigation\n";
-		return false;
-	    }
-	}
-    }
-
-    //garbage collect ht_nodes
-    for (int i = 0; i < (int)allNodeList.size(); i++)
-	delete allNodeList[i];
-
-    return true;
-}
-
-inline void print_ht(uint8_t* hufLen, char* hufTable) {
-    if (!hufLen || !hufTable) {
-	cout << "Error: unallocated buffer(s)\n";
-	return;
-    }
-
-    for (int i = 0; i < 256; i++) {
-	cout << i << ": " << (uint16_t)hufLen[i] << "; " << hex << (uint16_t)(uint8_t)hufTable[i+i] << " " << (uint16_t)(uint8_t)hufTable[i+i+1] << " " << dec;
-	//cout << i << ": ";
-	uint8_t byte_mask = 0x80;
-	char code = hufTable[i+i];
-	for (int j = 0; j < hufLen[i]; j++) {
-	    //cout << hex << (uint16_t)byte_mask << " ";
-	    if (j == 8) {
-		code = hufTable[i+i+1];
-		byte_mask = 0x80;
-	    }
-	    if (code & byte_mask)
-		cout << "1";
-	    else
-		cout << "0";
-	    byte_mask >>= 1;
-	}
-	cout << "\n";
-    }
-}
-
-inline bool encode(string &key_huf, string &key, uint8_t* hufLen, char* hufTable) {
-    //compute code length
-    int code_len_bit = 0;
-    for (int i = 0; i < key.size(); i++) {
-	int c = (uint8_t)key[i];
-	code_len_bit += hufLen[c];
-    }
-    //round-up to byte-aligned
-    int code_len_byte = 0;
-    if (code_len_bit % 8 == 0)
-	code_len_byte = code_len_bit / 8;
-    else
-	code_len_byte = code_len_bit / 8 + 1;
-
-    //init result string
-    key_huf.resize(code_len_byte);
-    for (int i = 0; i < code_len_byte; i++)
-	key_huf[i] = 0;
-
-    //encode
-    int pos = 0;
-    int byte = pos / 8;
-    int offset = pos - (byte * 8);
-    for (int i = 0; i < key.size(); i++) {
-	int c = (uint8_t)key[i];
-	code_len_bit = hufLen[c];
-	uint8_t code_byte1 = (uint8_t)hufTable[c+c];
-	uint8_t code_byte2 = (uint8_t)hufTable[c+c+1];
-	
-	if (code_len_bit < 8) {
-	    uint8_t mask = code_byte1 >> offset;
-	    key_huf[byte] |= mask;
-
-	    if (code_len_bit > 8 - offset) {
-		mask = code_byte1 << (8 - offset);
-		key_huf[byte + 1] |= mask;
-	    }
-	    pos += code_len_bit;
-	    byte = pos / 8;
-	    offset = pos - (byte * 8);
-	}
-	else {
-	    uint8_t mask = code_byte1 >> offset;
-	    key_huf[byte] |= mask;
-	    if (offset > 0) {
-		mask = code_byte1 << (8 - offset);
-		key_huf[byte + 1] |= mask;
-	    }
-	    pos += 8;
-	    byte = pos / 8;
-	    offset = pos - (byte * 8);
-	    code_len_bit -= 8;
-
-	    mask = code_byte2 >> offset;
-	    key_huf[byte] |= mask;
-
-	    if (code_len_bit > 8 - offset) {
-		mask = code_byte2 << (8 - offset);
-		key_huf[byte + 1] |= mask;
-	    }
-	    pos += code_len_bit;
-	    byte = pos / 8;
-	    offset = pos - (byte * 8);
-	}
-    }
-
-    // cout << "key = " << key << "\t";
-    // cout << "key_huf = ";
-    // for (int i = 0; i < key_huf.size(); i++) {
-    // 	cout << (uint16_t)(uint8_t)key_huf[i] << " ";
-    // }
-    // cout << "\n";
-
-    return true;
-}
-
-inline bool encodeList(vector<string> &keys_huf, vector<string> &keys, uint8_t* hufLen, char* hufTable) {
-    for (int i = 0; i < (int)keys.size(); i++) {
-	string key_huf;
-	if (!encode(key_huf, keys[i], hufLen, hufTable)) return false;
-	keys_huf.push_back(key_huf);
-    }
-    return true;
-}
-
-
 //******************************************************
 // Initilization functions for SuRF
 //******************************************************
@@ -387,7 +61,7 @@ SuRF* load(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool hu
 SuRF* load(vector<uint64_t> &keys, uint16_t suf_config);
 
 //helpers
-inline bool insertChar_cond(const uint8_t ch, vector<uint8_t> &c, vector<uint64_t> &t, vector<uint64_t> &s, uint64_t &pos, uint64_t &nc);
+inline bool insertChar_cond(const uint8_t ch, vector<uint8_t> &c, vector<uint64_t> &t, vector<uint64_t> &s, uint64_t &pos, uint64_t &is_term, uint64_t &nc);
 inline bool insertChar(const uint8_t ch, bool isTerm, vector<uint8_t> &c, vector<uint64_t> &t, vector<uint64_t> &s, uint64_t &pos, uint64_t &nc);
 
 
@@ -418,8 +92,10 @@ public:
     bool lookup(const uint64_t key, uint64_t &position);
 
     //range query
+    bool lowerBound(string &key, SuRFIter &iter);
     bool lowerBound(const uint8_t* key, const int keylen, SuRFIter &iter);
     bool lowerBound(const uint64_t key, SuRFIter &iter);
+    bool upperBound(string &key, SuRFIter &iter);
     bool upperBound(const uint8_t* key, const int keylen, SuRFIter &iter);
     bool upperBound(const uint64_t key, SuRFIter &iter);
 
@@ -622,4 +298,4 @@ private:
     friend class SuRF;
 };
 
-#endif  // SURF_H_
+#endif // SURF_H_
