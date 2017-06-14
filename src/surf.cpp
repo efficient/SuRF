@@ -2304,7 +2304,7 @@ string SuRFIter::key () {
 	    retStr += (char)(positions[i].keyPos & 255);
 	else {
 	    int32_t keypos = positions[i].keyPos;
-	    char c = index->cbytes_()[keypos];
+	    uint8_t c = index->cbytes_()[keypos];
 	    //TODO--NEED FIX
 	    if (c != TERM || (c == TERM && !readBit(index->sbits_()[keypos >> 6], keypos & (uint64_t)63)))
 		retStr += c;
@@ -2313,7 +2313,7 @@ string SuRFIter::key () {
 
     //suffix config
     if (index->suffixConfig_ == 3) {
-	char c = 0;
+	uint8_t c = 0;
 	if (len <= cutoff_level)
 	    c = index->suffixesU_()[positions[len-1].sufPos];
 	else
