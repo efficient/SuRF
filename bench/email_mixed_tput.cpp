@@ -21,6 +21,11 @@ inline void exec(int wl, vector<string> &init_keys, vector<string> &keys, int pe
 #endif
 
     //READ TEST----------------
+
+    //pre-load encoded keys
+    //vector<string> keys_huf;
+    //encodeList(keys_huf, keys, idx->hufLen(), idx->hufTable());
+
     double start_time = get_now();
     uint64_t s = 0;
 
@@ -32,6 +37,10 @@ inline void exec(int wl, vector<string> &init_keys, vector<string> &keys, int pe
 #else
     SuRFIter iter(idx);
     if (wl < 2) {
+	//pre-load encoded keys
+	//for (int i = 0; i < LIMIT; i++)
+	//s += (int)idx->lookup(keys_huf[i]);
+
 	for (int i = 0; i < LIMIT; i++)
 	    s += (int)idx->lookup(keys[i]);
     }

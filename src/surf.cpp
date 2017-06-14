@@ -241,21 +241,25 @@ SuRF* load(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool hu
 
 
     // put together
-    int nc_total = 0;
-    for (int i = 0; i < (int)nc.size(); i++)
-	nc_total += nc[i];
-
     int16_t cutoff_level = 0;
+    int nc_total = 0;
     int8_t first_suffix_pos = 0;
     int32_t last_suffix_pos = 0;
     int nc_u = 0;
-    while (nc_u * CUTOFF_RATIO < nc_total) {
-	nc_u += nc[cutoff_level];
-	cutoff_level++;
-    }
-    cutoff_level--;
 
-    //cout << "cutoff_level = " << cutoff_level << "\n";
+    if (CUTOFF_LEVEL >= 0)
+	cutoff_level = CUTOFF_LEVEL;
+    else {
+	for (int i = 0; i < (int)nc.size(); i++)
+	    nc_total += nc[i];
+	while (nc_u * CUTOFF_RATIO < nc_total) {
+	    nc_u += nc[cutoff_level];
+	    cutoff_level++;
+	}
+	cutoff_level--;
+    }
+
+    cout << "cutoff_level = " << cutoff_level << "\n";
 
     // determine the position of the first suffix for range query boundary check
     if (first_suffix_level < cutoff_level)
@@ -308,7 +312,10 @@ SuRF* load(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool hu
 		    }
 		    nodeCountU++;
 
-		    if (ch == TERM)
+		    //if (ch == TERM)
+		    //oU[i].push_back(1);
+		    //try to fix terminator issue
+		    if (ch == TERM && !readBit(t[i][j], k))
 			oU[i].push_back(1);
 		    else {
 			oU[i].push_back(0);
@@ -626,6 +633,15 @@ uint64_t SuRF::mem() {
     cout << "suffixMem = " << suffixMem() << "\n\n";
 
     return sizeof(SuRF) + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_ + (tnbits_ / kBasicBlockSize) * sizeof(uint32_t) + smem_ + (sselectLUTCount_ + 1) * sizeof(uint32_t) + suffixUmem_ + suffixmem_;
+}
+
+
+uint8_t* SuRF::hufLen() {
+    return hufLen_;
+}
+
+char* SuRF::hufTable() {
+    return hufTable_;
 }
 
 //******************************************************
@@ -1119,13 +1135,25 @@ inline bool SuRF::nodeSearch_upperBound(uint64_t &pos, int size, uint8_t target)
 // LOOKUP
 //******************************************************
 bool SuRF::lookup(string &key) {
+
     if (hufConfig_) {
 	string key_huf;
 	encode(key_huf, key, hufLen_, hufTable_);
+
+	// cout << "key = " << key << "\t";
+	// cout << "key_huf = ";
+	// for (int j = 0; j < key_huf.size(); j++) {
+	//     cout << (uint16_t)(uint8_t)key_huf[j] << " ";
+	// }
+	// cout << "\n";
+
 	return lookup((uint8_t*)key_huf.c_str(), key_huf.length());
     }
     else
 	return lookup((uint8_t*)key.c_str(), key.length());
+
+
+    //return lookup((uint8_t*)key.c_str(), key.length());
 }
 
 bool SuRF::lookup(const uint8_t* key, const int keylen) {
@@ -1139,11 +1167,24 @@ bool SuRF::lookup(const uint8_t* key, const int keylen) {
 	kc = key[keypos];
 	pos = (nodeNum << 8) + kc;
 
+	// cout << "keypos = " << keypos << "\tkc = " << (uint16_t)(uint8_t)kc << "\n";
+
+	// cout << "nodeNum = " << nodeNum << "\nnode: ";
+	// uint8_t cc = 0;
+	// for (int i = 0; i < 256; i++) {
+	//     if (isLabelExist(cUbits_() + (nodeNum << 2), cc))
+	// 	cout << i << " ";
+	//     cc++;
+	// }
+	// cout << "\n";
+
 	__builtin_prefetch(tUbits_() + (nodeNum << 2) + (kc >> 6), 0);
 	__builtin_prefetch(tUrankLUT_() + ((pos + 1) >> 6), 0);
 
-	if (!isCbitSetU(nodeNum, kc))
+	if (!isCbitSetU(nodeNum, kc)) {
+	    //cout << "1\n";
 	    return false;
+	}
 
 	if (!isTbitSetU(nodeNum, kc)) {
 	    //suffix config
@@ -1160,6 +1201,7 @@ bool SuRF::lookup(const uint8_t* key, const int keylen) {
 		    if (sl == sk)
 			return true;
 		    
+		    //cout << "2\n";
 		    return false;
 		}
 		return true;
@@ -1176,12 +1218,15 @@ bool SuRF::lookup(const uint8_t* key, const int keylen) {
 		if (sl == sk)
 		    return true;
 
+		//cout << "3\n";
 		return false;
 	    }
 	    else if (suffixConfig_ > 0) {
 		sl = suffixesU_()[suffixPosU(nodeNum, pos)];
 		if (sl == (keylen - 1 - keypos))
 		    return true;
+
+		//cout << "4\n";
 		return false;
 	    }
 	    return true;
@@ -1207,6 +1252,7 @@ bool SuRF::lookup(const uint8_t* key, const int keylen) {
 		    if (sl == sk)
 			return true;
 
+		    //cout << "5\n";
 		    return false;
 		}
 		return true;
@@ -1223,16 +1269,21 @@ bool SuRF::lookup(const uint8_t* key, const int keylen) {
 		if (sl == sk)
 		    return true;
 
+		//cout << "6\n";
 		return false;
 	    }
 	    else if (suffixConfig_ > 0) {
 		sl = suffixesU_()[suffixPosU(nodeNum, (nodeNum << 8))];
 		if (sl == 0)
 		    return true;
+
+		//cout << "7\n";
 		return false;
 	    }
 	    return true;
 	}
+
+	//cout << "8\n";
 	return false;
     }
 
@@ -1253,8 +1304,10 @@ bool SuRF::lookup(const uint8_t* key, const int keylen) {
 	// }
 	// cout << "\n";
 
-	if (!nodeSearch(pos, nsize, kc))
+	if (!nodeSearch(pos, nsize, kc)) {
+	    //cout << "10\n";
 	    return false;
+	}
 
 	if (!isTbitSet(pos)) {
 	    //suffix config
@@ -1271,6 +1324,7 @@ bool SuRF::lookup(const uint8_t* key, const int keylen) {
 		    if (sl == sk)
 			return true;
 
+		    //cout << "11\n";
 		    return false;
 		}
 		return true;
@@ -1287,19 +1341,22 @@ bool SuRF::lookup(const uint8_t* key, const int keylen) {
 		if (sl == sk)
 		    return true;
 
+		//cout << "12\n";
 		return false;
 	    }
 	    else if (suffixConfig_ > 0) {
 		sl = suffixes_()[suffixPos(pos)];
 		if (sl == (keylen - 1 - keypos))
 		    return true;
+
+		//cout << "13\n";
 		return false;
 	    }
 	    return true;
 	}
 
 	// cout << "\tbefore pos = " << pos << "\tchar = " << (uint16_t)(uint8_t)cbytes_()[pos] << "\n";
-	// cout << "childCountU_ = " << childCountU_ << "\tchildNodeNum(pos) = " << childNodeNum(pos) << "\tchildpos(childNodeNum(pos) + childCountU_) = " << childpos(childNodeNum(pos) + childCountU_) << "\n";
+	//cout << "childCountU_ = " << childCountU_ << "\tchildNodeNum(pos) = " << childNodeNum(pos) << "\tchildpos(childNodeNum(pos) + childCountU_) = " << childpos(childNodeNum(pos) + childCountU_) << "\n";
 
 	pos = childpos(childNodeNum(pos) + childCountU_);
 
@@ -1332,6 +1389,7 @@ bool SuRF::lookup(const uint8_t* key, const int keylen) {
 		if (sl == sk)
 		    return true;
 
+		//cout << "14\n";
 		return false;
 	    }
 	    return true;
@@ -1348,16 +1406,21 @@ bool SuRF::lookup(const uint8_t* key, const int keylen) {
 	    if (sl == sk)
 		return true;
 
+	    //cout << "15\n";
 	    return false;
 	}
 	else if (suffixConfig_ > 0) {
 	    sl = suffixes_()[suffixPos(pos)];
 	    if (sl == 0)
 		return true;
+
+	    //cout << "16\n";
 	    return false;
 	}
 	return true;
     }
+
+    //cout << "17\n";
     return false;
 }
 

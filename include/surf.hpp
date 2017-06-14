@@ -23,10 +23,9 @@ class SuRF;
 //******************************************************
 // Constants for SuRF
 //******************************************************
-//const uint8_t TERM = 0; //prefix termination indicator
 const uint8_t TERM = 255; //prefix termination indicator
+const int CUTOFF_LEVEL = 0; //-1 means using the default cutoff ratio
 const int CUTOFF_RATIO = 64;
-//const int CUTOFF_RATIO = 10000000;
 //const int MIN_PATH_LEN = 0;
 
 const uint8_t CHECK_BITS_MASK = 0xFF; //8
@@ -118,6 +117,10 @@ public:
     uint32_t suffixMem();
 
     uint64_t mem();
+
+
+    uint8_t* hufLen();
+    char* hufTable();
 
     //debug
     void printU();

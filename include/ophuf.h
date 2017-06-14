@@ -281,9 +281,9 @@ inline bool encodeList(vector<string> &keys_huf, vector<string> &keys, uint8_t* 
 	if (!encode(key_huf, keys[i], hufLen, hufTable)) return false;
 	keys_huf.push_back(key_huf);
 
-	/* if (i == 1) { */
-	/*     cout << "1 key = " << keys[i] << "\t"; */
-	/*     cout << "1 key_huf = "; */
+	/* if (i < 10) { */
+	/*     cout << i << " key = " << keys[i] << "\t"; */
+	/*     cout << i << " key_huf = "; */
 	/*     for (int j = 0; j < key_huf.size(); j++) { */
 	/* 	cout << (uint16_t)(uint8_t)key_huf[j] << " "; */
 	/*     } */

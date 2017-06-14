@@ -10,6 +10,7 @@ inline void exec(int wl, vector<string> &init_keys, vector<string> &keys, int pe
     for (int i = 0; i < (INIT_LIMIT_EMAIL * percent / 100); i++)
 	insert_init_keys.push_back(init_keys[i]);
 
+    //put back
     sort(insert_init_keys.begin(), insert_init_keys.end());
 
 #ifdef USE_BLOOM
@@ -18,6 +19,7 @@ inline void exec(int wl, vector<string> &init_keys, vector<string> &keys, int pe
     idx->CreateFilter(insert_init_keys, insert_init_keys.size(), &filter);
 #else
     SuRF *idx = load(insert_init_keys, LONGEST_KEY_LEN, INCLUDE_SUFFIX_LEN, HUFFMAN_CONFIG);
+    cout << "memory = " << (idx->mem() / 1000000.0) << "MB\n";
 #endif
 
     //LOAD MAP----------------
@@ -48,6 +50,11 @@ inline void exec(int wl, vector<string> &init_keys, vector<string> &keys, int pe
     }
 
     //READ TEST----------------
+
+    //pre-load encoded keys
+    //vector<string> keys_huf;
+    //encodeList(keys_huf, keys, idx->hufLen(), idx->hufTable());
+
     uint64_t pp = 0;
 
 #ifdef USE_BLOOM
@@ -58,6 +65,10 @@ inline void exec(int wl, vector<string> &init_keys, vector<string> &keys, int pe
 #else
     SuRFIter iter(idx);
     if (wl < 2) {
+	//pre-load encoded keys
+	//for (int i = 0; i < LIMIT; i++)
+	//pp += (int)idx->lookup(keys_huf[i]);
+
 	for (int i = 0; i < LIMIT; i++)
 	    pp += (int)idx->lookup(keys[i]);
     }
@@ -112,6 +123,7 @@ int main(int argc, char *argv[]) {
     load_init_email(wl, INIT_LIMIT_EMAIL, init_keys);
     load_txn_email(wl, LIMIT, keys, ranges, ops);
 
+    //put back
     random_shuffle(init_keys.begin(), init_keys.end());
 
     //for (int p = 10; p < 100; p += 10)
