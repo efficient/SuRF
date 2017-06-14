@@ -296,7 +296,8 @@ private:
     int cutoff_level;
     uint32_t tree_height;
     int8_t first_suffix_pos;
-    uint32_t last_suffix_pos;
+    //uint32_t last_suffix_pos;
+    int32_t last_suffix_pos;
 
     friend class SuRF;
 };
