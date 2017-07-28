@@ -98,7 +98,7 @@ TEST_F(UnitTest, LookupTest) {
     int longestKeyLen = loadFile(testFilePath, keys);
 
     //double start_time = get_now();
-    SuRF *index = load(keys, longestKeyLen, INCLUDE_SUFFIX_LEN, HUF_CONFIG);
+    SuRF *index = SuRF::buildSuRF(keys, longestKeyLen, INCLUDE_SUFFIX_LEN, HUF_CONFIG);
     //double end_time = get_now();
     //double tput = TEST_SIZE / (end_time - start_time);
     //cout << tput << "\n";
@@ -120,21 +120,22 @@ TEST_F(UnitTest, LookupTest) {
     //tput = TEST_SIZE / (end_time - start_time);
     //cout << tput << "\n";
 
-    delete index;
+    index->destroy();
 }
-
 
 TEST_F(UnitTest, LookupMonoIntTest) {
     vector<uint64_t> keys;
     int longestKeyLen = loadMonoInt(keys);
 
-    SuRF *index = load(keys, INCLUDE_SUFFIX_LEN);
+    SuRF *index = SuRF::buildSuRF(keys, INCLUDE_SUFFIX_LEN);
 
     printStatSuRF(index);
 
     for (uint64_t i = 0; i < TEST_SIZE_INT; i++) {
 	ASSERT_TRUE(index->lookup(keys[i]));
     }
+
+    index->destroy();
 }
 
 
@@ -142,7 +143,7 @@ TEST_F(UnitTest, LookupRandIntTest) {
     vector<uint64_t> keys;
     int longestKeyLen = loadRandInt(keys);
 
-    SuRF *index = load(keys, INCLUDE_SUFFIX_LEN);
+    SuRF *index = SuRF::buildSuRF(keys, INCLUDE_SUFFIX_LEN);
 
     printStatSuRF(index);
 
@@ -151,13 +152,15 @@ TEST_F(UnitTest, LookupRandIntTest) {
     for (uint64_t i = 0; i < TEST_SIZE_INT; i++) {
 	ASSERT_TRUE(index->lookup(keys[i]));
     }
+
+    index->destroy();
 }
 
 TEST_F(UnitTest, LowerBoundTest) {
     vector<uint64_t> keys;
     int longestKeyLen = loadMonoSkipInt(keys);
 
-    SuRF *index = load(keys, INCLUDE_SUFFIX_LEN);
+    SuRF *index = SuRF::buildSuRF(keys, INCLUDE_SUFFIX_LEN);
 
     printStatSuRF(index);
 
@@ -192,13 +195,15 @@ TEST_F(UnitTest, LowerBoundTest) {
 	    }
 	}
     }
+
+    index->destroy();
 }
 
 TEST_F(UnitTest, UpperBoundTest) {
     vector<uint64_t> keys;
     int longestKeyLen = loadMonoSkipInt(keys);
 
-    SuRF *index = load(keys, INCLUDE_SUFFIX_LEN);
+    SuRF *index = SuRF::buildSuRF(keys, INCLUDE_SUFFIX_LEN);
 
     printStatSuRF(index);
 
@@ -233,6 +238,8 @@ TEST_F(UnitTest, UpperBoundTest) {
 	    }
 	}
     }
+
+    index->destroy();
 }
 
 
@@ -240,7 +247,7 @@ TEST_F(UnitTest, ScanTest) {
     vector<string> keys;
     int longestKeyLen = loadFile(testFilePath, keys);
 
-    SuRF *index = load(keys, longestKeyLen, INCLUDE_SUFFIX_LEN, HUF_CONFIG);
+    SuRF *index = SuRF::buildSuRF(keys, longestKeyLen, INCLUDE_SUFFIX_LEN, HUF_CONFIG);
 
     printStatSuRF(index);
 
@@ -270,6 +277,8 @@ TEST_F(UnitTest, ScanTest) {
 	    }
 	}
     }
+
+    index->destroy();
 }
 
 
@@ -277,7 +286,7 @@ TEST_F(UnitTest, ScanMonoIntTest) {
     vector<uint64_t> keys;
     int longestKeyLen = loadMonoInt(keys);
 
-    SuRF *index = load(keys, INCLUDE_SUFFIX_LEN);
+    SuRF *index = SuRF::buildSuRF(keys, INCLUDE_SUFFIX_LEN);
 
     printStatSuRF(index);
 
@@ -312,13 +321,15 @@ TEST_F(UnitTest, ScanMonoIntTest) {
 	    }
 	}
     }
+
+    index->destroy();
 }
 
 TEST_F(UnitTest, ScanReverseTest) {
     vector<string> keys;
     int longestKeyLen = loadFile(testFilePath, keys);
 
-    SuRF *index = load(keys, longestKeyLen, INCLUDE_SUFFIX_LEN, HUF_CONFIG);
+    SuRF *index = SuRF::buildSuRF(keys, longestKeyLen, INCLUDE_SUFFIX_LEN, HUF_CONFIG);
 
     printStatSuRF(index);
 
@@ -349,13 +360,15 @@ TEST_F(UnitTest, ScanReverseTest) {
 	    }
 	}
     }
+
+    index->destroy();
 }
 
 TEST_F(UnitTest, ScanMonoIntReverseTest) {
     vector<uint64_t> keys;
     int longestKeyLen = loadMonoInt(keys);
 
-    SuRF *index = load(keys, INCLUDE_SUFFIX_LEN);
+    SuRF *index = SuRF::buildSuRF(keys, INCLUDE_SUFFIX_LEN);
 
     printStatSuRF(index);
 
@@ -390,7 +403,308 @@ TEST_F(UnitTest, ScanMonoIntReverseTest) {
 	    }
 	}
     }
+
+    index->destroy();
 }
+
+// TEST_F(UnitTest, LookupTest) {
+//     vector<string> keys;
+//     int longestKeyLen = loadFile(testFilePath, keys);
+
+//     //double start_time = get_now();
+//     SuRF *index = load(keys, longestKeyLen, INCLUDE_SUFFIX_LEN, HUF_CONFIG);
+//     //double end_time = get_now();
+//     //double tput = TEST_SIZE / (end_time - start_time);
+//     //cout << tput << "\n";
+
+//     printStatSuRF(index);
+
+//     //index->printU();
+//     //index->print();
+
+//     //start_time = get_now();
+//     for (int i = 0; i < TEST_SIZE; i++) {
+//     //for (int i = 27; i < 28; i++) {
+// 	if (i > 0 && keys[i].compare(keys[i-1]) == 0)
+// 	    continue;
+// 	//ASSERT_TRUE(index->lookup((uint8_t*)keys[i].c_str(), keys[i].length()));
+// 	ASSERT_TRUE(index->lookup(keys[i]));
+//     }
+//     //end_time = get_now();
+//     //tput = TEST_SIZE / (end_time - start_time);
+//     //cout << tput << "\n";
+
+//     delete index;
+// }
+
+
+// TEST_F(UnitTest, LookupMonoIntTest) {
+//     vector<uint64_t> keys;
+//     int longestKeyLen = loadMonoInt(keys);
+
+//     SuRF *index = load(keys, INCLUDE_SUFFIX_LEN);
+
+//     printStatSuRF(index);
+
+//     for (uint64_t i = 0; i < TEST_SIZE_INT; i++) {
+// 	ASSERT_TRUE(index->lookup(keys[i]));
+//     }
+// }
+
+
+// TEST_F(UnitTest, LookupRandIntTest) {
+//     vector<uint64_t> keys;
+//     int longestKeyLen = loadRandInt(keys);
+
+//     SuRF *index = load(keys, INCLUDE_SUFFIX_LEN);
+
+//     printStatSuRF(index);
+
+//     random_shuffle(keys.begin(), keys.end());
+
+//     for (uint64_t i = 0; i < TEST_SIZE_INT; i++) {
+// 	ASSERT_TRUE(index->lookup(keys[i]));
+//     }
+// }
+
+// TEST_F(UnitTest, LowerBoundTest) {
+//     vector<uint64_t> keys;
+//     int longestKeyLen = loadMonoSkipInt(keys);
+
+//     SuRF *index = load(keys, INCLUDE_SUFFIX_LEN);
+
+//     printStatSuRF(index);
+
+//     string curkey;
+//     char* key_str = new char[8];
+//     string keyString;
+//     SuRFIter iter(index);
+//     for (int i = 0; i < TEST_SIZE_INT - 1; i++) {
+// 	ASSERT_TRUE(index->lowerBound(keys[i] - 1, iter));
+// 	curkey = iter.key();
+// 	reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(keys[i]);
+// 	keyString = string(key_str, 8);
+// 	auto res = mismatch(curkey.begin(), curkey.end(), keyString.begin());
+// 	ASSERT_TRUE(res.first == curkey.end());
+
+// 	for (int j = 0; j < RANGE_SIZE; j++) {
+// 	    if (i+j+1 < TEST_SIZE_INT) {
+// 		ASSERT_TRUE(iter++);
+// 		curkey = iter.key();
+// 		reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(keys[i+j+1]);
+// 		keyString = string(key_str, 8);
+// 		res = mismatch(curkey.begin(), curkey.end(), keyString.begin());
+// 		ASSERT_TRUE(res.first == curkey.end());
+// 	    }
+// 	    else {
+// 		ASSERT_FALSE(iter++);
+// 		curkey = iter.key();
+// 		reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(keys[TEST_SIZE_INT-1]);
+// 		keyString = string(key_str, 8);
+// 		res = mismatch(curkey.begin(), curkey.end(), keyString.begin());
+// 		ASSERT_TRUE(res.first == curkey.end());
+// 	    }
+// 	}
+//     }
+// }
+
+// TEST_F(UnitTest, UpperBoundTest) {
+//     vector<uint64_t> keys;
+//     int longestKeyLen = loadMonoSkipInt(keys);
+
+//     SuRF *index = load(keys, INCLUDE_SUFFIX_LEN);
+
+//     printStatSuRF(index);
+
+//     string curkey;
+//     char* key_str = new char[8];
+//     string keyString;
+//     SuRFIter iter(index);
+//     for (int i = 0; i < TEST_SIZE_INT - 1; i++) {
+//  	ASSERT_TRUE(index->upperBound(keys[i] + 1, iter));
+// 	curkey = iter.key();
+// 	reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(keys[i]);
+// 	keyString = string(key_str, 8);
+// 	auto res = mismatch(curkey.begin(), curkey.end(), keyString.begin());
+// 	ASSERT_TRUE(res.first == curkey.end());
+
+// 	for (int j = 0; j < RANGE_SIZE; j++) {
+// 	    if (i+j+1 < TEST_SIZE_INT) {
+// 		ASSERT_TRUE(iter++);
+// 		curkey = iter.key();
+// 		reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(keys[i+j+1]);
+// 		keyString = string(key_str, 8);
+// 		res = mismatch(curkey.begin(), curkey.end(), keyString.begin());
+// 		ASSERT_TRUE(res.first == curkey.end());
+// 	    }
+// 	    else {
+// 		ASSERT_FALSE(iter++);
+// 		curkey = iter.key();
+// 		reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(keys[TEST_SIZE_INT-1]);
+// 		keyString = string(key_str, 8);
+// 		res = mismatch(curkey.begin(), curkey.end(), keyString.begin());
+// 		ASSERT_TRUE(res.first == curkey.end());
+// 	    }
+// 	}
+//     }
+// }
+
+
+// TEST_F(UnitTest, ScanTest) {
+//     vector<string> keys;
+//     int longestKeyLen = loadFile(testFilePath, keys);
+
+//     SuRF *index = load(keys, longestKeyLen, INCLUDE_SUFFIX_LEN, HUF_CONFIG);
+
+//     printStatSuRF(index);
+
+//     string curkey;
+//     SuRFIter iter(index);
+//     for (int i = 0; i < TEST_SIZE - 1; i++) {
+// 	if (i > 0 && keys[i].compare(keys[i-1]) == 0)
+// 	    continue;
+// 	//ASSERT_TRUE(index->lowerBound((uint8_t*)keys[i].c_str(), keys[i].length(), iter));
+// 	ASSERT_TRUE(index->lowerBound(keys[i], iter));
+// 	//curkey = iter.key();
+// 	//auto res = mismatch(curkey.begin(), curkey.end(), keys[i].begin());
+// 	//ASSERT_TRUE(res.first == curkey.end());
+
+// 	for (int j = 0; j < RANGE_SIZE; j++) {
+// 	    if (i+j+1 < TEST_SIZE) {
+// 		ASSERT_TRUE(iter++);
+// 		//curkey = iter.key();
+// 		//res = mismatch(curkey.begin(), curkey.end(), keys[i+j+1].begin());
+// 		//ASSERT_TRUE(res.first == curkey.end());
+// 	    }
+// 	    else {
+// 		ASSERT_FALSE(iter++);
+// 		//curkey = iter.key();
+// 		//res = mismatch(curkey.begin(), curkey.end(), keys[TEST_SIZE-1].begin());
+// 		//ASSERT_TRUE(res.first == curkey.end());
+// 	    }
+// 	}
+//     }
+// }
+
+
+// TEST_F(UnitTest, ScanMonoIntTest) {
+//     vector<uint64_t> keys;
+//     int longestKeyLen = loadMonoInt(keys);
+
+//     SuRF *index = load(keys, INCLUDE_SUFFIX_LEN);
+
+//     printStatSuRF(index);
+
+//     string curkey;
+//     char* key_str = new char[8];
+//     string keyString;
+//     SuRFIter iter(index);
+//     for (int i = 0; i < TEST_SIZE_INT - 1; i++) {
+// 	ASSERT_TRUE(index->lowerBound(keys[i], iter));
+// 	curkey = iter.key();
+// 	reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(keys[i]);
+// 	keyString = string(key_str, 8);
+// 	auto res = mismatch(curkey.begin(), curkey.end(), keyString.begin());
+// 	ASSERT_TRUE(res.first == curkey.end());
+
+// 	for (int j = 0; j < RANGE_SIZE; j++) {
+// 	    if (i+j+1 < TEST_SIZE_INT) {
+// 		ASSERT_TRUE(iter++);
+// 		curkey = iter.key();
+// 		reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(keys[i+j+1]);
+// 		keyString = string(key_str, 8);
+// 		res = mismatch(curkey.begin(), curkey.end(), keyString.begin());
+// 		ASSERT_TRUE(res.first == curkey.end());
+// 	    }
+// 	    else {
+// 		ASSERT_FALSE(iter++);
+// 		curkey = iter.key();
+// 		reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(keys[TEST_SIZE_INT-1]);
+// 		keyString = string(key_str, 8);
+// 		res = mismatch(curkey.begin(), curkey.end(), keyString.begin());
+// 		ASSERT_TRUE(res.first == curkey.end());
+// 	    }
+// 	}
+//     }
+// }
+
+// TEST_F(UnitTest, ScanReverseTest) {
+//     vector<string> keys;
+//     int longestKeyLen = loadFile(testFilePath, keys);
+
+//     SuRF *index = load(keys, longestKeyLen, INCLUDE_SUFFIX_LEN, HUF_CONFIG);
+
+//     printStatSuRF(index);
+
+//     string curkey;
+//     SuRFIter iter(index);
+//     for (int i = 0; i < TEST_SIZE - 1; i++) {
+// 	if (i > 0 && keys[i].compare(keys[i-1]) == 0)
+// 	    continue;
+
+// 	//ASSERT_TRUE(index->upperBound((uint8_t*)keys[i].c_str(), keys[i].length(), iter));
+// 	ASSERT_TRUE(index->upperBound(keys[i], iter));
+// 	//curkey = iter.key();
+// 	//auto res = mismatch(curkey.begin(), curkey.end(), keys[i].begin());
+// 	//ASSERT_TRUE(res.first == curkey.end());
+
+// 	for (int j = 0; j < RANGE_SIZE; j++) {
+// 	    if (i-j-1 >= 0) {
+// 		ASSERT_TRUE(iter--);
+// 		//curkey = iter.key();
+// 		//res = mismatch(curkey.begin(), curkey.end(), keys[i-j-1].begin());
+// 		//ASSERT_TRUE(res.first == curkey.end());
+// 	    }
+// 	    else {
+// 		ASSERT_FALSE(iter--);
+// 		//curkey = iter.key();
+// 		//res = mismatch(curkey.begin(), curkey.end(), keys[0].begin());
+// 		//ASSERT_TRUE(res.first == curkey.end());
+// 	    }
+// 	}
+//     }
+// }
+
+// TEST_F(UnitTest, ScanMonoIntReverseTest) {
+//     vector<uint64_t> keys;
+//     int longestKeyLen = loadMonoInt(keys);
+
+//     SuRF *index = load(keys, INCLUDE_SUFFIX_LEN);
+
+//     printStatSuRF(index);
+
+//     string curkey;
+//     char* key_str = new char[8];
+//     string keyString;
+//     SuRFIter iter(index);
+//     for (int i = 0; i < TEST_SIZE_INT - 1; i++) {
+// 	ASSERT_TRUE(index->upperBound(keys[i], iter));
+// 	curkey = iter.key();
+// 	reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(keys[i]);
+// 	keyString = string(key_str, 8);
+// 	auto res = mismatch(curkey.begin(), curkey.end(), keyString.begin());
+// 	ASSERT_TRUE(res.first == curkey.end());
+
+// 	for (int j = 0; j < RANGE_SIZE; j++) {
+// 	    if (i-j-1 >= 0) {
+// 		ASSERT_TRUE(iter--);
+// 		curkey = iter.key();
+// 		reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(keys[i-j-1]);
+// 		keyString = string(key_str, 8);
+// 		res = mismatch(curkey.begin(), curkey.end(), keyString.begin());
+// 		ASSERT_TRUE(res.first == curkey.end());
+// 	    }
+// 	    else {
+// 		ASSERT_FALSE(iter--);
+// 		curkey = iter.key();
+// 		reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(keys[0]);
+// 		keyString = string(key_str, 8);
+// 		res = mismatch(curkey.begin(), curkey.end(), keyString.begin());
+// 		ASSERT_TRUE(res.first == curkey.end());
+// 	    }
+// 	}
+//     }
+// }
 
 
 int main (int argc, char** argv) {

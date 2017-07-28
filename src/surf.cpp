@@ -1,7 +1,41 @@
 #include <surf.hpp>
 #include <cassert>
 
-inline bool insertChar_cond(const uint8_t ch, vector<uint8_t> &c, vector<uint64_t> &t, vector<uint64_t> &s, uint64_t &pos, uint64_t &is_term, uint64_t &nc) {
+//*******************************************************************
+SuRF::SuRF()
+    : treeHeight_(0), cutoffLevel_(0), nodeCountDense_(0), childCountDense_(0),
+      suffixConfig_(0), useHuf_(false), first_suffix_pos_(0), last_suffix_pos_(0),
+      cUnbits_(0), cUpCount_(0), cUmem_(0),
+      tUnbits_(0), tUpCount_(0), tUmem_(0),
+      oUnbits_(0), oUpCount_(0), oUmem_(0),
+      suffixUmem_(0),
+      cmem_(0),
+      tnbits_(0), tpCount_(0), tmem_(0),
+      snbits_(0), spCount_(0), smem_(0), sselectLUTCount_(0),
+      suffixmem_(0) {}
+
+SuRF::SuRF(int16_t cl, uint16_t th, int8_t fsp, int32_t lsp,
+	   uint32_t ncu, uint32_t ccu, uint16_t sc, bool hc,
+	   uint32_t cUnb, uint32_t cUmem, uint32_t tUnb, uint32_t tUmem,
+	   uint32_t oUnb, uint32_t oUmem, uint32_t sUm, uint32_t cmem,
+	   uint32_t tnb, uint32_t tmem, uint32_t smem, uint32_t sbbc, uint32_t sm)
+    : treeHeight_(th), cutoffLevel_(cl), nodeCountDense_(ncu), childCountDense_(ccu),
+      suffixConfig_(sc), useHuf_(hc), first_suffix_pos_(fsp), last_suffix_pos_(lsp),
+      cUnbits_(cUnb), cUpCount_(0), cUmem_(cUmem),
+      tUnbits_(tUnb), tUpCount_(0), tUmem_(tUmem),
+    oUnbits_(oUnb), oUpCount_(0), oUmem_(oUmem),
+    suffixUmem_(sUm),
+    cmem_(cmem),
+    tnbits_(tnb), tpCount_(0), tmem_(tmem),
+    snbits_(0), spCount_(0), smem_(smem), sselectLUTCount_(sbbc),
+    suffixmem_(sm) {
+    labelDense_.init(cUnb, kBasicBlockSizeU, (void*)data_);
+    }
+
+SuRF::~SuRF() {}
+
+
+inline bool SuRF::insertChar_cond(const uint8_t ch, vector<uint8_t> &c, vector<uint64_t> &t, vector<uint64_t> &s, uint64_t &pos, uint64_t &is_term, uint64_t &nc) {
     if (c.empty() || is_term > 0 || c.back() != ch) {
 	c.push_back(ch);
 	if (c.size() == 1) {
@@ -25,7 +59,7 @@ inline bool insertChar_cond(const uint8_t ch, vector<uint8_t> &c, vector<uint64_
     }
 }
 
-inline bool insertChar(const uint8_t ch, bool isTerm, vector<uint8_t> &c, vector<uint64_t> &t, vector<uint64_t> &s, uint64_t &pos, uint64_t &nc) {
+inline bool SuRF::insertChar(const uint8_t ch, bool isTerm, vector<uint8_t> &c, vector<uint64_t> &t, vector<uint64_t> &s, uint64_t &pos, uint64_t &nc) {
     c.push_back(ch);
     if (!isTerm)
 	setBit(t.back(), pos % 64);
@@ -40,9 +74,9 @@ inline bool insertChar(const uint8_t ch, bool isTerm, vector<uint8_t> &c, vector
 }
 
 //******************************************************
-// LOAD
+// buildSuRF
 //******************************************************
-SuRF* load(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool huf_config) {
+SuRF* SuRF::buildSuRF(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool huf_config) {
 
     //Huffman encode input source
     uint8_t* hufLen = NULL;
@@ -126,23 +160,6 @@ SuRF* load(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool hu
 	}
 	else
 	    cout << "ERROR!\n";
-
-	//min path len
-	// if (i < MIN_PATH_LEN && i < key.length() - 1) {
-	//     uint64_t pos = pos_list[i];
-	//     if (pos % 64 == 0)
-	// 	setBit(t[i].rbegin()[1], (pos-1) % 64);
-	//     else
-	// 	setBit(t[i].back(), (pos-1) % 64);
-	// }
-
-	// while (i < MIN_PATH_LEN && i < key.length() - 1) {
-	//     i++;
-	//     if (i < MIN_PATH_LEN && i < key.length() - 1)
-	// 	insertChar((uint8_t)key[i], false, c[i], t[i], s[i], pos_list[i], nc[i]);
-	//     else
-	// 	insertChar((uint8_t)key[i], true, c[i], t[i], s[i], pos_list[i], nc[i]);
-	// }
 
 	//suffix config
 	if (suf_config == 3) {
@@ -248,7 +265,7 @@ SuRF* load(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool hu
     int nc_u = 0;
 
     if (CUTOFF_LEVEL >= 0)
-	cutoff_level = CUTOFF_LEVEL;
+        cutoff_level = CUTOFF_LEVEL;
     else {
 	for (int i = 0; i < (int)nc.size(); i++)
 	    nc_total += nc[i];
@@ -338,7 +355,7 @@ SuRF* load(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool hu
 	}
     }
 
-    //-------------------------------------------------    
+    //-------------------------------------------------
     int cUlen = 0;
     int oUlen = 0;
     int slenU = 0;
@@ -361,7 +378,7 @@ SuRF* load(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool hu
     uint32_t tUnbits = tUmem * 8;
     uint32_t oUnbits = oUmem * 8;
 
-    uint32_t cmem = 0;    
+    uint32_t cmem = 0;
     uint32_t tmem = 0;
     uint32_t smem = 0;
     uint32_t suffixmem = 0;
@@ -424,10 +441,10 @@ SuRF* load(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool hu
 
     void* ptr = malloc(sizeof(SuRF) + totalMem);
     memset(ptr, 0, sizeof(SuRF) + totalMem);
-    SuRF* fst = new(ptr) SuRF(cutoff_level, tree_height, first_suffix_pos, last_suffix_pos, 
+    SuRF* fst = new(ptr) SuRF(cutoff_level, tree_height, first_suffix_pos, last_suffix_pos,
 			      nodeCountU, childCountU, suffixLen, huf_config,
 			      cUnbits, cUmem, tUnbits, tUmem, oUnbits, oUmem,
-			      suffixUmem, cmem, tnbits, tmem, 
+			      suffixUmem, cmem, tnbits, tmem,
 			      smem, sselectLUTCount, suffixmem);
 
     if (huf_config) {
@@ -450,16 +467,18 @@ SuRF* load(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool hu
 
     uint64_t c_bitPosU = 0;
     for (int i = 0; i < (int)cU.size(); i++) {
-	for (int j = 0; j < (int)cU[i].size(); j++) {
-	    for (int k = 0; k < 64; k++) {
-		if (readBit(cU[i][j], k))
-		    setBit(cUbits[c_bitPosU/64], c_bitPosU % 64);
-		c_bitPosU++;
-	    }
-	}
+        for (int j = 0; j < (int)cU[i].size(); j++) {
+            for (int k = 0; k < 64; k++) {
+        	if (readBit(cU[i][j], k))
+        	    setBit(cUbits[c_bitPosU/64], c_bitPosU % 64);
+        	c_bitPosU++;
+            }
+        }
     }
 
     fst->cUinit(cUbits, c_sizeU * 64);
+
+    //fst->labelDense_.load(cU);
 
     uint64_t t_bitPosU = 0;
     for (int i = 0; i < (int)tU.size(); i++) {
@@ -555,49 +574,19 @@ SuRF* load(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool hu
     return fst;
 }
 
-SuRF* load(vector<uint64_t> &keys, uint16_t suf_config) {
+SuRF* SuRF::buildSuRF(vector<uint64_t> &keys, uint16_t suf_config) {
     vector<string> keys_str;
     for (int i = 0; i < (int)keys.size(); i++) {
 	char key[8];
 	reinterpret_cast<uint64_t*>(key)[0]=__builtin_bswap64(keys[i]);
 	keys_str.push_back(string(key, 8));
     }
-    return load(keys_str, sizeof(uint64_t), suf_config, false);
+    return SuRF::buildSuRF(keys_str, sizeof(uint64_t), suf_config, false);
 }
 
-
-//*******************************************************************
-SuRF::SuRF() 
-    : cutoff_level_(0), tree_height_(0), first_suffix_pos_(0),
-      last_suffix_pos_(0), nodeCountU_(0), childCountU_(0), 
-      suffixConfig_(0), hufConfig_(false),
-      cUnbits_(0), cUpCount_(0), cUmem_(0),
-      tUnbits_(0), tUpCount_(0), tUmem_(0),
-      oUnbits_(0), oUpCount_(0), oUmem_(0),
-      suffixUmem_(0),
-      cmem_(0),
-      tnbits_(0), tpCount_(0), tmem_(0),
-      snbits_(0), spCount_(0), smem_(0), sselectLUTCount_(0),
-      suffixmem_(0) {}
-
-SuRF::SuRF(int16_t cl, uint16_t th, int8_t fsp, int32_t lsp, 
-	   uint32_t ncu, uint32_t ccu, uint16_t sc, bool hc,
-	   uint32_t cUnb, uint32_t cUmem, uint32_t tUnb, uint32_t tUmem,
-	   uint32_t oUnb, uint32_t oUmem, uint32_t sUm, uint32_t cmem,
-	   uint32_t tnb, uint32_t tmem, uint32_t smem, uint32_t sbbc, uint32_t sm) 
-    : cutoff_level_(cl), tree_height_(th), first_suffix_pos_(fsp),
-      last_suffix_pos_(lsp), nodeCountU_(ncu), childCountU_(ccu), 
-      suffixConfig_(sc), hufConfig_(hc),
-      cUnbits_(cUnb), cUpCount_(0), cUmem_(cUmem),
-      tUnbits_(tUnb), tUpCount_(0), tUmem_(tUmem),
-    oUnbits_(oUnb), oUpCount_(0), oUmem_(oUmem),
-    suffixUmem_(sUm),
-    cmem_(cmem),
-    tnbits_(tnb), tpCount_(0), tmem_(tmem),
-    snbits_(0), spCount_(0), smem_(smem), sselectLUTCount_(sbbc),
-    suffixmem_(sm) {}
-
-SuRF::~SuRF() {}
+void SuRF::destroy() {
+    free(this);
+}
 
 //stat
 uint32_t SuRF::cMemU() { return cUmem_; }
@@ -632,7 +621,8 @@ uint64_t SuRF::mem() {
     cout << "sSelectMem = " << sSelectMem() << "\n";
     cout << "suffixMem = " << suffixMem() << "\n\n";
 
-    return sizeof(SuRF) + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_ + (tnbits_ / kBasicBlockSize) * sizeof(uint32_t) + smem_ + (sselectLUTCount_ + 1) * sizeof(uint32_t) + suffixUmem_ + suffixmem_;
+    //return sizeof(SuRF) + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_ + (tnbits_ / kBasicBlockSize) * sizeof(uint32_t) + smem_ + (sselectLUTCount_ + 1) * sizeof(uint32_t) + suffixUmem_ + suffixmem_;
+    return sizeof(SuRF) + labelDense_.size() + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_ + (tnbits_ / kBasicBlockSize) * sizeof(uint32_t) + smem_ + (sselectLUTCount_ + 1) * sizeof(uint32_t) + suffixUmem_ + suffixmem_;
 }
 
 
@@ -647,7 +637,6 @@ char* SuRF::hufTable() {
 //******************************************************
 // rank and select support
 //******************************************************
-//*******************************************************************
 inline void SuRF::cUinit(uint64_t* bits, uint32_t nbits) {
     cUnbits_ = nbits;
     uint32_t* cUrankLUT = cUrankLUT_();
@@ -832,70 +821,44 @@ inline uint32_t SuRF::sselect(uint32_t rank) {
 //******************************************************
 //*******************************************************************
 inline uint64_t* SuRF::cUbits_() {return (uint64_t*)data_;}
+inline uint32_t* SuRF::cUrankLUT_() {return (uint32_t*)((char*)cUbits_() + cUmem_);}
+inline uint64_t* SuRF::tUbits_() {return (uint64_t*)((char*)cUrankLUT_() + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t));}
+inline uint32_t* SuRF::tUrankLUT_() {return (uint32_t*)((char*)tUbits_() + tUmem_);}
+inline uint64_t* SuRF::oUbits_() {return (uint64_t*)((char*)tUrankLUT_() + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t));}
+inline uint32_t* SuRF::oUrankLUT_() {return (uint32_t*)((char*)oUbits_() + oUmem_);}
+inline uint8_t* SuRF::cbytes_() {return (uint8_t*)((char*)oUrankLUT_() + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t));}
+inline uint64_t* SuRF::tbits_() {return (uint64_t*)((char*)cbytes_() + cmem_);}
+inline uint32_t* SuRF::trankLUT_() {return (uint32_t*)((char*)tbits_() + tmem_);}
+inline uint64_t* SuRF::sbits_() {return (uint64_t*)((char*)trankLUT_() + (tnbits_ / kBasicBlockSize) * sizeof(uint32_t));}
+inline uint32_t* SuRF::sselectLUT_() {return (uint32_t*)((char*)sbits_() + smem_);}
+inline uint8_t* SuRF::suffixesU_() {return (uint8_t*)((char*)sselectLUT_() + (sselectLUTCount_ + 1) * sizeof(uint32_t));}
+inline uint8_t* SuRF::suffixes_() {return (uint8_t*)((char*)suffixesU_() + suffixUmem_);}
 
-inline uint32_t* SuRF::cUrankLUT_() {return (uint32_t*)(data_ + cUmem_);}
 
-inline uint64_t* SuRF::tUbits_() {return (uint64_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t));}
-
-inline uint32_t* SuRF::tUrankLUT_() {return (uint32_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_);}
-
-inline uint64_t* SuRF::oUbits_() {return (uint64_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t));}
-
-inline uint32_t* SuRF::oUrankLUT_() {return (uint32_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_);}
-
-inline uint8_t* SuRF::cbytes_() {return (uint8_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t));}
-
-inline uint64_t* SuRF::tbits_() {return (uint64_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_);}
-
-inline uint32_t* SuRF::trankLUT_() {return (uint32_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_);}
-
-inline uint64_t* SuRF::sbits_() {return (uint64_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_ + (tnbits_ / kBasicBlockSize) * sizeof(uint32_t));}
-
-inline uint32_t* SuRF::sselectLUT_() {return (uint32_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_ + (tnbits_ / kBasicBlockSize) * sizeof(uint32_t) + smem_);}
-
-inline uint8_t* SuRF::suffixesU_() {return (uint8_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_ + (tnbits_ / kBasicBlockSize) * sizeof(uint32_t) + smem_ + (sselectLUTCount_ + 1) * sizeof(uint32_t));}
-
-inline uint8_t* SuRF::suffixes_() {return (uint8_t*)(data_ + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_ + (tnbits_ / kBasicBlockSize) * sizeof(uint32_t) + smem_ + (sselectLUTCount_ + 1) * sizeof(uint32_t) + suffixUmem_);}
-
-//******************************************************
-// IS O BIT SET U?
-//******************************************************
 inline bool SuRF::isCbitSetU(uint64_t nodeNum, uint8_t kc) {
     return isLabelExist(cUbits_() + (nodeNum << 2), kc);
 }
-//******************************************************
-// IS O BIT SET U?
-//******************************************************
+
 inline bool SuRF::isTbitSetU(uint64_t nodeNum, uint8_t kc) {
     return isLabelExist(tUbits_() + (nodeNum << 2), kc);
 }
-//******************************************************
-// IS O BIT SET U?
-//******************************************************
+
 inline bool SuRF::isObitSetU(uint64_t nodeNum) {
     return readBit(oUbits_()[nodeNum >> 6], nodeNum & (uint64_t)63);
 }
-//******************************************************
-// IS S BIT SET?
-//******************************************************
+
 inline bool SuRF::isSbitSet(uint64_t pos) {
     return readBit(sbits_()[pos >> 6], pos & (uint64_t)63);
 }
-//******************************************************
-// IS T BIT SET?
-//******************************************************
+
 inline bool SuRF::isTbitSet(uint64_t pos) {
     return readBit(tbits_()[pos >> 6], pos & (uint64_t)63);
 }
-//******************************************************
-// GET SUFFIX POS U
-//******************************************************
+
 inline uint64_t SuRF::suffixPosU(uint64_t nodeNum, uint64_t pos) {
     return cUrank(pos + 1) - tUrank(pos + 1) + oUrank(nodeNum + 1) - 1;
 }
-//******************************************************
-// GET SUFFIX POS
-//******************************************************
+
 inline uint64_t SuRF::suffixPos(uint64_t pos) {
     return pos - trank(pos+1);
 }
@@ -914,8 +877,8 @@ inline uint64_t SuRF::childNodeNum(uint64_t pos) {
 // CHILD POS
 //******************************************************
 inline uint64_t SuRF::childpos(uint64_t nodeNum) {    
-    //return sselect(nodeNum - nodeCountU_ + 1);
-    return sselect(nodeNum + 1 - nodeCountU_);
+    //return sselect(nodeNum - nodeCountDense_ + 1);
+    return sselect(nodeNum + 1 - nodeCountDense_);
 }
 
 
@@ -1136,7 +1099,7 @@ inline bool SuRF::nodeSearch_upperBound(uint64_t &pos, int size, uint8_t target)
 //******************************************************
 bool SuRF::lookup(string &key) {
 
-    if (hufConfig_) {
+    if (useHuf_) {
 	string key_huf;
 	encode(key_huf, key, hufLen_, hufTable_);
 
@@ -1163,7 +1126,7 @@ bool SuRF::lookup(const uint8_t* key, const int keylen) {
     uint64_t pos = kc;
     uint8_t sl = 0;
 
-    while (keypos < keylen && keypos < cutoff_level_) {
+    while (keypos < keylen && keypos < cutoffLevel_) {
 	kc = key[keypos];
 	pos = (nodeNum << 8) + kc;
 
@@ -1236,7 +1199,7 @@ bool SuRF::lookup(const uint8_t* key, const int keylen) {
 	keypos++;
     }
 
-    if (keypos < cutoff_level_) {
+    if (keypos < cutoffLevel_) {
 	if (isObitSetU(nodeNum)) {
 	    //suffix config
 	    if (suffixConfig_ == 3) {
@@ -1288,7 +1251,7 @@ bool SuRF::lookup(const uint8_t* key, const int keylen) {
     }
 
     //-----------------------------------------------------------------------
-    pos = (cutoff_level_ == 0) ? 0 : childpos(nodeNum);
+    pos = (cutoffLevel_ == 0) ? 0 : childpos(nodeNum);
 
     while (keypos < keylen) {
 	kc = key[keypos];
@@ -1356,9 +1319,9 @@ bool SuRF::lookup(const uint8_t* key, const int keylen) {
 	}
 
 	// cout << "\tbefore pos = " << pos << "\tchar = " << (uint16_t)(uint8_t)cbytes_()[pos] << "\n";
-	//cout << "childCountU_ = " << childCountU_ << "\tchildNodeNum(pos) = " << childNodeNum(pos) << "\tchildpos(childNodeNum(pos) + childCountU_) = " << childpos(childNodeNum(pos) + childCountU_) << "\n";
+	//cout << "childCountDense_ = " << childCountDense_ << "\tchildNodeNum(pos) = " << childNodeNum(pos) << "\tchildpos(childNodeNum(pos) + childCountDense_) = " << childpos(childNodeNum(pos) + childCountDense_) << "\n";
 
-	pos = childpos(childNodeNum(pos) + childCountU_);
+	pos = childpos(childNodeNum(pos) + childCountDense_);
 
 	//cout << "\tafter pos = " << pos << "\tchar = " << (uint16_t)(uint8_t)cbytes_()[pos] << "\n";
 
@@ -1432,77 +1395,6 @@ bool SuRF::lookup(const uint64_t key) {
 }
 
 
-bool SuRF::lookup(const uint8_t* key, const int keylen, uint64_t &position) {
-    int keypos = 0;
-    uint64_t nodeNum = 0;
-    uint8_t kc = (uint8_t)key[keypos];
-    uint64_t pos = kc;
-
-    while (keypos < keylen && keypos < cutoff_level_) {
-	kc = (uint8_t)key[keypos];
-	pos = (nodeNum << 8) + kc;
-
-	__builtin_prefetch(tUbits_() + (nodeNum << 2) + (kc >> 6), 0);
-	__builtin_prefetch(tUrankLUT_() + ((pos + 1) >> 6), 0);
-
-	if (!isCbitSetU(nodeNum, kc))
-	    return false;
-
-	if (!isTbitSetU(nodeNum, kc)) {
-	    position = suffixPosU(nodeNum, pos);
-	    return true;
-	}
-
-	nodeNum = childNodeNumU(pos);
-	keypos++;
-    }
-
-    if (keypos < cutoff_level_) {
-	if (isObitSetU(nodeNum)) {
-	    position = suffixPosU(nodeNum, (nodeNum << 8));
-	    return true;
-	}
-	return false;
-    }
-
-    //-----------------------------------------------------------------------
-    pos = (cutoff_level_ == 0) ? 0 : childpos(nodeNum);
-
-    while (keypos < keylen) {
-	kc = (uint8_t)key[keypos];
-
-	int nsize = nodeSize(pos);
-	if (!nodeSearch(pos, nsize, kc))
-	    return false;
-
-	if (!isTbitSet(pos)) {
-	    position = suffixPos(pos);
-	    return true;
-	}
-
-	pos = childpos(childNodeNum(pos) + childCountU_);
-	keypos++;
-
-	__builtin_prefetch(cbytes_() + pos, 0, 1);
-	__builtin_prefetch(tbits_() + (pos >> 6), 0, 1);
-	__builtin_prefetch(trankLUT_() + ((pos + 1) >> 9), 0);
-    }
-
-    if (cbytes_()[pos] == TERM && !isTbitSet(pos)) {
-	position = suffixPos(pos);
-	return true;
-    }
-    return false;
-}
-
-bool SuRF::lookup(const uint64_t key, uint64_t &position) {
-    uint8_t key_str[8];
-    reinterpret_cast<uint64_t*>(key_str)[0]=__builtin_bswap64(key);
-
-    return lookup(key_str, 8, position);
-}
-
-
 //******************************************************
 // NEXT ITEM U
 //******************************************************
@@ -1539,7 +1431,7 @@ inline bool SuRF::nextLeftU(int level, uint64_t pos, SuRFIter* iter) {
     level++;
     nodeNum = (iter->positions[level].keyPos < 0) ? childNodeNumU(pos) : (iter->positions[level].keyPos >> 8);
 
-    while (level < cutoff_level_) {
+    while (level < cutoffLevel_) {
 	if (isObitSetU(nodeNum)) {
 	    iter->setKVU(level, nodeNum, (nodeNum << 8), true);
 	    return true;
@@ -1570,12 +1462,12 @@ inline bool SuRF::nextLeft(int level, uint64_t pos, SuRFIter* iter) {
 	level++;
 
 	//TEMP FIX, TODO: figure out why
-	if (level >= tree_height_) {
+	if (level >= treeHeight_) {
 	    level--;
 	    break;
 	}
 
-	pos = (iter->positions[level].keyPos < 0) ? childpos(childNodeNum(pos) + childCountU_) : iter->positions[level].keyPos;
+	pos = (iter->positions[level].keyPos < 0) ? childpos(childNodeNum(pos) + childCountDense_) : iter->positions[level].keyPos;
     }
     iter->setKV(level, pos);
     return true;
@@ -1597,7 +1489,7 @@ inline bool SuRF::nextRightU(int level, uint64_t pos, SuRFIter* iter) {
     level++;
     nodeNum = (iter->positions[level].keyPos < 0) ? childNodeNumU(pos) : (iter->positions[level].keyPos >> 8);
 
-    while (level < cutoff_level_) {
+    while (level < cutoffLevel_) {
 	prevItemU(nodeNum, (uint8_t)255, cc);
 	pos = (nodeNum << 8) + cc;
 	iter->positions[level].keyPos = pos;
@@ -1627,7 +1519,7 @@ inline bool SuRF::nextRight(int level, uint64_t pos, SuRFIter* iter) {
 	level++;
 
 	if (iter->positions[level].keyPos < 0) {
-	    pos = childpos(childNodeNum(pos) + childCountU_);
+	    pos = childpos(childNodeNum(pos) + childCountDense_);
 	    pos += (nodeSize(pos) - 1);
 	}
 	else
@@ -1645,7 +1537,7 @@ inline bool SuRF::nextRight(int level, uint64_t pos, SuRFIter* iter) {
 inline bool SuRF::nextNodeU(int level, uint64_t nodeNum, SuRFIter* iter) {
     //cout << "nextNodeU\t";
 
-    int cur_level = (level < cutoff_level_) ? level : (cutoff_level_ - 1);
+    int cur_level = (level < cutoffLevel_) ? level : (cutoffLevel_ - 1);
     uint8_t cc = 0;
     uint8_t kc = 0;
     bool inNode = false;
@@ -1674,7 +1566,7 @@ inline bool SuRF::nextNodeU(int level, uint64_t nodeNum, SuRFIter* iter) {
     }
     iter->positions[cur_level].keyPos = (nodeNum << 8) + cc;
 
-    while (cur_level < level && cur_level < cutoff_level_) {
+    while (cur_level < level && cur_level < cutoffLevel_) {
 	uint64_t pos = iter->positions[cur_level].keyPos;
 	nodeNum = pos >> 8;
 	cc = pos & 255;
@@ -1685,7 +1577,7 @@ inline bool SuRF::nextNodeU(int level, uint64_t nodeNum, SuRFIter* iter) {
 	cur_level++;
     }
 
-    if (level < cutoff_level_)
+    if (level < cutoffLevel_)
 	return nextLeftU(level, iter->positions[cur_level].keyPos, iter);
     else
 	return false;
@@ -1696,14 +1588,14 @@ inline bool SuRF::nextNode(int level, uint64_t pos, SuRFIter* iter) {
 
     bool inNode = false;
     int cur_level = level - 1;
-    while (!inNode && cur_level >= cutoff_level_) {
+    while (!inNode && cur_level >= cutoffLevel_) {
 	iter->positions[cur_level].keyPos++;
 	pos = iter->positions[cur_level].keyPos;
 	inNode = !isSbitSet(pos);
 	cur_level--;
     }
 
-    if (!inNode && cur_level < cutoff_level_) {
+    if (!inNode && cur_level < cutoffLevel_) {
 	uint64_t nodeNum = iter->positions[cur_level].keyPos >> 8;
 	uint8_t kc = iter->positions[cur_level].keyPos & 255;
 	uint8_t cc = 0;
@@ -1739,7 +1631,7 @@ inline bool SuRF::nextNode(int level, uint64_t pos, SuRFIter* iter) {
 // PREV NODE
 //******************************************************
 inline bool SuRF::prevNodeU(int level, uint64_t nodeNum, SuRFIter* iter) {
-    int cur_level = (level < cutoff_level_) ? level : (cutoff_level_ - 1);
+    int cur_level = (level < cutoffLevel_) ? level : (cutoffLevel_ - 1);
     uint8_t cc = 0;
     uint8_t kc = 0;
     bool inNode = false;
@@ -1775,7 +1667,7 @@ inline bool SuRF::prevNodeU(int level, uint64_t nodeNum, SuRFIter* iter) {
     }
     iter->positions[cur_level].keyPos = (nodeNum << 8) + cc;
 
-    while (cur_level < level && cur_level < cutoff_level_) {
+    while (cur_level < level && cur_level < cutoffLevel_) {
 	uint64_t pos = iter->positions[cur_level].keyPos;
 	nodeNum = pos >> 8;
 	cc = pos & 255;
@@ -1787,7 +1679,7 @@ inline bool SuRF::prevNodeU(int level, uint64_t nodeNum, SuRFIter* iter) {
 	cur_level++;
     }
 
-    if (level < cutoff_level_)
+    if (level < cutoffLevel_)
 	return nextRightU(level, iter->positions[cur_level].keyPos, iter);
     else
 	return false;
@@ -1797,7 +1689,7 @@ inline bool SuRF::prevNode(int level, uint64_t pos, SuRFIter* iter) {
     bool inNode = false;
     int cur_level = level - 1;
 
-    while (!inNode && cur_level >= cutoff_level_) {
+    while (!inNode && cur_level >= cutoffLevel_) {
 	pos = iter->positions[cur_level].keyPos;
 	inNode = !isSbitSet(pos);
 	iter->positions[cur_level].keyPos--;
@@ -1805,7 +1697,7 @@ inline bool SuRF::prevNode(int level, uint64_t pos, SuRFIter* iter) {
 	cur_level--;
     }
 
-    if (!inNode && cur_level < cutoff_level_) {
+    if (!inNode && cur_level < cutoffLevel_) {
 	uint64_t nodeNum = iter->positions[cur_level].keyPos >> 8;
 	uint8_t kc = iter->positions[cur_level].keyPos & 255;
 	uint8_t cc = 0;
@@ -1854,7 +1746,7 @@ inline bool SuRF::prevNode(int level, uint64_t pos, SuRFIter* iter) {
 // LOWER BOUND
 //******************************************************
 bool SuRF::lowerBound(string &key, SuRFIter &iter) {
-    if (hufConfig_) {
+    if (useHuf_) {
 	string key_huf;
 	encode(key_huf, key, hufLen_, hufTable_);
 	return lowerBound((uint8_t*)key_huf.c_str(), key_huf.length(), iter);
@@ -1873,7 +1765,7 @@ bool SuRF::lowerBound(const uint8_t* key, const int keylen, SuRFIter &iter) {
     uint8_t cc = 0;
     uint64_t pos = kc;
 
-    while (keypos < keylen && keypos < cutoff_level_) {
+    while (keypos < keylen && keypos < cutoffLevel_) {
 	kc = (uint8_t)key[keypos];
 	pos = (nodeNum << 8) + kc;
 
@@ -1916,7 +1808,7 @@ bool SuRF::lowerBound(const uint8_t* key, const int keylen, SuRFIter &iter) {
 	keypos++;
     }
 
-    if (keypos < cutoff_level_) {
+    if (keypos < cutoffLevel_) {
 	pos = nodeNum << 8;
 	if (isObitSetU(nodeNum)) {
 	    iter.setKVU(keypos, nodeNum, pos, true);
@@ -1927,7 +1819,7 @@ bool SuRF::lowerBound(const uint8_t* key, const int keylen, SuRFIter &iter) {
     }
 
     //----------------------------------------------------------
-    pos = (cutoff_level_ == 0) ? 0 : childpos(nodeNum);
+    pos = (cutoffLevel_ == 0) ? 0 : childpos(nodeNum);
 
     bool inNode = true;
     while (keypos < keylen) {
@@ -1965,7 +1857,7 @@ bool SuRF::lowerBound(const uint8_t* key, const int keylen, SuRFIter &iter) {
 	    return true;
 	}
 
-	pos = childpos(childNodeNum(pos) + childCountU_);
+	pos = childpos(childNodeNum(pos) + childCountDense_);
 	keypos++;
 
 	__builtin_prefetch(cbytes_() + pos, 0, 1);
@@ -1981,7 +1873,7 @@ bool SuRF::lowerBound(const uint8_t* key, const int keylen, SuRFIter &iter) {
     }
     keypos--;
 
-    if (keypos < cutoff_level_)
+    if (keypos < cutoffLevel_)
 	return nextLeftU(keypos, iter.positions[keypos].keyPos, &iter);
 
     return nextLeft(keypos, iter.positions[keypos].keyPos, &iter);
@@ -1997,7 +1889,7 @@ bool SuRF::lowerBound(const uint64_t key, SuRFIter &iter) {
 // UPPER BOUND
 //******************************************************
 bool SuRF::upperBound(string &key, SuRFIter &iter) {
-    if (hufConfig_) {
+    if (useHuf_) {
 	string key_huf;
 	encode(key_huf, key, hufLen_, hufTable_);
 	return upperBound((uint8_t*)key_huf.c_str(), key_huf.length(), iter);
@@ -2014,7 +1906,7 @@ bool SuRF::upperBound(const uint8_t* key, const int keylen, SuRFIter &iter) {
     uint8_t cc = 0;
     uint64_t pos = kc;
 
-    while (keypos < keylen && keypos < cutoff_level_) {
+    while (keypos < keylen && keypos < cutoffLevel_) {
 	kc = (uint8_t)key[keypos];
 	pos = (nodeNum << 8) + kc;
 
@@ -2047,7 +1939,7 @@ bool SuRF::upperBound(const uint8_t* key, const int keylen, SuRFIter &iter) {
 	keypos++;
     }
 
-    if (keypos < cutoff_level_) {
+    if (keypos < cutoffLevel_) {
 	pos = nodeNum << 8;
 	if (isObitSetU(nodeNum)) {
 	    iter.setKVU(keypos, nodeNum, pos, true);
@@ -2058,7 +1950,7 @@ bool SuRF::upperBound(const uint8_t* key, const int keylen, SuRFIter &iter) {
     }
 
     //----------------------------------------------------------
-    pos = (cutoff_level_ == 0) ? 0 : childpos(nodeNum);
+    pos = (cutoffLevel_ == 0) ? 0 : childpos(nodeNum);
 
     bool inNode = true;
     while (keypos < keylen) {
@@ -2084,7 +1976,7 @@ bool SuRF::upperBound(const uint8_t* key, const int keylen, SuRFIter &iter) {
 	    return true;
 	}
 
-	pos = childpos(childNodeNum(pos) + childCountU_);
+	pos = childpos(childNodeNum(pos) + childCountDense_);
 	keypos++;
 
 	__builtin_prefetch(cbytes_() + pos, 0, 1);
@@ -2100,7 +1992,7 @@ bool SuRF::upperBound(const uint8_t* key, const int keylen, SuRFIter &iter) {
     }
     keypos--;
 
-    if (keypos < cutoff_level_)
+    if (keypos < cutoffLevel_)
 	return nextRightU(keypos, iter.positions[keypos].keyPos, &iter);
 
     return nextRight(keypos, iter.positions[keypos].keyPos, &iter);
@@ -2188,8 +2080,8 @@ SuRFIter::SuRFIter() : index(NULL), len(0), isBegin(false), isEnd(false), cBound
 
 SuRFIter::SuRFIter(SuRF* idx) {
     index = idx;
-    tree_height = index->tree_height_;
-    cutoff_level = index->cutoff_level_;
+    tree_height = index->treeHeight_;
+    cutoff_level = index->cutoffLevel_;
     cBoundU = (index->cUnbits_ << 6) - 1;
     cBound = index->cMem() - 1;
     first_suffix_pos = index->first_suffix_pos_;
@@ -2294,7 +2186,7 @@ string SuRFIter::key () {
     string retStr;
     //TEMP FIX, TODO: figure out why
     /*
-    if (level >= tree_height_) {
+    if (level >= treeHeight_) {
 	level--;
 	break;
     }

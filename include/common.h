@@ -3,30 +3,30 @@
 
 #include <stdint.h>
 
-#define MSB_MASK 0x8000000000000000
+#define MSB_MASK_64 0x8000000000000000
 
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
 inline void setBit(uint64_t &byte, int pos) {
-    byte = byte | (MSB_MASK >> pos);
+    byte = byte | (MSB_MASK_64 >> pos);
 }
 
 inline bool readBit(uint64_t &byte, int pos) {
-    return byte & (MSB_MASK >> pos);
+    return byte & (MSB_MASK_64 >> pos);
 }
 
 inline bool isLabelExist(uint64_t *bits, uint8_t c) {
     int group = c >> 6;
     int idx = c & 63;
-    return bits[group] & (MSB_MASK >> idx);
+    return bits[group] & (MSB_MASK_64 >> idx);
 }
 
 inline bool isLabelExist_lowerBound(uint64_t *bits, uint8_t c, uint8_t &pos) {
     int group = c >> 6;
     int idx = c & 63;
     uint64_t b64 = bits[group];
-    if (b64 & (MSB_MASK >> idx)) {
+    if (b64 & (MSB_MASK_64 >> idx)) {
 	pos = c;
 	return true;
     }
@@ -51,7 +51,7 @@ inline bool isLabelExist_upperBound(uint64_t *bits, uint8_t c, uint8_t &pos) {
     int group = c >> 6;
     int idx = c & 63;
     uint64_t b64 = bits[group];
-    if (b64 & (MSB_MASK >> idx)) {
+    if (b64 & (MSB_MASK_64 >> idx)) {
 	pos = c;
 	return true;
     }

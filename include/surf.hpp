@@ -15,16 +15,18 @@
 #include "hash.h"
 #include "ophuf.h"
 
+#include "rank.hpp"
+
 using namespace std;
 
-class SuRFIter;
 class SuRF;
+class SuRFIter;
 
 //******************************************************
 // Constants for SuRF
 //******************************************************
 const uint8_t TERM = 255; //prefix termination indicator
-const int CUTOFF_LEVEL = 0; //-1 means using the default cutoff ratio
+const int CUTOFF_LEVEL = -1; //-1 means using the default cutoff ratio
 const int CUTOFF_RATIO = 64;
 //const int MIN_PATH_LEN = 0;
 
@@ -53,42 +55,26 @@ const int skip = 64;
 const int kSkipBits = 6;
 const uint32_t kSkipMask = ((uint32_t)1 << kSkipBits) - 1;
 
-//******************************************************
-// Initilization functions for SuRF
-//******************************************************
-SuRF* load(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool huf_config);
-SuRF* load(vector<uint64_t> &keys, uint16_t suf_config);
-
-//helpers
-inline bool insertChar_cond(const uint8_t ch, vector<uint8_t> &c, vector<uint64_t> &t, vector<uint64_t> &s, uint64_t &pos, uint64_t &is_term, uint64_t &nc);
-inline bool insertChar(const uint8_t ch, bool isTerm, vector<uint8_t> &c, vector<uint64_t> &t, vector<uint64_t> &s, uint64_t &pos, uint64_t &nc);
-
 
 //******************************************************
-// Fast Succinct Trie Class
+// SuRF: Succinct Range Filter
 //******************************************************
 class SuRF {
+
+//******************************************************
+// Public Interface
+//******************************************************
 public:
-    SuRF();
-    SuRF(int16_t cl, uint16_t th, int8_t fsp, int32_t lsp, 
-	 uint32_t ncu, uint32_t ccu, uint16_t sc, bool hc,
-	 uint32_t cUnb, uint32_t cUmem, uint32_t tUnb, uint32_t tUmem,
-	 uint32_t oUnb, uint32_t oUmem, uint32_t sUm, uint32_t cmem,
-	 uint32_t tnb, uint32_t tmem, uint32_t smem, uint32_t sbbc, uint32_t sm);
-    virtual ~SuRF();
+    //new
+    static SuRF* buildSuRF(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool huf_config);
+    static SuRF* buildSuRF(vector<uint64_t> &keys, uint16_t suffixConfig);
 
-    friend inline bool insertChar_cond(const uint8_t ch, vector<uint8_t> &c, vector<uint64_t> &t, vector<uint64_t> &s, uint64_t &pos, uint64_t &nc);
-    friend inline bool insertChar(const uint8_t ch, bool isTerm, vector<uint8_t> &c, vector<uint64_t> &t, vector<uint64_t> &s, uint64_t &pos, uint64_t &nc);
-
-    friend SuRF* load(vector<string> &keys, int longestKeyLen, uint16_t suf_config, bool huf_config);
-    friend SuRF* load(vector<uint64_t> &keys, uint16_t suf_config);
+    void destroy();
 
     //point query
     bool lookup(string &key);
     bool lookup(const uint8_t* key, const int keylen);
     bool lookup(const uint64_t key);
-    bool lookup(const uint8_t* key, const int keylen, uint64_t &position);
-    bool lookup(const uint64_t key, uint64_t &position);
 
     //range query
     bool lowerBound(string &key, SuRFIter &iter);
@@ -127,6 +113,18 @@ public:
     void print();
 
 private:
+    SuRF();
+    SuRF(int16_t cl, uint16_t th, int8_t fsp, int32_t lsp, 
+         uint32_t ncu, uint32_t ccu, uint16_t sc, bool hc,
+         uint32_t cUnb, uint32_t cUmem, uint32_t tUnb, uint32_t tUmem,
+         uint32_t oUnb, uint32_t oUmem, uint32_t sUm, uint32_t cmem,
+         uint32_t tnb, uint32_t tmem, uint32_t smem, uint32_t sbbc, uint32_t sm);
+    ~SuRF();
+
+    //new
+    static inline bool insertChar_cond(const uint8_t ch, vector<uint8_t> &c, vector<uint64_t> &t, vector<uint64_t> &s, uint64_t &pos, uint64_t &is_term, uint64_t &nc);
+    static inline bool insertChar(const uint8_t ch, bool isTerm, vector<uint8_t> &c, vector<uint64_t> &t, vector<uint64_t> &s, uint64_t &pos, uint64_t &nc);
+
     //bit/byte vector accessors
     //-------------------------------------------------
     inline uint64_t* cUbits_();
@@ -199,16 +197,20 @@ private:
     inline bool prevNodeU(int keypos, uint64_t nodeNum, SuRFIter* iter);
     inline bool prevNode(int keypos, uint64_t pos, SuRFIter* iter);
 
-    //members
+    //class members
     //-------------------------------------------------
-    int16_t cutoff_level_;
-    uint16_t tree_height_;
+    uint16_t treeHeight_;
+    int16_t cutoffLevel_;
+    uint32_t nodeCountDense_;
+    uint32_t childCountDense_;
+    uint16_t suffixConfig_; // 0: no suffix; 1: suffix length; 2: one-byte hash bits; 3: one-byte suffix
+    bool useHuf_;
+
+    //TODO: remove
     int8_t first_suffix_pos_; // negative means in suffixesU_
     int32_t last_suffix_pos_; // negative means in suffixesU_
-    uint32_t nodeCountU_;
-    uint32_t childCountU_;
-    uint16_t suffixConfig_; // 0: no suffix; 1: suffix length; 2: one-byte hash bits; 3: one-byte suffix
-    bool hufConfig_;
+
+    BitVectorRank labelDense_;
 
     //D-Labels
     uint32_t cUnbits_;
