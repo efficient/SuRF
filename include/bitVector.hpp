@@ -3,20 +3,22 @@
 
 #include <assert.h>
 
+#include "config.h"
+
 using namespace std;
 
 class BitVector {
-protected:
-    const int WORD_SIZE = 64;
-    const uint64_t MSB_MASK = 0x8000000000000000;
-
 public:
     BitVector() : numBits_(0), bits_(NULL) {};
-    ~BitVector() {};
 
-    void init(uint32_t numBits, uint64_t* addr) {
-        numBits_ = numBits;
-        bits_ = addr;
+    BitVector(vector<vector<uint64_t> > bitVectorPerLevel, vector<uint32_t> numBitsPerLevel) {
+	numBits_ = computeTotalNumBits(numBitsPerLevel);
+	bits_ = new uint64_t[numBits_/64 + 1];
+	concatenateBitVectors(bitVectorPerLevel, numBitsPerLevel);
+    }
+
+    ~BitVector() {
+	delete[] bits_;
     }
 
     void setBit(uint32_t pos) {
@@ -33,22 +35,20 @@ public:
         return bits_[wordId] & (MSB_MASK >> offset);
     }
 
-    // number of bits per level must be multiples of WORD_SIZE
-    void load(vector<vector<uint64_t> > bitVectorPerLevel) {
-        uint32_t wordId = 0;
-        // combine bit-vectors at each trie level into one (consecutive) bit-vector
-        for (uint32_t level = 0; level < bitVectorPerLevel.size(); level++) {
-            for (uint32_t word = 0; word < bitVectorPerLevel[level].size(); word++) {
-                bits_[wordId] = bitVectorPerLevel[level][word];
-                wordId++;
-            }
-        }
+    uint32_t size() {
+        return numBits_ / 8;
     }
 
-    void load(vector<vector<uint64_t> > bitVectorPerLevel, vector<uint32_t> numBitsPerLevel) {
+private:
+    inline uint32_t computeTotalNumBits(vector<uint32_t> numBitsPerLevel) {
+	for (uint32_t level = 0; level < numBitsPerLevel.size(); level++) {
+	    numBits_ += numBitsPerLevel[level];
+	}	
+    }
+
+    inline void concatenateBitVectors(vector<vector<uint64_t> > bitVectorPerLevel, vector<uint32_t> numBitsPerLevel) {
         uint32_t bitShift = 0;
         uint32_t wordId = 0;
-        // combine bit-vectors at each trie level into one (consecutive) bit-vector
         for (uint32_t level = 0; level < bitVectorPerLevel.size(); level++) {
             uint32_t numCompleteWords = numBitsPerLevel[level] / WORD_SIZE;
             for (uint32_t word = 0; word < numCompleteWords; word++) {
@@ -68,10 +68,6 @@ public:
                 bitShift = bitShift + bitsRemain - WORD_SIZE;
             }
         }
-    }
-
-    uint32_t size() {
-        return numBits_ / 8;
     }
 
 protected:

@@ -29,7 +29,7 @@ SuRF::SuRF(int16_t cl, uint16_t th, int8_t fsp, int32_t lsp,
     tnbits_(tnb), tpCount_(0), tmem_(tmem),
     snbits_(0), spCount_(0), smem_(smem), sselectLUTCount_(sbbc),
     suffixmem_(sm) {
-    labelDense_.init(cUnb, kBasicBlockSizeU, (void*)data_);
+    //labelDense_.initAddrAndProp(cUnb, kBasicBlockSizeU, (void*)data_);
     }
 
 SuRF::~SuRF() {}
@@ -478,7 +478,7 @@ SuRF* SuRF::buildSuRF(vector<string> &keys, int longestKeyLen, uint16_t suf_conf
 
     fst->cUinit(cUbits, c_sizeU * 64);
 
-    //fst->labelDense_.load(cU);
+    //fst->labelDense_.initContent(cU);
 
     uint64_t t_bitPosU = 0;
     for (int i = 0; i < (int)tU.size(); i++) {
@@ -621,8 +621,8 @@ uint64_t SuRF::mem() {
     cout << "sSelectMem = " << sSelectMem() << "\n";
     cout << "suffixMem = " << suffixMem() << "\n\n";
 
-    //return sizeof(SuRF) + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_ + (tnbits_ / kBasicBlockSize) * sizeof(uint32_t) + smem_ + (sselectLUTCount_ + 1) * sizeof(uint32_t) + suffixUmem_ + suffixmem_;
-    return sizeof(SuRF) + labelDense_.size() + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_ + (tnbits_ / kBasicBlockSize) * sizeof(uint32_t) + smem_ + (sselectLUTCount_ + 1) * sizeof(uint32_t) + suffixUmem_ + suffixmem_;
+    return sizeof(SuRF) + cUmem_ + (cUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_ + (tnbits_ / kBasicBlockSize) * sizeof(uint32_t) + smem_ + (sselectLUTCount_ + 1) * sizeof(uint32_t) + suffixUmem_ + suffixmem_;
+    //return sizeof(SuRF) + labelDense_.size() + tUmem_ + (tUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + oUmem_ + (oUnbits_ / kBasicBlockSizeU) * sizeof(uint32_t) + cmem_ + tmem_ + (tnbits_ / kBasicBlockSize) * sizeof(uint32_t) + smem_ + (sselectLUTCount_ + 1) * sizeof(uint32_t) + suffixUmem_ + suffixmem_;
 }
 
 

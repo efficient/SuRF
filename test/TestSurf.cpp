@@ -22,7 +22,7 @@ using namespace std;
 
 const string testFilePath = "../../test/testStringKeys.txt";
 
-class UnitTest : public ::testing::Test {
+class SuRFUnitTest : public ::testing::Test {
 public:
     virtual void SetUp () { }
     virtual void TearDown () { }
@@ -93,7 +93,7 @@ inline int loadRandInt (vector<uint64_t> &keys) {
 // SuRF TESTS
 //*****************************************************************
 
-TEST_F(UnitTest, LookupTest) {
+TEST_F(SuRFUnitTest, LookupTest) {
     vector<string> keys;
     int longestKeyLen = loadFile(testFilePath, keys);
 
@@ -123,7 +123,7 @@ TEST_F(UnitTest, LookupTest) {
     index->destroy();
 }
 
-TEST_F(UnitTest, LookupMonoIntTest) {
+TEST_F(SuRFUnitTest, LookupMonoIntTest) {
     vector<uint64_t> keys;
     int longestKeyLen = loadMonoInt(keys);
 
@@ -139,7 +139,7 @@ TEST_F(UnitTest, LookupMonoIntTest) {
 }
 
 
-TEST_F(UnitTest, LookupRandIntTest) {
+TEST_F(SuRFUnitTest, LookupRandIntTest) {
     vector<uint64_t> keys;
     int longestKeyLen = loadRandInt(keys);
 
@@ -156,7 +156,7 @@ TEST_F(UnitTest, LookupRandIntTest) {
     index->destroy();
 }
 
-TEST_F(UnitTest, LowerBoundTest) {
+TEST_F(SuRFUnitTest, LowerBoundTest) {
     vector<uint64_t> keys;
     int longestKeyLen = loadMonoSkipInt(keys);
 
@@ -199,7 +199,7 @@ TEST_F(UnitTest, LowerBoundTest) {
     index->destroy();
 }
 
-TEST_F(UnitTest, UpperBoundTest) {
+TEST_F(SuRFUnitTest, UpperBoundTest) {
     vector<uint64_t> keys;
     int longestKeyLen = loadMonoSkipInt(keys);
 
@@ -243,7 +243,7 @@ TEST_F(UnitTest, UpperBoundTest) {
 }
 
 
-TEST_F(UnitTest, ScanTest) {
+TEST_F(SuRFUnitTest, ScanTest) {
     vector<string> keys;
     int longestKeyLen = loadFile(testFilePath, keys);
 
@@ -282,7 +282,7 @@ TEST_F(UnitTest, ScanTest) {
 }
 
 
-TEST_F(UnitTest, ScanMonoIntTest) {
+TEST_F(SuRFUnitTest, ScanMonoIntTest) {
     vector<uint64_t> keys;
     int longestKeyLen = loadMonoInt(keys);
 
@@ -325,7 +325,7 @@ TEST_F(UnitTest, ScanMonoIntTest) {
     index->destroy();
 }
 
-TEST_F(UnitTest, ScanReverseTest) {
+TEST_F(SuRFUnitTest, ScanReverseTest) {
     vector<string> keys;
     int longestKeyLen = loadFile(testFilePath, keys);
 
@@ -364,7 +364,7 @@ TEST_F(UnitTest, ScanReverseTest) {
     index->destroy();
 }
 
-TEST_F(UnitTest, ScanMonoIntReverseTest) {
+TEST_F(SuRFUnitTest, ScanMonoIntReverseTest) {
     vector<uint64_t> keys;
     int longestKeyLen = loadMonoInt(keys);
 

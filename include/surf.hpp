@@ -15,7 +15,7 @@
 #include "hash.h"
 #include "ophuf.h"
 
-#include "rank.hpp"
+//#include "rank.hpp"
 
 using namespace std;
 
@@ -210,7 +210,7 @@ private:
     int8_t first_suffix_pos_; // negative means in suffixesU_
     int32_t last_suffix_pos_; // negative means in suffixesU_
 
-    BitVectorRank labelDense_;
+    //BitVectorRank labelDense_;
 
     //D-Labels
     uint32_t cUnbits_;

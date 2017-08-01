@@ -4,9 +4,10 @@ include_directories(${GTEST_INCLUDE_DIR})
 
 function (add_fst_test file_name )
   add_executable(${file_name} ${file_name}.cpp)
-  #target_link_libraries(${file_name} surf gtest)
-  target_link_libraries(${file_name} surf /usr/local/lib/libgtest.a /usr/local/lib/libgtest_main.a)
+  target_link_libraries(${file_name} surf gtest)
+  #target_link_libraries(${file_name} surf /usr/local/lib/libgtest.a /usr/local/lib/libgtest_main.a)
   add_test(NAME ${file_name} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${file_name})
 endfunction()
 
+add_fst_test(TestBitVector)
 add_fst_test(TestSurf)

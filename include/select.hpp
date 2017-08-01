@@ -12,7 +12,7 @@ public:
     BitVectorSelect() : basicBlockSize_(0), lut_(NULL) {};
     ~BitVectorSelect() {};
 
-    void init(uint32_t numBits, uint32_t basicBlockSize, void* addr) {
+    void initAddrAndProp(uint32_t numBits, uint32_t basicBlockSize, void* addr) {
         basicBlockSize_ = basicBlockSize;
         lut_ = (uint32_t*)addr;
         uint32_t numBlocks = numBits / basicBlockSize_;
