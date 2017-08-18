@@ -11,25 +11,28 @@ class BitVectorRank : public BitVector {
 public:
     BitVectorRank() : basicBlockSize_(0), rankLut_(NULL) {};
 
-    BitVectorRank(uint32_t basicBlockSize, vector<vector<uint64_t> > bitVectorPerLevel, vector<uint32_t> numBitsPerLevel) : BitVector(bitVectorPerLevel, numBitsPerLevel) {
+    BitVectorRank(const uint32_t basicBlockSize, const vector<vector<uint64_t> > &bitVectorPerLevel, const vector<uint32_t> &numBitsPerLevel) : BitVector(bitVectorPerLevel, numBitsPerLevel) {
 	basicBlockSize_ = basicBlockSize;
 	initRankLut();
     }
 
-    ~BitVectorRank() {};
+    ~BitVectorRank() {
+	delete[] rankLut_;
+    }
 
+    //TODO: change to zero-based
     uint32_t rank(uint32_t pos) {
         assert(pos <= numBits_);
         uint32_t wordPerBasicBlock = basicBlockSize_ / WORD_SIZE;
         uint32_t blockId = pos / basicBlockSize_;
         uint32_t offset = pos & (basicBlockSize_ - 1);
-        return rankLut_[blockId] + popcountLinear(bits_, blockId * wordPerBasicBlock, offset);
+        return (rankLut_[blockId] + popcountLinear(bits_, blockId * wordPerBasicBlock, offset));
     }
 
     uint32_t size() {
         uint32_t bitVectorMem = numBits_ / 8;
         uint32_t rankLutMem = numBits_ / basicBlockSize_ * sizeof(uint32_t);
-        return bitVectorMem + rankLutMem;
+        return (sizeof(BitVectorRank) + bitVectorMem + rankLutMem);
     }
 
 private:

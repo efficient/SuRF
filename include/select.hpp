@@ -9,38 +9,72 @@
 
 class BitVectorSelect : public BitVector {
 public:
-    BitVectorSelect() : basicBlockSize_(0), lut_(NULL) {};
-    ~BitVectorSelect() {};
+    BitVectorSelect() : sampleInterval_(0), numOnes_(0), selectLut_(NULL) {};
 
-    void initAddrAndProp(uint32_t numBits, uint32_t basicBlockSize, void* addr) {
-        basicBlockSize_ = basicBlockSize;
-        lut_ = (uint32_t*)addr;
-        uint32_t numBlocks = numBits / basicBlockSize_;
-        BitVector::init(numBits, (uint64_t*)(lut_ + numBlocks));
+    BitVectorSelect(const uint32_t sampleInterval, const vector<vector<uint64_t> > &bitVectorPerLevel, const vector<uint32_t> &numBitsPerLevel) : BitVector(bitVectorPerLevel, numBitsPerLevel) {
+	sampleInterval_ = sampleInterval;
+	initSelectLut();
     }
 
-    void initSelectLut() {
-        uint32_t numBlocks = numBits_ / basicBlockSize_;
-        uint32_t wordPerBasicBlock = basicBlockSize_ / WORD_SIZE;
-        uint32_t cumuRank = 0;
-        for (uint32_t i = 0; i < numBlocks; i++) {
-            lut_[i] = cumuRank;
-            cumuRank += popcountLinear(bits_, i * wordPerBasicBlock, basicBlockSize_);
-        }
+    ~BitVectorSelect() {
+	delete[] selectLut_;
     }
 
-    uint32_t rank(uint32_t pos) {
-        assert(pos <= numBits_);
-        uint32_t wordPerBasicBlock = basicBlockSize_ / WORD_SIZE;
-        uint32_t blockId = pos / basicBlockSize_;
-        uint32_t offset = pos & (basicBlockSize_ - 1);
-        return lut_[blockId] + popcountLinear(bits_, blockId * wordPerBasicBlock, offset);
+    uint32_t select(uint32_t rank) {
+	assert(rank < numOnes_);
+	uint32_t lutIdx = rank / sampleInterval_;
+	uint32_t rankLeft = rank % sampleInterval_;
+
+	uint32_t pos = selectLut_[lutIdx];
+
+	if (rankLeft == 0)
+	    return pos;
+
+	uint32_t wordId = pos / WORD_SIZE;
+	uint32_t offset = pos % WROD_SIZE;
+	uint64_t word = bits_[wordId] << offset >> offset; //zero-out most significant bits
+	uint32_t OnesCountInWord = popcount(word);
+	while (OnesCountInWord < rankLeft) {
+	    wordId++;
+	    word = bits_[wordId];
+	    rankLeft -= OnesCountInWord;
+	}
+
+	return (wordId * WORD_SIZE + select64_popcount_search(word, rankLeft));
     }
 
     uint32_t size() {
         uint32_t bitVectorMem = numBits_ / 8;
         uint32_t selectLutMem = (numOnes_ / sampleInterval_ + 1) * sizeof(uint32_t);
         return bitVectorMem + selectLutMem;
+    }
+
+private:
+    void initSelectLut() {
+	uint32_t numWords = numBits_ / WORD_SIZE;
+	if (numBits % WORD_SIZE != 0)
+	    numWords++;
+
+	vector<uint32_t> selectLutVector;
+	selectLutVector.push_back(0); //ASSERT: first bit is 1
+	uint32_t samplingOnes = sampleInterval_;
+	uint32_t cumuOnesUptoWord = 0;
+	for (uint32_t i = 0; i < numWords; i++) {
+	    uint32_t numOnesInWord = popcount(bits_[i]);
+	    while (samplingOnes <= (cumuOnesUptoWord + numOnesInWord)) {
+		int diff = samplingOnes - cumuOnesUptoWord;
+		uint32_t resultPos = i * WORD_SIZE + select64_popcount_search(bits_[i], diff);
+		selectLutVector.push_back(resultPos);
+		samplingOnes += sampleInterval_;
+	    }
+	    cumuOnesUptoWord += popcount(bits_[i]);
+	}
+
+	numOnes_ = cumuOnesUptoWord;
+	uint32_t numSamples = selectLutVector.size();
+	selectLut_ = new uint32_t[numSamples];
+	for (uint32_t i = 0; i < numSamples; i++)
+	    selectLut_ = selectLutVector[i];
     }
 
 private:

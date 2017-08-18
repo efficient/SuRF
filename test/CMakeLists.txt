@@ -9,5 +9,6 @@ function (add_fst_test file_name )
   add_test(NAME ${file_name} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${file_name})
 endfunction()
 
+add_fst_test(TestLoudsSparseBuilder)
 add_fst_test(TestBitVector)
 add_fst_test(TestSurf)
