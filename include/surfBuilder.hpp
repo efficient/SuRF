@@ -6,25 +6,26 @@
 
 #include "config.hpp"
 #include "hash.h"
-#include "SuRF.hpp"
+#include "surf.hpp"
 
 using namespace std;
 
 class SuRFBuilder {
 public: 
-    SuRFBuilder() : cutoffLevel_(0), suffixConfig_(0) {};
-    SuRFBuilder(SuffixType suffixConfig) : cutoffLevel_(0), suffixConfig_(suffixConfig) {};
+    SuRFBuilder() : sparseStartLevel_(0), suffixConfig_(SuffixType_None) {};
+    SuRFBuilder(SuffixType suffixConfig) : sparseStartLevel_(0), suffixConfig_(suffixConfig) {};
 
     ~SuRFBuilder() {};
 
-    static SuRF* build(const vector<string> &keys);
+    void buildVectors(const vector<string> &keys);
+    static SuRF* build(const vector<string> &keys, SuffixType suffixConfig);
 
 private:
-    uint32_t getTreeHeight() {
+    uint32_t getTreeHeight() const {
 	return (uint32_t)labels_.size();
     }
 
-    uint32_t getNumItems(uint32_t level) {
+    uint32_t getNumItems(const uint32_t level) const {
 	return (uint32_t)labels_[level].size();
     }
 
@@ -71,9 +72,9 @@ private:
     }
 
     bool isCharCommonPrefix(const char c, const uint32_t level) const {
-	return level < getTreeHeight() 
-	    && !isLastItemTerminator_[level] 
-	    && c == labels_[level].back();
+	return (level < getTreeHeight())
+	    && (!isLastItemTerminator_[level])
+	    && (c == labels_[level].back());
     }
 
     uint32_t skipCommonPrefix(const string &key) {
@@ -178,7 +179,7 @@ private:
 	return mem;
     }
 
-    void determineCuttofLevel() {
+    void determineCutoffLevel() {
 	uint32_t cutoffLevel = 0;
 	uint64_t denseMem = computeDenseMem(cutoffLevel);
 	uint64_t sparseMem = computeSparseMem(cutoffLevel);
@@ -191,17 +192,17 @@ private:
     }
 
     void initDenseVectors(const uint32_t level) {
-	bitMap_labels_.push_back(vector<uint64_t>);
-	bitMap_childIndicatorBits_.push_back(vector<uint64_t>);
-	prefixKeysIndicatorBits.push_back(vector<uint64_t>);
+	bitmap_labels_.push_back(vector<uint64_t>());
+	bitmap_childIndicatorBits_.push_back(vector<uint64_t>());
+	prefixKeyIndicatorBits_.push_back(vector<uint64_t>());
 
 	for (uint32_t nc = 0; nc < nodeCount_[level]; nc++) {
 	    for (int i = 0; i < 4; i++) {
-		bitMap_labels_[level].push_back(0);
-		bitMap_childIndicatorBits_[level].push_back(0);
+		bitmap_labels_[level].push_back(0);
+		bitmap_childIndicatorBits_[level].push_back(0);
 	    }
 	    if (nc % 64 == 0)
-		prefixKeyIndicatorBits[level].push_back(0);
+		prefixKeyIndicatorBits_[level].push_back(0);
 	}
     }
 
@@ -221,9 +222,9 @@ private:
 
     void fillInLabelAndChildIndicator(const uint32_t level, const position_t nodeNum, const position_t pos) {
 	uint8_t label = labels_[level][pos];
-	setBit(bitMap_labels_[level], nodeNum * 256 + label);
+	setBit(bitmap_labels_[level], nodeNum * 256 + label);
 	if (readBit(childIndicatorBits_[level], pos))
-	    setBit(bitMap_childIndicatorBits_[level], nodeNum * 256 + label);
+	    setBit(bitmap_childIndicatorBits_[level], nodeNum * 256 + label);
     }
 
     bool isStartOfNode(const uint32_t level, const position_t pos) const {
@@ -236,8 +237,8 @@ private:
     }
 
     void fillInDenseVectors() {
-	for (uint32_t level = 0; level < sparseStartLevel; level++) {
-	    initDenseVectors();
+	for (uint32_t level = 0; level < sparseStartLevel_; level++) {
+	    initDenseVectors(level);
 	    position_t nodeNum = 0;
 	    fillInLabelAndChildIndicator(level, nodeNum, 0);
 	    for (position_t pos = 1; pos < getNumItems(level); pos++) {
@@ -254,8 +255,8 @@ private:
     }
 
 private:
-    vector<vector<uint64_t> > bitMap_labels_;
-    vector<vector<uint64_t> > bitMap_childIndicatorBits_;
+    vector<vector<uint64_t> > bitmap_labels_;
+    vector<vector<uint64_t> > bitmap_childIndicatorBits_;
     vector<vector<uint64_t> > prefixKeyIndicatorBits_;
 
     vector<vector<uint8_t> > labels_;
@@ -272,13 +273,19 @@ private:
     SuffixType suffixConfig_;
 };
 
-static SuRF* SuRFBuilder::build(const vector<string> &keys) {
+void SuRFBuilder::buildVectors(const vector<string> &keys) {
     assert(keys.size() > 0);
+
     buildSparsePerLevel(keys);
     determineCutoffLevel();
     fillInDenseVectors();
+}
 
-    SuRF* filter = new SuRF(bitMap_labels, bitMap_childIndicatorBits_, prefixKeyIndicatorBits_, labels_, childIndicatorBits_, loudsBits_, suffixes_, sparseStartLevel_, nodeCount_, suffixConfig_);
+SuRF* SuRFBuilder::build(const vector<string> &keys, SuffixType suffixConfig) {
+    SuRFBuilder builder(suffixConfig);
+    builder.buildVectors(keys);
+
+    SuRF* filter = new SuRF(builder.bitmap_labels_, builder.bitmap_childIndicatorBits_, builder.prefixKeyIndicatorBits_, builder.labels_, builder.childIndicatorBits_, builder.loudsBits_, builder.suffixes_, builder.nodeCount_, builder.sparseStartLevel_, builder.suffixConfig_);
     return filter;
 }
 

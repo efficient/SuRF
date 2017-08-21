@@ -1,9 +1,10 @@
-#ifdef SELECT_H_
+#ifndef SELECT_H_
 #define SELECT_H_
 
 #include <assert.h>
 #include <vector>
 
+#include "config.hpp"
 #include "popcount.h"
 #include "bitVector.hpp"
 
@@ -31,7 +32,7 @@ public:
 	    return pos;
 
 	uint32_t wordId = pos / WORD_SIZE;
-	uint32_t offset = pos % WROD_SIZE;
+	uint32_t offset = pos % WORD_SIZE;
 	uint64_t word = bits_[wordId] << offset >> offset; //zero-out most significant bits
 	uint32_t OnesCountInWord = popcount(word);
 	while (OnesCountInWord < rankLeft) {
@@ -52,7 +53,7 @@ public:
 private:
     void initSelectLut() {
 	uint32_t numWords = numBits_ / WORD_SIZE;
-	if (numBits % WORD_SIZE != 0)
+	if (numBits_ % WORD_SIZE != 0)
 	    numWords++;
 
 	vector<uint32_t> selectLutVector;
@@ -74,7 +75,7 @@ private:
 	uint32_t numSamples = selectLutVector.size();
 	selectLut_ = new uint32_t[numSamples];
 	for (uint32_t i = 0; i < numSamples; i++)
-	    selectLut_ = selectLutVector[i];
+	    selectLut_[i] = selectLutVector[i];
     }
 
 private:

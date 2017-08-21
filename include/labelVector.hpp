@@ -15,9 +15,9 @@ public:
     LabelVector(const vector<vector<uint8_t> > &labelsPerLevel) {
 	numBytes_ = 0;
 	for (int level = 0; level < labelsPerLevel.size(); level++)
-	    numBytes += labelsPerLevel[level].size();
+	    numBytes_ += labelsPerLevel[level].size();
 
-	labels_ = new uint8_t[numBytes];
+	labels_ = new uint8_t[numBytes_];
 
 	position_t pos = 0;
 	for (int level = 0; level < labelsPerLevel.size(); level++) {
@@ -81,7 +81,7 @@ bool LabelVector::simdSearch(const uint8_t target, position_t &pos, const positi
     while ((numLabelsLeft >> 4) > 0) {
 	uint8_t* startPtr = labels_ + pos + numLabelsSearched;
 	__m128i cmp = _mm_cmpeq_epi8(_mm_set1_epi8(target), 
-				     _mm_loadu_si128(reinterpret_case<__m128i*>(startPtr)));
+				     _mm_loadu_si128(reinterpret_cast<__m128i*>(startPtr)));
 	unsigned checkBits = _mm_movemask_epi8(cmp);
 	if (checkBits) {
 	    pos += (numLabelsSearched + __builtin_ctz(checkBits));
@@ -94,7 +94,7 @@ bool LabelVector::simdSearch(const uint8_t target, position_t &pos, const positi
     if (numLabelsLeft > 0) {
 	uint8_t* startPtr = labels_ + pos + numLabelsSearched;
 	__m128i cmp = _mm_cmpeq_epi8(_mm_set1_epi8(target), 
-				     _mm_loadu_si128(reinterpret_case<__m128i*>(startPtr)));
+				     _mm_loadu_si128(reinterpret_cast<__m128i*>(startPtr)));
 	unsigned leftoverBitsMask = (1 << numLabelsLeft) - 1;
 	unsigned checkBits = _mm_movemask_epi8(cmp) & leftoverBitsMask;
 	if (checkBits) {

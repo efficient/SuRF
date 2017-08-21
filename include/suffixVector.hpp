@@ -11,16 +11,16 @@ using namespace std;
 //Current version only supports one-byte suffixes
 class SuffixVector {
 public:
-    SuffixVector() : type_(SuffixType_None), numBytes(0), suffixes(NULL) {};
+    SuffixVector() : type_(SuffixType_None), numBytes_(0), suffixes_(NULL) {};
 
     SuffixVector(const SuffixType type, const vector<vector<uint8_t> > &suffixesPerLevel) {
 	type_ = type;
 
 	numBytes_ = 0;
 	for (int level = 0; level < suffixesPerLevel.size(); level++)
-	    numBytes += suffixesPerLevel[level].size();
+	    numBytes_ += suffixesPerLevel[level].size();
 
-	suffixes_ = new uint8_t[numBytes];
+	suffixes_ = new uint8_t[numBytes_];
 
 	position_t pos = 0;
 	for (int level = 0; level < suffixesPerLevel.size(); level++) {

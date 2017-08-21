@@ -1,5 +1,5 @@
-#ifndef SURFSTATIC_H_
-#define SURFSTATIC_H_
+#ifndef SURF_H_
+#define SURF_H_
 
 #include <string>
 
@@ -13,8 +13,8 @@ class SuRF {
 public:
     SuRF() {};
 
-    SuRF(const vector<vector<uint64_t> > &bitMap_labelsPL,
-	 const vector<vector<uint64_t> > &bitMap_childIndicatorBitsPL,
+    SuRF(const vector<vector<uint64_t> > &bitmap_labelsPL,
+	 const vector<vector<uint64_t> > &bitmap_childIndicatorBitsPL,
 	 const vector<vector<uint64_t> > &prefixKeyIndicatorBitsPL,
 	 const vector<vector<uint8_t> > &labelsPL,
 	 const vector<vector<uint64_t> > &childIndicatorBitsPL,
@@ -23,7 +23,7 @@ public:
 	 const vector<uint32_t> &nodeCountPL,
 	 const uint32_t sparseStartLevel,
 	 const SuffixType suffixConfig) {
-	loudsDense_ = new LoudsDense(bitMap_labelsPL, bitMap_childIndicatorBitsPL, prefixKeyIndicatorBitsPL, suffixesPL, suffixConfig);
+	loudsDense_ = new LoudsDense(bitmap_labelsPL, bitmap_childIndicatorBitsPL, prefixKeyIndicatorBitsPL, suffixesPL, nodeCountPL, suffixConfig);
 	loudsSparse_ = new LoudsSparse(labelsPL, childIndicatorBitsPL, loudsBitsPL, suffixesPL, nodeCountPL, sparseStartLevel, suffixConfig);
     }
 
@@ -55,8 +55,8 @@ bool SuRF::lookupKey(const string &key) {
 bool SuRF::lookupRange(const string &leftKey, const string &rightKey) {
     position_t leftConnectPos = 0;
     position_t rightConnectPos = 0;
-    if (!loudsDense_->lookupRange(key, leftConnectPos, rightConnectPos))
-	return loudsSparse_->lookupRange(key, leftConnectPos, rightConnectPos);
+    if (!loudsDense_->lookupRange(leftKey, rightKey, leftConnectPos, rightConnectPos))
+	return loudsSparse_->lookupRange(leftKey, rightKey, leftConnectPos, rightConnectPos);
     return true;
 }
 
@@ -64,8 +64,8 @@ uint32_t SuRF::countRange(const string &leftKey, const string &rightKey) {
     uint32_t count = 0;
     position_t leftConnectPos = 0;
     position_t rightConnectPos = 0;
-    count += loudsDense_->countRange(key, leftConnectPos, rightConnectPos);
-    count += loudsSparse_->countRange(key, leftConnectPos, rightConnectPos);
+    count += loudsDense_->countRange(leftKey, rightKey, leftConnectPos, rightConnectPos);
+    count += loudsSparse_->countRange(leftKey, rightKey, leftConnectPos, rightConnectPos);
     return count;
 }
 
@@ -80,3 +80,4 @@ uint64_t SuRF::getMemoryUsage() {
     return (sizeof(SuRF) + loudsDense_->getMemoryUsage() + loudsSparse_->getMemoryUsage());
 }
 
+#endif

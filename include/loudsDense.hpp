@@ -34,8 +34,8 @@ public:
     uint64_t getMemoryUsage();
 
 private:
-    position_t getChildNodeNum(position_t pos) const;
-    position_t getSuffixPos(position_t pos) const;
+    position_t getChildNodeNum(const position_t pos) const;
+    position_t getSuffixPos(const position_t nodeNum, const position_t pos) const;
 
 private:
     static const position_t NODE_FANOUT = 256;
@@ -68,12 +68,12 @@ LoudsDense::LoudsDense(const vector<vector<uint64_t> > &bitmap_labelsPL,
 }
 
 //TODO: need check off-by-one
-position_t LoudsDense::getChildNodeNum(position_t pos) const {
+position_t LoudsDense::getChildNodeNum(const position_t pos) const {
     return childIndicatorBitmaps_->rank(pos);
 }
 
 //TODO: need check off-by-one
-position_t LoudsDense::getSuffixPos(position_t nodeNum, position_t pos) const {
+position_t LoudsDense::getSuffixPos(const position_t nodeNum, const position_t pos) const {
     return (labelBitmaps_->rank(pos)
 	    - childIndicatorBitmaps_->rank(pos)
 	    + prefixKeyIndicatorBits_->rank(nodeNum)
@@ -109,11 +109,11 @@ bool LoudsDense::lookupRange(const string &leftKey, const string &rightKey, posi
     return true;
 }
 
-uint32_t LoudsDense::countRange(const string &leftKey, const string rightKey, position_t &out_leftPos, position_t &out_rightPos) const {
+uint32_t LoudsDense::countRange(const string &leftKey, const string &rightKey, position_t &out_leftPos, position_t &out_rightPos) const {
     return 0;
 }
 
-bool LoudsDense::getLowerBoundKey(const string &key, const string &outputKey, position_t &out_pos) const {
+bool LoudsDense::getLowerBoundKey(const string &key, string &outputKey, position_t &out_pos) const {
     return true;
 }
 

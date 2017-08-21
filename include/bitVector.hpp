@@ -62,7 +62,7 @@ public:
 	//first word left-over bits
 	uint64_t testBits = bits_[wordId] << offset;
 	if (testBits > 0)
-	    return (distance + builtin_clzll(textBits));
+	    return (distance + __builtin_clzll(testBits));
 	else
 	    distance += (64 - offset);
 
@@ -71,7 +71,7 @@ public:
 	    if (wordId >= numWords()) return distance;
 	    testBits = bits_[wordId];
 	    if (testBits > 0)
-		return (distance + builtin_clzll(textBits));
+		return (distance + __builtin_clzll(testBits));
 	    distance += 64;
 	}
     }
