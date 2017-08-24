@@ -12,8 +12,8 @@
 
 #include "common.h"
 #include "popcount.h"
-#include "hash.h"
-#include "ophuf.h"
+#include "hash.hpp"
+#include "ophuf.hpp"
 
 //#include "rank.hpp"
 

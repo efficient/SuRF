@@ -1,87 +1,96 @@
 #ifndef SELECT_H_
 #define SELECT_H_
 
+#include "bitvector.hpp"
+
 #include <assert.h>
+
 #include <vector>
 
 #include "config.hpp"
 #include "popcount.h"
-#include "bitVector.hpp"
+
+namespace surf {
 
 class BitVectorSelect : public BitVector {
 public:
-    BitVectorSelect() : sampleInterval_(0), numOnes_(0), selectLut_(NULL) {};
+    BitVectorSelect() : sample_interval_(0), num_ones_(0), select_lut_(NULL) {};
 
-    BitVectorSelect(const uint32_t sampleInterval, const vector<vector<uint64_t> > &bitVectorPerLevel, const vector<uint32_t> &numBitsPerLevel) : BitVector(bitVectorPerLevel, numBitsPerLevel) {
-	sampleInterval_ = sampleInterval;
+    BitVectorSelect(const position_t sample_interval, 
+		    const std::vector<std::vector<word_t> > &bitvector_per_level, 
+		    const std::vector<position_t> &num_bits_per_level) 
+	: BitVector(bitvector_per_level, num_bits_per_level) {
+	sample_interval_ = sample_interval;
 	initSelectLut();
     }
 
     ~BitVectorSelect() {
-	delete[] selectLut_;
+	delete[] select_lut_;
     }
 
-    uint32_t select(uint32_t rank) {
-	assert(rank < numOnes_);
-	uint32_t lutIdx = rank / sampleInterval_;
-	uint32_t rankLeft = rank % sampleInterval_;
+    position_t select(position_t rank) {
+	assert(rank < num_ones_);
+	position_t lut_idx = rank / sample_interval_;
+	position_t rank_left = rank % sample_interval_;
 
-	uint32_t pos = selectLut_[lutIdx];
+	position_t pos = select_lut_[lut_idx];
 
-	if (rankLeft == 0)
+	if (rank_left == 0)
 	    return pos;
 
-	uint32_t wordId = pos / WORD_SIZE;
-	uint32_t offset = pos % WORD_SIZE;
-	uint64_t word = bits_[wordId] << offset >> offset; //zero-out most significant bits
-	uint32_t OnesCountInWord = popcount(word);
-	while (OnesCountInWord < rankLeft) {
-	    wordId++;
-	    word = bits_[wordId];
-	    rankLeft -= OnesCountInWord;
+	position_t word_id = pos / kWordSize;
+	position_t offset = pos % kWordSize;
+	word_t word = bits_[word_id] << offset >> offset; //zero-out most significant bits
+	position_t ones_count_in_word = popcount(word);
+	while (ones_count_in_word < rank_left) {
+	    word_id++;
+	    word = bits_[word_id];
+	    rank_left -= ones_count_in_word;
 	}
 
-	return (wordId * WORD_SIZE + select64_popcount_search(word, rankLeft));
+	return (word_id * kWordSize + select64_popcount_search(word, rank_left));
     }
 
-    uint32_t size() {
-        uint32_t bitVectorMem = numBits_ / 8;
-        uint32_t selectLutMem = (numOnes_ / sampleInterval_ + 1) * sizeof(uint32_t);
-        return bitVectorMem + selectLutMem;
+    position_t size() {
+        position_t bitvector_mem = num_bits_ / 8;
+        position_t select_lut_mem = (num_ones_ / sample_interval_ + 1) * sizeof(uint32_t);
+        return bitvector_mem + select_lut_mem;
     }
 
 private:
     void initSelectLut() {
-	uint32_t numWords = numBits_ / WORD_SIZE;
-	if (numBits_ % WORD_SIZE != 0)
-	    numWords++;
+	position_t num_words = num_bits_ / kWordSize;
+	if (num_bits_ % kWordSize != 0)
+	    num_words++;
 
-	vector<uint32_t> selectLutVector;
-	selectLutVector.push_back(0); //ASSERT: first bit is 1
-	uint32_t samplingOnes = sampleInterval_;
-	uint32_t cumuOnesUptoWord = 0;
-	for (uint32_t i = 0; i < numWords; i++) {
-	    uint32_t numOnesInWord = popcount(bits_[i]);
-	    while (samplingOnes <= (cumuOnesUptoWord + numOnesInWord)) {
-		int diff = samplingOnes - cumuOnesUptoWord;
-		uint32_t resultPos = i * WORD_SIZE + select64_popcount_search(bits_[i], diff);
-		selectLutVector.push_back(resultPos);
-		samplingOnes += sampleInterval_;
+	std::vector<position_t> select_lut_vector;
+	select_lut_vector.push_back(0); //ASSERT: first bit is 1
+	position_t sampling_ones = sample_interval_;
+	position_t cumu_ones_upto_word = 0;
+	for (position_t i = 0; i < num_words; i++) {
+	    position_t num_ones_in_word = popcount(bits_[i]);
+	    while (sampling_ones <= (cumu_ones_upto_word + num_ones_in_word)) {
+		int diff = sampling_ones - cumu_ones_upto_word;
+		position_t result_pos = i * kWordSize + select64_popcount_search(bits_[i], diff);
+		select_lut_vector.push_back(result_pos);
+		sampling_ones += sample_interval_;
 	    }
-	    cumuOnesUptoWord += popcount(bits_[i]);
+	    cumu_ones_upto_word += popcount(bits_[i]);
 	}
 
-	numOnes_ = cumuOnesUptoWord;
-	uint32_t numSamples = selectLutVector.size();
-	selectLut_ = new uint32_t[numSamples];
-	for (uint32_t i = 0; i < numSamples; i++)
-	    selectLut_[i] = selectLutVector[i];
+	num_ones_ = cumu_ones_upto_word;
+	position_t num_samples = select_lut_vector.size();
+	select_lut_ = new position_t[num_samples];
+	for (position_t i = 0; i < num_samples; i++)
+	    select_lut_[i] = select_lut_vector[i];
     }
 
 private:
-    uint32_t sampleInterval_;
-    uint32_t numOnes_;
-    uint32_t* selectLut_; //select look-up table
+    position_t sample_interval_;
+    position_t num_ones_;
+    position_t* select_lut_; //select look-up table
 };
+
+} // namespace surf
 
 #endif // SELECT_H_

@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
+namespace surf {
+
 #define L8 0x0101010101010101ULL // Every lowest 8th bit set: 00000001...
 #define G2 0xAAAAAAAAAAAAAAAAULL // Every highest 2nd bit: 101010...
 #define G4 0x3333333333333333ULL // 00110011 ... used to group the sum of 4 bits.
@@ -186,5 +188,7 @@ inline uint64_t selectLinear(uint64_t* bits, uint64_t length, uint64_t x, uint64
     // We're now certain that the bit we want is stored in bits[x+i]
     return i*64 + select64(bits[x+i], k);
 }
+
+} // namespace surf
 
 #endif /* _FASTRANK_POPCOUNT_H_ */

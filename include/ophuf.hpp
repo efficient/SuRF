@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-using namespace std;
+namespace surf {
 
 //******************************************************
 // Order-preserving Huffman Encoding
@@ -18,7 +18,7 @@ typedef struct ht_node {
     ht_node* rightChild;
 } ht_node;
 
-inline bool build_ht(vector<string> &keys, uint8_t* hufLen, char* hufTable) {
+inline bool build_ht(std::vector<std::string> &keys, uint8_t* hufLen, char* hufTable) {
     if (!hufLen || !hufTable) {
 	cout << "Error: unallocated buffer(s)\n";
 	return false;
@@ -36,7 +36,7 @@ inline bool build_ht(vector<string> &keys, uint8_t* hufLen, char* hufTable) {
 	freq[i] = 0;
 
     for (int k = 0; k < (int)keys.size(); k++) {
-	string key = keys[k];
+	std::string key = keys[k];
 	for (int j = 0; j < (int)key.length(); j++)
 	    freq[(uint8_t)key[j]]++;
     }
@@ -44,9 +44,9 @@ inline bool build_ht(vector<string> &keys, uint8_t* hufLen, char* hufTable) {
     //for (int i = 0; i < 256; i ++)
     //cout << i << ": " << freq[i] << "\n";
 
-    vector<ht_node*> nodeList;
-    vector<ht_node*> tempNodeList;
-    vector<ht_node*> allNodeList;
+    std::vector<ht_node*> nodeList;
+    std::vector<ht_node*> tempNodeList;
+    std::vector<ht_node*> allNodeList;
     //init huffman tree leaf nodes
     uint16_t c = 0;
     for (int i = 0; i < 256; i++) {
@@ -199,7 +199,7 @@ inline void print_ht(uint8_t* hufLen, char* hufTable) {
     }
 }
 
-inline bool encode(string &key_huf, string &key, uint8_t* hufLen, char* hufTable) {
+inline bool encode(std::string &key_huf, std::string &key, uint8_t* hufLen, char* hufTable) {
     //compute code length
     int code_len_bit = 0;
     for (int i = 0; i < key.size(); i++) {
@@ -275,9 +275,9 @@ inline bool encode(string &key_huf, string &key, uint8_t* hufLen, char* hufTable
     return true;
 }
 
-inline bool encodeList(vector<string> &keys_huf, vector<string> &keys, uint8_t* hufLen, char* hufTable) {
+inline bool encodeList(std::vector<std::string> &keys_huf, std::vector<std::string> &keys, uint8_t* hufLen, char* hufTable) {
     for (int i = 0; i < (int)keys.size(); i++) {
-	string key_huf;
+	std::string key_huf;
 	if (!encode(key_huf, keys[i], hufLen, hufTable)) return false;
 	keys_huf.push_back(key_huf);
 
@@ -293,5 +293,7 @@ inline bool encodeList(vector<string> &keys_huf, vector<string> &keys, uint8_t* 
 
     return true;
 }
+
+} // namespace surf
 
 #endif // OPHUF_H_

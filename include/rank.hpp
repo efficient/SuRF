@@ -1,55 +1,65 @@
 #ifndef RANK_H_
 #define RANK_H_
 
+#include "bitvector.hpp"
+
 #include <assert.h>
+
 #include <vector>
 
 #include "popcount.h"
-#include "bitVector.hpp"
+
+namespace surf {
 
 class BitVectorRank : public BitVector {
 public:
-    BitVectorRank() : basicBlockSize_(0), rankLut_(NULL) {};
+    BitVectorRank() : basic_block_size_(0), rank_lut_(NULL) {};
 
-    BitVectorRank(const uint32_t basicBlockSize, const vector<vector<uint64_t> > &bitVectorPerLevel, const vector<uint32_t> &numBitsPerLevel) : BitVector(bitVectorPerLevel, numBitsPerLevel) {
-	basicBlockSize_ = basicBlockSize;
+    BitVectorRank(const position_t basic_block_size, 
+		  const std::vector<std::vector<word_t> > &bitvector_per_level, 
+		  const std::vector<position_t> &num_bits_per_level) 
+	: BitVector(bitvector_per_level, num_bits_per_level) {
+	basic_block_size_ = basic_block_size;
 	initRankLut();
     }
 
     ~BitVectorRank() {
-	delete[] rankLut_;
+	delete[] rank_lut_;
     }
 
     //TODO: change to zero-based
-    uint32_t rank(uint32_t pos) {
-        assert(pos <= numBits_);
-        uint32_t wordPerBasicBlock = basicBlockSize_ / WORD_SIZE;
-        uint32_t blockId = pos / basicBlockSize_;
-        uint32_t offset = pos & (basicBlockSize_ - 1);
-        return (rankLut_[blockId] + popcountLinear(bits_, blockId * wordPerBasicBlock, offset));
+    position_t rank(position_t pos) {
+        assert(pos <= num_bits_);
+        position_t word_per_basic_block = basic_block_size_ / kWordSize;
+        position_t block_id = pos / basic_block_size_;
+        position_t offset = pos & (basic_block_size_ - 1);
+        return (rank_lut_[block_id] 
+		+ popcountLinear(bits_, block_id * word_per_basic_block, offset));
     }
 
-    uint32_t size() {
-        uint32_t bitVectorMem = numBits_ / 8;
-        uint32_t rankLutMem = numBits_ / basicBlockSize_ * sizeof(uint32_t);
-        return (sizeof(BitVectorRank) + bitVectorMem + rankLutMem);
+    position_t size() {
+        position_t bitvector_mem = num_bits_ / 8;
+        position_t rank_lut_mem = num_bits_ / basic_block_size_ * sizeof(uint32_t);
+        return (sizeof(BitVectorRank) + bitvector_mem + rank_lut_mem);
     }
 
 private:
     void initRankLut() {
-        uint32_t wordPerBasicBlock = basicBlockSize_ / WORD_SIZE;
-        uint32_t numBlocks = numBits_ / basicBlockSize_;
-	rankLut_ = new uint32_t[numBlocks];
+        position_t word_per_basic_block = basic_block_size_ / kWordSize;
+        position_t num_blocks = num_bits_ / basic_block_size_;
+	rank_lut_ = new position_t[num_blocks];
 
-        uint32_t cumuRank = 0;
-        for (uint32_t i = 0; i < numBlocks; i++) {
-            rankLut_[i] = cumuRank;
-            cumuRank += popcountLinear(bits_, i * wordPerBasicBlock, basicBlockSize_);
+        position_t cumu_rank = 0;
+        for (position_t i = 0; i < num_blocks; i++) {
+            rank_lut_[i] = cumu_rank;
+            cumu_rank += popcountLinear(bits_, i * word_per_basic_block, basic_block_size_);
         }
     }
 
-    uint32_t basicBlockSize_;
-    uint32_t* rankLut_; //rank look-up table
+    position_t basic_block_size_;
+    position_t* rank_lut_; //rank look-up table
 };
+
+} // namespace surf
 
 #endif // RANK_H_

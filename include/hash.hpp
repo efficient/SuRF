@@ -3,7 +3,7 @@
 
 #include <string>
 
-using namespace std;
+namespace surf {
 
 //******************************************************
 //HASH FUNCTION FROM LEVELDB
@@ -45,7 +45,7 @@ inline uint32_t Hash(const char* data, size_t n, uint32_t seed) {
     return h;
 }
 
-inline uint32_t suffixHash(const string &key) {
+inline uint32_t suffixHash(const std::string &key) {
     return Hash(key.c_str(), key.size(), 0xbc9f1d34);
 }
 
@@ -53,4 +53,6 @@ inline uint32_t suffixHash(const char* key, const int keylen) {
     return Hash(key, keylen, 0xbc9f1d34);
 }
 
-#endif  // HASH_H_
+} // namespace surf
+
+#endif // HASH_H_

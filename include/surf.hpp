@@ -4,80 +4,82 @@
 #include <string>
 
 #include "config.hpp"
-#include "loudsDense.hpp"
-#include "loudsSparse.hpp"
+#include "louds_dense.hpp"
+#include "louds_sparse.hpp"
 
-using namespace std;
+namespace surf {
 
 class SuRF {
 public:
     SuRF() {};
 
-    SuRF(const vector<vector<uint64_t> > &bitmap_labelsPL,
-	 const vector<vector<uint64_t> > &bitmap_childIndicatorBitsPL,
-	 const vector<vector<uint64_t> > &prefixKeyIndicatorBitsPL,
-	 const vector<vector<uint8_t> > &labelsPL,
-	 const vector<vector<uint64_t> > &childIndicatorBitsPL,
-	 const vector<vector<uint64_t> > &loudsBitsPL,
-	 const vector<vector<uint8_t> > &suffixesPL,
-	 const vector<uint32_t> &nodeCountPL,
-	 const uint32_t sparseStartLevel,
-	 const SuffixType suffixConfig) {
-	loudsDense_ = new LoudsDense(bitmap_labelsPL, bitmap_childIndicatorBitsPL, prefixKeyIndicatorBitsPL, suffixesPL, nodeCountPL, suffixConfig);
-	loudsSparse_ = new LoudsSparse(labelsPL, childIndicatorBitsPL, loudsBitsPL, suffixesPL, nodeCountPL, sparseStartLevel, suffixConfig);
+    SuRF(const std::vector<std::vector<word_t> > &bitmap_labels_pl,
+	 const std::vector<std::vector<word_t> > &bitmap_child_indicator_bits_pl,
+	 const std::vector<std::vector<word_t> > &prefixkey_indicator_bits_pl,
+	 const std::vector<std::vector<label_t> > &labels_pl,
+	 const std::vector<std::vector<word_t> > &child_indicator_bits_pl,
+	 const std::vector<std::vector<word_t> > &louds_bits_pl,
+	 const std::vector<std::vector<suffix_t> > &suffixes_pl,
+	 const std::vector<position_t> &node_count_pl,
+	 const level_t sparse_start_level,
+	 const SuffixType suffix_config) {
+	louds_dense_ = new LoudsDense(bitmap_labels_pl, bitmap_child_indicator_bits_pl, prefixkey_indicator_bits_pl, suffixes_pl, node_count_pl, suffix_config);
+	louds_sparse_ = new LoudsSparse(labels_pl, child_indicator_bits_pl, louds_bits_pl, suffixes_pl, node_count_pl, sparse_start_level, suffix_config);
     }
 
     ~SuRF() {
-	delete loudsDense_;
-	delete loudsSparse_;
+	delete louds_dense_;
+	delete louds_sparse_;
     }
 
-    bool lookupKey(const string &key);
-    bool lookupRange(const string &leftKey, const string &rightKey);
-    uint32_t countRange(const string &leftKey, const string &rightKey);
+    bool lookupKey(const std::string &key);
+    bool lookupRange(const std::string &left_key, const std::string &right_key);
+    uint32_t countRange(const std::string &left_key, const std::string &right_key);
 
-    bool getLowerBoundKey(const string &key, string &outKey);
+    bool getLowerBoundKey(const std::string &key, std::string *out_key);
 
     uint64_t getMemoryUsage();
 
 private:
-    LoudsDense* loudsDense_;
-    LoudsSparse* loudsSparse_;
+    LoudsDense* louds_dense_;
+    LoudsSparse* louds_sparse_;
 };
 
-bool SuRF::lookupKey(const string &key) {
-    position_t connectNodeNum = 0;
-    if (!loudsDense_->lookupKey(key, connectNodeNum))
-	return loudsSparse_->lookupKey(key, connectNodeNum);
+bool SuRF::lookupKey(const std::string &key) {
+    position_t connect_node_num = 0;
+    if (!louds_dense_->lookupKey(key, connect_node_num))
+	return louds_sparse_->lookupKey(key, connect_node_num);
     return true;
 }
 
-bool SuRF::lookupRange(const string &leftKey, const string &rightKey) {
-    position_t leftConnectPos = 0;
-    position_t rightConnectPos = 0;
-    if (!loudsDense_->lookupRange(leftKey, rightKey, leftConnectPos, rightConnectPos))
-	return loudsSparse_->lookupRange(leftKey, rightKey, leftConnectPos, rightConnectPos);
+bool SuRF::lookupRange(const std::string &left_key, const std::string &right_key) {
+    position_t left_connect_pos = 0;
+    position_t right_connect_pos = 0;
+    if (!louds_dense_->lookupRange(left_key, right_key, left_connect_pos, right_connect_pos))
+	return louds_sparse_->lookupRange(left_key, right_key, left_connect_pos, right_connect_pos);
     return true;
 }
 
-uint32_t SuRF::countRange(const string &leftKey, const string &rightKey) {
+uint32_t SuRF::countRange(const std::string &left_key, const std::string &right_key) {
     uint32_t count = 0;
-    position_t leftConnectPos = 0;
-    position_t rightConnectPos = 0;
-    count += loudsDense_->countRange(leftKey, rightKey, leftConnectPos, rightConnectPos);
-    count += loudsSparse_->countRange(leftKey, rightKey, leftConnectPos, rightConnectPos);
+    position_t left_connect_pos = 0;
+    position_t right_connect_pos = 0;
+    count += louds_dense_->countRange(left_key, right_key, left_connect_pos, right_connect_pos);
+    count += louds_sparse_->countRange(left_key, right_key, left_connect_pos, right_connect_pos);
     return count;
 }
 
-bool SuRF::getLowerBoundKey(const string &key, string &outputKey) {
-    position_t connectPos = 0;
-    if (!loudsDense_->getLowerBoundKey(key, outputKey, connectPos))
-	return loudsSparse_->getLowerBoundKey(key, outputKey, connectPos);
+bool SuRF::getLowerBoundKey(const std::string &key, std::string *output_key) {
+    position_t connect_pos = 0;
+    if (!louds_dense_->getLowerBoundKey(key, output_key, connect_pos))
+	return louds_sparse_->getLowerBoundKey(key, output_key, connect_pos);
     return true;
 }
 
 uint64_t SuRF::getMemoryUsage() {
-    return (sizeof(SuRF) + loudsDense_->getMemoryUsage() + loudsSparse_->getMemoryUsage());
+    return (sizeof(SuRF) + louds_dense_->getMemoryUsage() + louds_sparse_->getMemoryUsage());
 }
 
-#endif
+} // namespace surf
+
+#endif // SURF_H
