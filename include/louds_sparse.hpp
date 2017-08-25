@@ -1,7 +1,6 @@
 #ifndef LOUDSSPARSE_H_
 #define LOUDSSPARSE_H_
 
-#include <vector>
 #include <string>
 
 #include "config.hpp"
@@ -9,20 +8,14 @@
 #include "rank.hpp"
 #include "select.hpp"
 #include "suffix_vector.hpp"
+#include "surf_builder.hpp"
 
 namespace surf {
 
 class LoudsSparse {
 public:
     LoudsSparse() {};
-
-    LoudsSparse(const std::vector<std::vector<label_t> > &labels_pl,
-		const std::vector<std::vector<word_t> > &child_indicator_bits_pl,
-		const std::vector<std::vector<word_t> > &louds_bits_pl,
-		const std::vector<std::vector<suffix_t> > &suffixes_pl,
-		const std::vector<position_t> &node_count_pl,
-		const level_t sparse_start_level,
-		const SuffixType suffix_config);
+    LoudsSparse(const SuRFBuilder* builder);
 
     ~LoudsSparse() {
 	delete labels_;
@@ -31,11 +24,11 @@ public:
 	delete suffixes_;
     }
 
-    bool lookupKey(const std::string &key, const position_t &in_node_num) const;
-    bool lookupRange(const std::string &left_key, const std::string &right_key, const position_t &in_left_pos, const position_t &in_right_pos) const;
-    uint32_t countRange(const std::string &left_key, const std::string &right_key, const position_t &in_left_pos, const position_t &in_right_pos) const;
+    bool lookupKey(const std::string& key, const position_t in_node_num) const;
+    bool lookupRange(const std::string& left_key, const std::string& right_key, const position_t in_left_pos, const position_t in_right_pos) const;
+    uint32_t countRange(const std::string& left_key, const std::string& right_key, const position_t in_left_pos, const position_t in_right_pos) const;
 
-    bool getLowerBoundKey(const std::string &key, std::string *output_key, const position_t in_pos) const;
+    bool getLowerBoundKey(const std::string& key, std::string* output_key, const position_t in_pos) const;
 
     uint64_t getMemoryUsage();
 
@@ -59,39 +52,25 @@ private:
     SuffixVector* suffixes_;
 };
 
-LoudsSparse::LoudsSparse(const std::vector<std::vector<label_t> > &labels_pl,
-			 const std::vector<std::vector<word_t> > &child_indicator_bits_pl,
-			 const std::vector<std::vector<word_t> > &louds_bits_pl,
-			 const std::vector<std::vector<suffix_t> > &suffixes_pl,
-			 const std::vector<position_t> &node_count_pl,
-			 const level_t sparse_start_level,
-			 const SuffixType suffix_config) {
-    height_ = labels_pl.size();
-    start_level_ = sparse_start_level;
+
+LoudsSparse::LoudsSparse(const SuRFBuilder* builder) {
+    height_ = builder->getLabels().size();
+    start_level_ = builder->getSparseStartLevel();
 
     node_count_dense_ = 0;
     for (level_t level = 0; level < start_level_; level++)
-	node_count_dense_ += node_count_pl[level];
+	node_count_dense_ += builder->getNodeCounts()[level];
 
-    child_count_dense_ = node_count_dense_ + node_count_pl[start_level_];
+    child_count_dense_ = node_count_dense_ + builder->getNodeCounts()[start_level_];
 
     std::vector<position_t> num_items_per_level;
-    for (level_t level = start_level_; level < height_; level++)
-	num_items_per_level.push_back(labels_pl[level].size() * kWordSize);
+    for (level_t level = 0; level < height_; level++)
+	num_items_per_level.push_back(builder->getLabels()[level].size() * kWordSize);
 
-    std::vector<std::vector<label_t> > labels_sparse_pl;
-    std::vector<std::vector<word_t> > child_indicator_bits_sparse_pl;
-    std::vector<std::vector<word_t> > louds_bits_sparse_pl;
-    for (level_t level = sparse_start_level; level < height_; level++) {
-	labels_sparse_pl.push_back(labels_pl[level]);
-	child_indicator_bits_sparse_pl.push_back(child_indicator_bits_pl[level]);
-	louds_bits_sparse_pl.push_back(louds_bits_pl[level]);
-    }
-
-    labels_ = new LabelVector(labels_pl);
-    child_indicator_bits_ = new BitVectorRank(kRankBasicBlockSize, child_indicator_bits_sparse_pl, num_items_per_level);
-    louds_bits_ = new BitVectorSelect(kRankBasicBlockSize, louds_bits_sparse_pl, num_items_per_level); //TODO
-    suffixes_ = new SuffixVector(suffix_config, suffixes_pl);
+    labels_ = new LabelVector(builder->getLabels(), start_level_, height_);
+    child_indicator_bits_ = new BitVectorRank(kRankBasicBlockSize, builder->getChildIndicatorBits(), num_items_per_level, start_level_, height_);
+    louds_bits_ = new BitVectorSelect(kRankBasicBlockSize, builder->getLoudsBits(), num_items_per_level, start_level_, height_); //TODO
+    suffixes_ = new SuffixVector(builder->getSuffixConfig(), builder->getSuffixes(), start_level_, height_);
 }
 
 //TODO: need check off-by-one
@@ -114,7 +93,7 @@ position_t LoudsSparse::nodeSize(const position_t pos) const {
     return louds_bits_->distanceToNextOne(pos);
 }
 
-bool LoudsSparse::lookupKey(const std::string &key, const position_t &in_node_num) const {
+bool LoudsSparse::lookupKey(const std::string& key, const position_t in_node_num) const {
     position_t node_num = in_node_num;
     position_t pos = getFirstLabelPos(node_num);
     level_t level = 0;
@@ -133,15 +112,15 @@ bool LoudsSparse::lookupKey(const std::string &key, const position_t &in_node_nu
 	return suffixes_->checkEquality(getSuffixPos(pos), key, level + 1);
 }
 
-bool LoudsSparse::lookupRange(const std::string &left_key, const std::string &right_key, const position_t &in_left_pos, const position_t &in_right_pos) const {
+bool LoudsSparse::lookupRange(const std::string& left_key, const std::string& right_key, const position_t in_left_pos, const position_t in_right_pos) const {
     return true;
 }
 
-uint32_t LoudsSparse::countRange(const std::string &left_key, const std::string &right_key, const position_t &in_left_pos, const position_t &in_right_pos) const {
+uint32_t LoudsSparse::countRange(const std::string& left_key, const std::string& right_key, const position_t in_left_pos, const position_t in_right_pos) const {
     return 0;
 }
 
-bool LoudsSparse::getLowerBoundKey(const std::string &key, std::string *output_key, const position_t in_pos) const {
+bool LoudsSparse::getLowerBoundKey(const std::string& key, std::string* output_key, const position_t in_pos) const {
     return true;
 }
 

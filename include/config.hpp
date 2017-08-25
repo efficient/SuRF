@@ -9,6 +9,8 @@ using level_t = uint32_t;
 using position_t = uint32_t;
 
 using label_t = uint8_t;
+static const position_t kFanout = 256;
+
 using suffix_t = uint8_t;
 static const suffix_t kSuffixHashMask = 0xFF;
 

@@ -16,9 +16,19 @@ public:
     BitVectorRank() : basic_block_size_(0), rank_lut_(NULL) {};
 
     BitVectorRank(const position_t basic_block_size, 
-		  const std::vector<std::vector<word_t> > &bitvector_per_level, 
-		  const std::vector<position_t> &num_bits_per_level) 
+		  const std::vector<std::vector<word_t> >& bitvector_per_level, 
+		  const std::vector<position_t>& num_bits_per_level)
 	: BitVector(bitvector_per_level, num_bits_per_level) {
+	basic_block_size_ = basic_block_size;
+	initRankLut();
+    }
+
+    BitVectorRank(const position_t basic_block_size, 
+		  const std::vector<std::vector<word_t> >& bitvector_per_level, 
+		  const std::vector<position_t>& num_bits_per_level,
+		  const level_t start_level,
+		  const level_t end_level/* non-inclusive */) 
+	: BitVector(bitvector_per_level, num_bits_per_level, start_level, end_level) {
 	basic_block_size_ = basic_block_size;
 	initRankLut();
     }

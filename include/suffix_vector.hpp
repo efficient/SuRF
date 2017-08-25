@@ -13,17 +13,18 @@ class SuffixVector {
 public:
     SuffixVector() : type_(kNone), num_bytes_(0), suffixes_(NULL) {};
 
-    SuffixVector(const SuffixType type, const std::vector<std::vector<suffix_t> > &suffixes_per_level) {
+    SuffixVector(const SuffixType type, const std::vector<std::vector<suffix_t> >& suffixes_per_level,
+		 const level_t start_level, const level_t end_level/* non-inclusive */) {
 	type_ = type;
 
 	num_bytes_ = 0;
-	for (level_t level = 0; level < suffixes_per_level.size(); level++)
+	for (level_t level = start_level; level < end_level; level++)
 	    num_bytes_ += suffixes_per_level[level].size();
 
 	suffixes_ = new suffix_t[num_bytes_];
 
 	position_t pos = 0;
-	for (level_t level = 0; level < suffixes_per_level.size(); level++) {
+	for (level_t level = start_level; level < end_level; level++) {
 	    for (position_t idx = 0; idx < suffixes_per_level[level].size(); idx++) {
 		suffixes_[pos] = suffixes_per_level[level][idx];
 		pos++;
@@ -31,11 +32,15 @@ public:
 	}
     }
 
+    SuffixVector(const SuffixType type, const std::vector<std::vector<suffix_t> >& suffixes_per_level) {
+	SuffixVector(type, suffixes_per_level, 0, suffixes_per_level.size());
+    }
+
     ~SuffixVector() {
 	delete[] suffixes_;
     }
 
-    bool checkEquality(const position_t pos, const std::string &key, const level_t level) const {
+    bool checkEquality(const position_t pos, const std::string& key, const level_t level) const {
 	assert(pos < num_bytes_);
 	switch (type_) {
 	case kHash: {

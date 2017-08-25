@@ -14,20 +14,26 @@ class LabelVector {
 public:
     LabelVector() : num_bytes_(0), labels_(NULL) {};
 
-    LabelVector(const std::vector<std::vector<label_t> > &labels_per_level) {
+    LabelVector(const std::vector<std::vector<label_t> >& labels_per_level,
+		const level_t start_level,
+		const level_t end_level/* non-inclusive */) {
 	num_bytes_ = 0;
-	for (int level = 0; level < labels_per_level.size(); level++)
+	for (int level = start_level; level < end_level; level++)
 	    num_bytes_ += labels_per_level[level].size();
 
 	labels_ = new label_t[num_bytes_];
 
 	position_t pos = 0;
-	for (level_t level = 0; level < labels_per_level.size(); level++) {
+	for (int level = start_level; level < end_level; level++) {
 	    for (position_t idx = 0; idx < labels_per_level[level].size(); idx++) {
 		labels_[pos] = labels_per_level[level][idx];
 		pos++;
 	    }
 	}
+    }
+
+    LabelVector(const std::vector<std::vector<label_t> >& labels_per_level) {
+	LabelVector(labels_per_level, 0, labels_per_level.size());
     }
 
     ~LabelVector() {
@@ -46,12 +52,12 @@ public:
 	return labels_[pos];
     }
 
-    bool search(const label_t target, position_t &pos, const position_t search_len) const;
+    bool search(const label_t target, position_t& pos, const position_t search_len) const;
 
 private:
-    bool binarySearch(const label_t target, position_t &pos, const position_t search_len) const;
-    bool simdSearch(const label_t target, position_t &pos, const position_t search_len) const;
-    bool linearSearch(const label_t target, position_t &pos, const position_t search_len) const;
+    bool binarySearch(const label_t target, position_t& pos, const position_t search_len) const;
+    bool simdSearch(const label_t target, position_t& pos, const position_t search_len) const;
+    bool linearSearch(const label_t target, position_t& pos, const position_t search_len) const;
 
 private:
     position_t num_bytes_;
@@ -59,7 +65,7 @@ private:
 };
 
 //TODO: need unit test
-bool LabelVector::binarySearch(const label_t target, position_t &pos, const position_t search_len) const {
+bool LabelVector::binarySearch(const label_t target, position_t& pos, const position_t search_len) const {
     position_t l = pos;
     position_t r = pos + search_len;
     while (l < r) {
@@ -77,7 +83,7 @@ bool LabelVector::binarySearch(const label_t target, position_t &pos, const posi
 }
 
 //TODO: need unit test
-bool LabelVector::simdSearch(const label_t target, position_t &pos, const position_t search_len) const {
+bool LabelVector::simdSearch(const label_t target, position_t& pos, const position_t search_len) const {
     position_t num_labels_searched = 0;
     position_t num_labels_left = search_len;
     while ((num_labels_left >> 4) > 0) {
@@ -109,7 +115,7 @@ bool LabelVector::simdSearch(const label_t target, position_t &pos, const positi
 }
 
 //TODO: need unit test
-bool LabelVector::linearSearch(const label_t target, position_t &pos, const position_t search_len) const {
+bool LabelVector::linearSearch(const label_t target, position_t&  pos, const position_t search_len) const {
     for (position_t i = 0; i < search_len; i++) {
 	if (target == labels_[pos + i]) {
 	    pos += i;
@@ -120,7 +126,7 @@ bool LabelVector::linearSearch(const label_t target, position_t &pos, const posi
 }
 
 //TODO: need performance test
-bool LabelVector::search(const label_t target, position_t &pos, position_t search_len) const {
+bool LabelVector::search(const label_t target, position_t& pos, position_t search_len) const {
     //skip terminator label
     if ((search_len > 1) && (labels_[pos] == kTerminator)) {
 	pos++;

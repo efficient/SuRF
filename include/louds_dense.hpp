@@ -1,25 +1,19 @@
 #ifndef LOUDSDENSE_H_
 #define LOUDSDENSE_H_
 
-#include <vector>
 #include <string>
 
 #include "config.hpp"
 #include "rank.hpp"
 #include "suffix_vector.hpp"
+#include "surf_builder.hpp"
 
 namespace surf {
 
 class LoudsDense {
 public:
     LoudsDense() {};
-
-    LoudsDense(const std::vector<std::vector<word_t> > &bitmap_labels_pl,
-	       const std::vector<std::vector<word_t> > &bitmap_child_indicator_bits_pl,
-	       const std::vector<std::vector<word_t> > &prefixkey_indicator_bits_pl,
-	       const std::vector<std::vector<suffix_t> > &suffixes_pl,
-	       const std::vector<position_t> &node_count_pl,
-	       const SuffixType suffix_config);
+    LoudsDense(const SuRFBuilder* builder);
 
     ~LoudsDense() {
 	delete label_bitmaps_;
@@ -28,11 +22,11 @@ public:
 	delete suffixes_;
     }
 
-    bool lookupKey(const std::string &key, position_t &out_node_num) const;
-    bool lookupRange(const std::string &left_key, const std::string &right_key, position_t &out_left_pos, position_t &out_right_pos) const;
-    uint32_t countRange(const std::string &left_key, const std::string &right_key, position_t &out_left_pos, position_t &out_right_pos) const;
+    bool lookupKey(const std::string& key, position_t& out_node_num) const;
+    bool lookupRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const;
+    uint32_t countRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const;
 
-    bool getLowerBoundKey(const std::string &key, std::string *output_key, position_t &out_pos) const;
+    bool getLowerBoundKey(const std::string& key, std::string* output_key, position_t& out_pos) const;
 
     uint64_t getMemoryUsage();
 
@@ -53,22 +47,19 @@ private:
     SuffixVector* suffixes_;
 };
 
-LoudsDense::LoudsDense(const std::vector<std::vector<word_t> > &bitmap_labels_pl,
-		       const std::vector<std::vector<word_t> > &bitmap_child_indicator_bits_pl,
-		       const std::vector<std::vector<word_t> > &prefixkey_indicator_bits_pl,
-		       const std::vector<std::vector<suffix_t> > &suffixes_pl,
-		       const std::vector<position_t> &node_count_pl,
-		       const SuffixType suffix_config) {
-    height_ = bitmap_labels_pl.size();
+
+LoudsDense::LoudsDense(const SuRFBuilder* builder) {
+    height_ = builder->getBitmapLabels().size();
     std::vector<position_t> num_bits_per_level;
     for (level_t level = 0; level < height_; level++)
-	num_bits_per_level.push_back(bitmap_labels_pl[level].size() * kWordSize);
+	num_bits_per_level.push_back(builder->getBitmapLabels()[level].size() * kWordSize);
 
-    label_bitmaps_ = new BitVectorRank(kRankBasicBlockSize, bitmap_labels_pl, num_bits_per_level);
-    child_indicator_bitmaps_ = new BitVectorRank(kRankBasicBlockSize, bitmap_child_indicator_bits_pl, num_bits_per_level);
-    prefixkey_indicator_bits_ = new BitVectorRank(kRankBasicBlockSize, prefixkey_indicator_bits_pl, node_count_pl);
-    suffixes_ = new SuffixVector(suffix_config, suffixes_pl);
+    label_bitmaps_ = new BitVectorRank(kRankBasicBlockSize, builder->getBitmapLabels(), num_bits_per_level);
+    child_indicator_bitmaps_ = new BitVectorRank(kRankBasicBlockSize, builder->getBitmapChildIndicatorBits(), num_bits_per_level);
+    prefixkey_indicator_bits_ = new BitVectorRank(kRankBasicBlockSize, builder->getPrefixkeyIndicatorBits(), builder->getNodeCounts());
+    suffixes_ = new SuffixVector(builder->getSuffixConfig(), builder->getSuffixes());
 }
+
 
 //TODO: need check off-by-one
 position_t LoudsDense::getChildNodeNum(const position_t pos) const {
@@ -83,7 +74,7 @@ position_t LoudsDense::getSuffixPos(const position_t node_num, const position_t 
 	    - 1);
 }
 
-bool LoudsDense::lookupKey(const std::string &key, position_t &out_node_num) const {
+bool LoudsDense::lookupKey(const std::string& key, position_t& out_node_num) const {
     position_t node_num = 0;
     position_t pos = 0;
     for (level_t level = 0; level < height_; level++) {
@@ -108,15 +99,15 @@ bool LoudsDense::lookupKey(const std::string &key, position_t &out_node_num) con
     return false;
 }
 
-bool LoudsDense::lookupRange(const std::string &left_key, const std::string &right_key, position_t &out_left_pos, position_t &out_right_pos) const {
+bool LoudsDense::lookupRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const {
     return true;
 }
 
-uint32_t LoudsDense::countRange(const std::string &left_key, const std::string &right_key, position_t &out_left_pos, position_t &out_right_pos) const {
+uint32_t LoudsDense::countRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const {
     return 0;
 }
 
-bool LoudsDense::getLowerBoundKey(const std::string &key, std::string *output_key, position_t &out_pos) const {
+bool LoudsDense::getLowerBoundKey(const std::string& key, std::string* output_key, position_t& out_pos) const {
     return true;
 }
 
