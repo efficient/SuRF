@@ -18,17 +18,9 @@ public:
 
     BitvectorSelect(const position_t sample_interval, 
 		    const std::vector<std::vector<word_t> >& bitvector_per_level, 
-		    const std::vector<position_t>& num_bits_per_level) 
-	: Bitvector(bitvector_per_level, num_bits_per_level) {
-	sample_interval_ = sample_interval;
-	initSelectLut();
-    }
-
-    BitvectorSelect(const position_t sample_interval, 
-		    const std::vector<std::vector<word_t> >& bitvector_per_level, 
 		    const std::vector<position_t>& num_bits_per_level,
-		    const level_t start_level,
-		    const level_t end_level/* non-inclusive */) 
+		    const level_t start_level = 0,
+		    const level_t end_level = 0/* non-inclusive */) 
 	: Bitvector(bitvector_per_level, num_bits_per_level, start_level, end_level) {
 	sample_interval_ = sample_interval;
 	initSelectLut();
@@ -38,10 +30,18 @@ public:
 	delete[] select_lut_;
     }
 
+    // Returns the postion of the rank-th 1 bit.
+    // posistion is zero-based; rank is one-based.
+    // E.g., for bitvector: 100101000, select(3) = 5
     position_t select(position_t rank) {
-	assert(rank < num_ones_);
+	assert(rank > 0);
+	assert(rank <= num_ones_);
 	position_t lut_idx = rank / sample_interval_;
 	position_t rank_left = rank % sample_interval_;
+	// The first slot in select_lut_ stores the position of the first 1 bit.
+	// Slot i > 0 stores the position of (i * sample_interval_)-th 1 bit
+	if (lut_idx == 0)
+	    rank_left--;
 
 	position_t pos = select_lut_[lut_idx];
 
@@ -50,24 +50,34 @@ public:
 
 	position_t word_id = pos / kWordSize;
 	position_t offset = pos % kWordSize;
+	if (offset == kWordSize - 1) {
+	    word_id++;
+	    offset = 0;
+	} else {
+	    offset++;
+	}
 	word_t word = bits_[word_id] << offset >> offset; //zero-out most significant bits
 	position_t ones_count_in_word = popcount(word);
 	while (ones_count_in_word < rank_left) {
 	    word_id++;
 	    word = bits_[word_id];
 	    rank_left -= ones_count_in_word;
+	    ones_count_in_word = popcount(word);
 	}
-
 	return (word_id * kWordSize + select64_popcount_search(word, rank_left));
     }
 
     position_t size() {
-        position_t bitvector_mem = num_bits_ / 8;
+        position_t bitvector_mem = (num_bits_ / kWordSize) * (kWordSize / 8);
+	if (num_bits_ % kWordSize == 0)
+	    bitvector_mem += (kWordSize / 8);
         position_t select_lut_mem = (num_ones_ / sample_interval_ + 1) * sizeof(uint32_t);
-        return bitvector_mem + select_lut_mem;
+        return (sizeof(BitvectorSelect) + bitvector_mem + select_lut_mem);
     }
 
 private:
+    // This function currently assumes that the first bit in the
+    // bitvector is one.
     void initSelectLut() {
 	position_t num_words = num_bits_ / kWordSize;
 	if (num_bits_ % kWordSize != 0)

@@ -20,9 +20,8 @@ public:
 	if (end_level == 0)
 	    end_level = bitvector_per_level.size();
 	computeTotalNumBits(num_bits_per_level, start_level, end_level);
-	position_t num_words = num_bits_ / kWordSize + 1;
-	bits_ = new word_t[num_words];
-	memset(bits_, 0, num_words * (kWordSize / 8));
+	bits_ = new word_t[numWords()];
+	memset(bits_, 0, numWords() * (kWordSize / 8));
 	concatenateBitvectors(bitvector_per_level, num_bits_per_level, start_level, end_level);
     }
 
@@ -30,17 +29,21 @@ public:
 	delete[] bits_;
     }
 
-    position_t size() const {
-        return (sizeof(Bitvector) + (num_bits_ >> 3));
+    position_t numWords() const {
+	if (num_bits_ % kWordSize == 0)
+	    return (num_bits_ / kWordSize);
+	else
+	    return (num_bits_ / kWordSize + 1);
     }
 
-    position_t numWords() const {
-	return (num_bits_ / kWordSize);
+    // in bytes
+    position_t size() const {
+        return (sizeof(Bitvector) + numWords() * (kWordSize / 8));
     }
 
     bool readBit(const position_t pos) const;
 
-    position_t distanceToNextOne(const position_t pos) const;
+    position_t distanceToNextSetBit(const position_t pos) const;
 
 private:
     position_t computeTotalNumBits(const std::vector<position_t>& num_bits_per_level, 
@@ -63,24 +66,29 @@ bool Bitvector::readBit (const position_t pos) const {
     return bits_[word_id] & (kMsbMask >> offset);
 }
 
-position_t Bitvector::distanceToNextOne (const position_t pos) const {
+position_t Bitvector::distanceToNextSetBit (const position_t pos) const {
     assert(pos <= num_bits_);
     position_t distance = 1;
 
     position_t word_id = (pos + 1) / kWordSize;
-    if (word_id >= numWords()) return distance;
+    if (word_id >= numWords())
+	return distance;
     position_t offset = (pos + 1) % kWordSize;
 
     //first word left-over bits
     word_t test_bits = bits_[word_id] << offset;
-    if (test_bits > 0)
+    if (test_bits > 0) {
 	return (distance + __builtin_clzll(test_bits));
-    else
+    } else {
+	if (word_id == numWords() - 1)
+	    return (num_bits_ - pos);
 	distance += (kWordSize - offset);
+    }
 
     while (true) {
 	word_id++;
-	if (word_id >= numWords()) return distance;
+	if (word_id >= numWords())
+	    return distance;
 	test_bits = bits_[word_id];
 	if (test_bits > 0)
 	    return (distance + __builtin_clzll(test_bits));

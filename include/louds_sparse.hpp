@@ -40,6 +40,7 @@ private:
 
 private:
     static const position_t kRankBasicBlockSize = 512;
+    static const position_t kSelectSampleInterval = 64;
 
     level_t height_;
     level_t start_level_;
@@ -69,7 +70,7 @@ LoudsSparse::LoudsSparse(const SuRFBuilder* builder) {
 
     labels_ = new LabelVector(builder->getLabels(), start_level_, height_);
     child_indicator_bits_ = new BitvectorRank(kRankBasicBlockSize, builder->getChildIndicatorBits(), num_items_per_level, start_level_, height_);
-    louds_bits_ = new BitvectorSelect(kRankBasicBlockSize, builder->getLoudsBits(), num_items_per_level, start_level_, height_); //TODO
+    louds_bits_ = new BitvectorSelect(kSelectSampleInterval, builder->getLoudsBits(), num_items_per_level, start_level_, height_); //TODO
     suffixes_ = new SuffixVector(builder->getSuffixConfig(), builder->getSuffixes(), start_level_, height_);
 }
 
