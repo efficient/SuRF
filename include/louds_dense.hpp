@@ -41,9 +41,9 @@ private:
 
     level_t height_;
 
-    BitVectorRank* label_bitmaps_;
-    BitVectorRank* child_indicator_bitmaps_;
-    BitVectorRank* prefixkey_indicator_bits_; //1 bit per internal node
+    BitvectorRank* label_bitmaps_;
+    BitvectorRank* child_indicator_bitmaps_;
+    BitvectorRank* prefixkey_indicator_bits_; //1 bit per internal node
     SuffixVector* suffixes_;
 };
 
@@ -54,9 +54,9 @@ LoudsDense::LoudsDense(const SuRFBuilder* builder) {
     for (level_t level = 0; level < height_; level++)
 	num_bits_per_level.push_back(builder->getBitmapLabels()[level].size() * kWordSize);
 
-    label_bitmaps_ = new BitVectorRank(kRankBasicBlockSize, builder->getBitmapLabels(), num_bits_per_level);
-    child_indicator_bitmaps_ = new BitVectorRank(kRankBasicBlockSize, builder->getBitmapChildIndicatorBits(), num_bits_per_level);
-    prefixkey_indicator_bits_ = new BitVectorRank(kRankBasicBlockSize, builder->getPrefixkeyIndicatorBits(), builder->getNodeCounts());
+    label_bitmaps_ = new BitvectorRank(kRankBasicBlockSize, builder->getBitmapLabels(), num_bits_per_level);
+    child_indicator_bitmaps_ = new BitvectorRank(kRankBasicBlockSize, builder->getBitmapChildIndicatorBits(), num_bits_per_level);
+    prefixkey_indicator_bits_ = new BitvectorRank(kRankBasicBlockSize, builder->getPrefixkeyIndicatorBits(), builder->getNodeCounts());
     suffixes_ = new SuffixVector(builder->getSuffixConfig(), builder->getSuffixes());
 }
 

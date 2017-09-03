@@ -47,8 +47,8 @@ private:
     position_t child_count_dense_;
 
     LabelVector* labels_;
-    BitVectorRank* child_indicator_bits_;
-    BitVectorSelect* louds_bits_;
+    BitvectorRank* child_indicator_bits_;
+    BitvectorSelect* louds_bits_;
     SuffixVector* suffixes_;
 };
 
@@ -65,11 +65,11 @@ LoudsSparse::LoudsSparse(const SuRFBuilder* builder) {
 
     std::vector<position_t> num_items_per_level;
     for (level_t level = 0; level < height_; level++)
-	num_items_per_level.push_back(builder->getLabels()[level].size() * kWordSize);
+	num_items_per_level.push_back(builder->getLabels()[level].size());
 
     labels_ = new LabelVector(builder->getLabels(), start_level_, height_);
-    child_indicator_bits_ = new BitVectorRank(kRankBasicBlockSize, builder->getChildIndicatorBits(), num_items_per_level, start_level_, height_);
-    louds_bits_ = new BitVectorSelect(kRankBasicBlockSize, builder->getLoudsBits(), num_items_per_level, start_level_, height_); //TODO
+    child_indicator_bits_ = new BitvectorRank(kRankBasicBlockSize, builder->getChildIndicatorBits(), num_items_per_level, start_level_, height_);
+    louds_bits_ = new BitvectorSelect(kRankBasicBlockSize, builder->getLoudsBits(), num_items_per_level, start_level_, height_); //TODO
     suffixes_ = new SuffixVector(builder->getSuffixConfig(), builder->getSuffixes(), start_level_, height_);
 }
 

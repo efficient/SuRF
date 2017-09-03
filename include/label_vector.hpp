@@ -70,14 +70,14 @@ bool LabelVector::binarySearch(const label_t target, position_t& pos, const posi
     position_t r = pos + search_len;
     while (l < r) {
 	position_t m = (l + r) >> 1;
-	if (target < labels_[m])
+	if (target < labels_[m]) {
 	    r = m;
-	else if (target == labels_[m]) {
+	} else if (target == labels_[m]) {
 	    pos = m;
 	    return true;
-	}
-	else
+	} else {
 	    l = m + 1;
+	}
     }
     return false;
 }

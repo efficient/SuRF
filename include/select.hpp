@@ -12,29 +12,29 @@
 
 namespace surf {
 
-class BitVectorSelect : public BitVector {
+class BitvectorSelect : public Bitvector {
 public:
-    BitVectorSelect() : sample_interval_(0), num_ones_(0), select_lut_(NULL) {};
+    BitvectorSelect() : sample_interval_(0), num_ones_(0), select_lut_(NULL) {};
 
-    BitVectorSelect(const position_t sample_interval, 
+    BitvectorSelect(const position_t sample_interval, 
 		    const std::vector<std::vector<word_t> >& bitvector_per_level, 
 		    const std::vector<position_t>& num_bits_per_level) 
-	: BitVector(bitvector_per_level, num_bits_per_level) {
+	: Bitvector(bitvector_per_level, num_bits_per_level) {
 	sample_interval_ = sample_interval;
 	initSelectLut();
     }
 
-    BitVectorSelect(const position_t sample_interval, 
+    BitvectorSelect(const position_t sample_interval, 
 		    const std::vector<std::vector<word_t> >& bitvector_per_level, 
 		    const std::vector<position_t>& num_bits_per_level,
 		    const level_t start_level,
 		    const level_t end_level/* non-inclusive */) 
-	: BitVector(bitvector_per_level, num_bits_per_level, start_level, end_level) {
+	: Bitvector(bitvector_per_level, num_bits_per_level, start_level, end_level) {
 	sample_interval_ = sample_interval;
 	initSelectLut();
     }
 
-    ~BitVectorSelect() {
+    ~BitvectorSelect() {
 	delete[] select_lut_;
     }
 

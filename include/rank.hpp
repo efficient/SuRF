@@ -11,29 +11,29 @@
 
 namespace surf {
 
-class BitVectorRank : public BitVector {
+class BitvectorRank : public Bitvector {
 public:
-    BitVectorRank() : basic_block_size_(0), rank_lut_(NULL) {};
+    BitvectorRank() : basic_block_size_(0), rank_lut_(NULL) {};
 
-    BitVectorRank(const position_t basic_block_size, 
+    BitvectorRank(const position_t basic_block_size, 
 		  const std::vector<std::vector<word_t> >& bitvector_per_level, 
 		  const std::vector<position_t>& num_bits_per_level)
-	: BitVector(bitvector_per_level, num_bits_per_level) {
+	: Bitvector(bitvector_per_level, num_bits_per_level) {
 	basic_block_size_ = basic_block_size;
 	initRankLut();
     }
 
-    BitVectorRank(const position_t basic_block_size, 
+    BitvectorRank(const position_t basic_block_size, 
 		  const std::vector<std::vector<word_t> >& bitvector_per_level, 
 		  const std::vector<position_t>& num_bits_per_level,
 		  const level_t start_level,
 		  const level_t end_level/* non-inclusive */) 
-	: BitVector(bitvector_per_level, num_bits_per_level, start_level, end_level) {
+	: Bitvector(bitvector_per_level, num_bits_per_level, start_level, end_level) {
 	basic_block_size_ = basic_block_size;
 	initRankLut();
     }
 
-    ~BitVectorRank() {
+    ~BitvectorRank() {
 	delete[] rank_lut_;
     }
 
@@ -50,7 +50,7 @@ public:
     position_t size() {
         position_t bitvector_mem = num_bits_ / 8;
         position_t rank_lut_mem = num_bits_ / basic_block_size_ * sizeof(uint32_t);
-        return (sizeof(BitVectorRank) + bitvector_mem + rank_lut_mem);
+        return (sizeof(BitvectorRank) + bitvector_mem + rank_lut_mem);
     }
 
 private:

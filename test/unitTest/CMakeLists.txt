@@ -9,5 +9,6 @@ function (add_unit_test file_name )
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endfunction()
 
+add_unit_test(test_bitvector)
 add_unit_test(test_surf_builder)
-#add_unit_test(test_bitvector)
+
