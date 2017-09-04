@@ -15,8 +15,11 @@ public:
     LabelVector() : num_bytes_(0), labels_(NULL) {};
 
     LabelVector(const std::vector<std::vector<label_t> >& labels_per_level,
-		const level_t start_level,
-		const level_t end_level/* non-inclusive */) {
+		const level_t start_level = 0,
+		level_t end_level = 0/* non-inclusive */) {
+	if (end_level == 0)
+	    end_level = labels_per_level.size();
+
 	num_bytes_ = 0;
 	for (int level = start_level; level < end_level; level++)
 	    num_bytes_ += labels_per_level[level].size();
@@ -32,10 +35,6 @@ public:
 	}
     }
 
-    LabelVector(const std::vector<std::vector<label_t> >& labels_per_level) {
-	LabelVector(labels_per_level, 0, labels_per_level.size());
-    }
-
     ~LabelVector() {
 	delete[] labels_;
     }
@@ -44,17 +43,16 @@ public:
 	return (sizeof(LabelVector) + num_bytes_);
     }
 
-    label_t read (const position_t pos) const {
+    label_t read(const position_t pos) const {
 	return labels_[pos];
     }
 
-    label_t operator[] (const position_t pos) const {
+    label_t operator[](const position_t pos) const {
 	return labels_[pos];
     }
 
     bool search(const label_t target, position_t& pos, const position_t search_len) const;
 
-private:
     bool binarySearch(const label_t target, position_t& pos, const position_t search_len) const;
     bool simdSearch(const label_t target, position_t& pos, const position_t search_len) const;
     bool linearSearch(const label_t target, position_t& pos, const position_t search_len) const;

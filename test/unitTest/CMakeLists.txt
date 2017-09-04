@@ -10,7 +10,9 @@ function (add_unit_test file_name )
 endfunction()
 
 add_unit_test(test_bitvector)
+add_unit_test(test_label_vector)
 add_unit_test(test_rank)
 add_unit_test(test_select)
+add_unit_test(test_suffix_vector)
 add_unit_test(test_surf_builder)
 

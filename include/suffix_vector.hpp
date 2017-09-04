@@ -14,7 +14,11 @@ public:
     SuffixVector() : type_(kNone), num_bytes_(0), suffixes_(NULL) {};
 
     SuffixVector(const SuffixType type, const std::vector<std::vector<suffix_t> >& suffixes_per_level,
-		 const level_t start_level, const level_t end_level/* non-inclusive */) {
+		 const level_t start_level = 0, 
+		 level_t end_level = 0/* non-inclusive */) {
+	if (end_level == 0)
+	    end_level = suffixes_per_level.size();
+
 	type_ = type;
 
 	num_bytes_ = 0;
@@ -32,15 +36,11 @@ public:
 	}
     }
 
-    SuffixVector(const SuffixType type, const std::vector<std::vector<suffix_t> >& suffixes_per_level) {
-	SuffixVector(type, suffixes_per_level, 0, suffixes_per_level.size());
-    }
-
     ~SuffixVector() {
 	delete[] suffixes_;
     }
 
-    bool checkEquality(const position_t pos, const std::string& key, const level_t level) const {
+    bool checkEquality(const position_t pos, const std::string& key, const level_t level = 0) const {
 	assert(pos < num_bytes_);
 	switch (type_) {
 	case kHash: {
