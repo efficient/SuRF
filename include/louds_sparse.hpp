@@ -62,7 +62,10 @@ LoudsSparse::LoudsSparse(const SuRFBuilder* builder) {
     for (level_t level = 0; level < start_level_; level++)
 	node_count_dense_ += builder->getNodeCounts()[level];
 
-    child_count_dense_ = node_count_dense_ + builder->getNodeCounts()[start_level_];
+    if (start_level_ == 0)
+	child_count_dense_ = 0;
+    else
+	child_count_dense_ = node_count_dense_ + builder->getNodeCounts()[start_level_];
 
     std::vector<position_t> num_items_per_level;
     for (level_t level = 0; level < height_; level++)
@@ -81,7 +84,7 @@ position_t LoudsSparse::getChildNodeNum(const position_t pos) const {
 
 //TODO: need check off-by-one
 position_t LoudsSparse::getFirstLabelPos(const position_t node_num) const {
-    return louds_bits_->select(node_num - node_count_dense_);
+    return louds_bits_->select(node_num - node_count_dense_ + 1);
 }
 
 //TODO: need check off-by-one
@@ -91,7 +94,7 @@ position_t LoudsSparse::getSuffixPos(const position_t pos) const {
 
 position_t LoudsSparse::nodeSize(const position_t pos) const {
     assert(louds_bits_->readBit(pos));
-    return louds_bits_->distanceToNextOne(pos);
+    return louds_bits_->distanceToNextSetBit(pos);
 }
 
 bool LoudsSparse::lookupKey(const std::string& key, const position_t in_node_num) const {

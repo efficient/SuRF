@@ -33,7 +33,8 @@ public:
 };
 
 TEST_F (SuffixVectorUnitTest, checkEqualityHashTest) {
-    builder_ = new SuRFBuilder(kHash);
+    bool include_dense = false;
+    builder_ = new SuRFBuilder(include_dense, kHash);
     builder_->build(words);
     suffixes_ = new SuffixVector(kHash, builder_->getSuffixes());
 

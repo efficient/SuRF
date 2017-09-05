@@ -20,7 +20,8 @@ static std::vector<std::string> words;
 class SuRFBuilderUnitTest : public ::testing::Test {
 public:
     virtual void SetUp () {
-	builder_ = new SuRFBuilder(kReal);
+	bool include_dense = true;
+	builder_ = new SuRFBuilder(include_dense, kReal);
 	truncateWordSuffixes();
     }
     virtual void TearDown () {

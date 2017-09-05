@@ -14,7 +14,7 @@ namespace surf {
 class SuRFBuilder {
 public: 
     SuRFBuilder() : sparse_start_level_(0), suffix_config_(kNone) {};
-    explicit SuRFBuilder(SuffixType suffix_config) : sparse_start_level_(0), suffix_config_(suffix_config) {};
+    explicit SuRFBuilder(bool include_dense, SuffixType suffix_config) : include_dense_(include_dense), sparse_start_level_(0), suffix_config_(suffix_config) {};
 
     ~SuRFBuilder() {};
 
@@ -130,17 +130,18 @@ private:
 private:
     // trie level < sparse_start_level_: LOUDS-Dense
     // trie level >= sparse_start_level_: LOUDS-Sparse
+    bool include_dense_;
     level_t sparse_start_level_;
-
-    // LOUDS-Dense bit vectors
-    std::vector<std::vector<word_t> > bitmap_labels_;
-    std::vector<std::vector<word_t> > bitmap_child_indicator_bits_;
-    std::vector<std::vector<word_t> > prefixkey_indicator_bits_;
 
     // LOUDS-Sparse bit/byte vectors
     std::vector<std::vector<label_t> > labels_;
     std::vector<std::vector<word_t> > child_indicator_bits_;
     std::vector<std::vector<word_t> > louds_bits_;
+
+    // LOUDS-Dense bit vectors
+    std::vector<std::vector<word_t> > bitmap_labels_;
+    std::vector<std::vector<word_t> > bitmap_child_indicator_bits_;
+    std::vector<std::vector<word_t> > prefixkey_indicator_bits_;
 
     // current version of SuRF only supports one-byte suffixes
     SuffixType suffix_config_;
@@ -156,8 +157,10 @@ void SuRFBuilder::build(const std::vector<std::string>& keys) {
 
     suffixes_.push_back(std::vector<suffix_t>());
     buildSparse(keys);
-    determineCutoffLevel();
-    buildDense();
+
+    if (include_dense_)
+	determineCutoffLevel();
+	buildDense();
 }
 
 void SuRFBuilder::buildSparse(const std::vector<std::string>& keys) {

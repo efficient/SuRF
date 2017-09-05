@@ -21,7 +21,8 @@ static std::vector<std::string> words;
 class LabelVectorUnitTest : public ::testing::Test {
 public:
     virtual void SetUp () {
-	builder_ = new SuRFBuilder(kReal);
+	bool include_dense = false;
+	builder_ = new SuRFBuilder(include_dense, kReal);
 	labels_ = NULL;
     }
     virtual void TearDown () {
