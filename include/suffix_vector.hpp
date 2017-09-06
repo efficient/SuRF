@@ -40,6 +40,10 @@ public:
 	delete[] suffixes_;
     }
 
+    suffix_t read(const position_t pos) const {
+	return suffixes_[pos];
+    }
+
     bool checkEquality(const position_t pos, const std::string& key, const level_t level = 0) const {
 	assert(pos < num_bytes_);
 	switch (type_) {

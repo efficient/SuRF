@@ -29,10 +29,9 @@ public:
     }
 
     bool lookupKey(const std::string& key);
+    bool getLowerBoundKey(const std::string& key, std::string* out_key);
     bool lookupRange(const std::string& left_key, const std::string& right_key);
     uint32_t countRange(const std::string& left_key, const std::string& right_key);
-
-    bool getLowerBoundKey(const std::string& key, std::string* out_key);
 
     uint64_t getMemoryUsage();
 
@@ -47,6 +46,13 @@ bool SuRF::lookupKey(const std::string& key) {
     position_t connect_node_num = 0;
     if (!louds_dense_->lookupKey(key, connect_node_num))
 	return louds_sparse_->lookupKey(key, connect_node_num);
+    return true;
+}
+
+bool SuRF::getLowerBoundKey(const std::string& key, std::string* output_key) {
+    position_t connect_pos = 0;
+    if (!louds_dense_->getLowerBoundKey(key, output_key, connect_pos))
+	return louds_sparse_->getLowerBoundKey(key, output_key, connect_pos);
     return true;
 }
 
@@ -65,13 +71,6 @@ uint32_t SuRF::countRange(const std::string& left_key, const std::string& right_
     count += louds_dense_->countRange(left_key, right_key, left_connect_pos, right_connect_pos);
     count += louds_sparse_->countRange(left_key, right_key, left_connect_pos, right_connect_pos);
     return count;
-}
-
-bool SuRF::getLowerBoundKey(const std::string& key, std::string* output_key) {
-    position_t connect_pos = 0;
-    if (!louds_dense_->getLowerBoundKey(key, output_key, connect_pos))
-	return louds_sparse_->getLowerBoundKey(key, output_key, connect_pos);
-    return true;
 }
 
 uint64_t SuRF::getMemoryUsage() {

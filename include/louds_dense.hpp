@@ -23,10 +23,9 @@ public:
     }
 
     bool lookupKey(const std::string& key, position_t& out_node_num) const;
+    bool getLowerBoundKey(const std::string& key, std::string* output_key, position_t& out_pos) const;
     bool lookupRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const;
     uint32_t countRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const;
-
-    bool getLowerBoundKey(const std::string& key, std::string* output_key, position_t& out_pos) const;
 
     uint64_t getMemoryUsage();
 
@@ -36,7 +35,6 @@ private:
 
 private:
     static const position_t kNodeFanout = 256;
-    static const position_t kNodeLogFanout = 8;
     static const position_t kRankBasicBlockSize  = 512;
 
     level_t height_;
@@ -49,7 +47,7 @@ private:
 
 
 LoudsDense::LoudsDense(const SuRFBuilder* builder) {
-    height_ = builder->getBitmapLabels().size();
+    height_ = builder->getTreeHeight();
     std::vector<position_t> num_bits_per_level;
     for (level_t level = 0; level < height_; level++)
 	num_bits_per_level.push_back(builder->getBitmapLabels()[level].size() * kWordSize);
@@ -60,6 +58,50 @@ LoudsDense::LoudsDense(const SuRFBuilder* builder) {
     suffixes_ = new SuffixVector(builder->getSuffixConfig(), builder->getSuffixes());
 }
 
+bool LoudsDense::lookupKey(const std::string& key, position_t& out_node_num) const {
+    position_t node_num = 0;
+    position_t pos = 0;
+    for (level_t level = 0; level < height_; level++) {
+	pos = (node_num * kNodeFanout) + key[level];
+	if (level >= key.length()) { //if run out of searchKey bytes
+	    if (prefixkey_indicator_bits_->readBit(node_num)) //if the prefix is also a key
+		return suffixes_->checkEquality(getSuffixPos(node_num, pos), key, level + 1);
+	    else
+		return false;
+	}
+
+	if (!label_bitmaps_->readBit(pos)) //if key byte does not exist
+	    return false;
+
+	if (!child_indicator_bitmaps_->readBit(pos)) //if trie branch terminates
+	    return suffixes_->checkEquality(getSuffixPos(node_num, pos), key, level + 1);
+
+	node_num = getChildNodeNum(pos);
+    }
+    //search will continue in LoudsSparse
+    out_node_num = node_num;
+    return false;
+}
+
+bool LoudsDense::getLowerBoundKey(const std::string& key, std::string* output_key, position_t& out_pos) const {
+    return true;
+}
+
+bool LoudsDense::lookupRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const {
+    return true;
+}
+
+uint32_t LoudsDense::countRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const {
+    return 0;
+}
+
+uint64_t LoudsDense::getMemoryUsage() {
+    return (sizeof(this)
+	    + label_bitmaps_->size()
+	    + child_indicator_bitmaps_->size()
+	    + prefixkey_indicator_bits_->size()
+	    + suffixes_->size());
+}
 
 //TODO: need check off-by-one
 position_t LoudsDense::getChildNodeNum(const position_t pos) const {
@@ -72,51 +114,6 @@ position_t LoudsDense::getSuffixPos(const position_t node_num, const position_t 
 	    - child_indicator_bitmaps_->rank(pos)
 	    + prefixkey_indicator_bits_->rank(node_num)
 	    - 1);
-}
-
-bool LoudsDense::lookupKey(const std::string& key, position_t& out_node_num) const {
-    position_t node_num = 0;
-    position_t pos = 0;
-    for (level_t level = 0; level < height_; level++) {
-	if (level >= key.length()) { //if run out of searchKey bytes
-	    if (prefixkey_indicator_bits_->readBit(node_num)) //if the prefix is also a key
-		return suffixes_->checkEquality(getSuffixPos(node_num, pos), key, level + 1);
-	    else
-		return false;
-	}
-
-	node_num = getChildNodeNum(pos);
-	pos = (node_num << kNodeLogFanout) + key[level];
-
-	if (!label_bitmaps_->readBit(pos)) //if key byte does not exist
-	    return false;
-
-	if (!child_indicator_bitmaps_->readBit(pos)) //if trie branch terminates
-	    return suffixes_->checkEquality(getSuffixPos(node_num, pos), key, level + 1);
-    }
-    //search will continue in LoudsSparse
-    out_node_num = node_num;
-    return false;
-}
-
-bool LoudsDense::lookupRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const {
-    return true;
-}
-
-uint32_t LoudsDense::countRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const {
-    return 0;
-}
-
-bool LoudsDense::getLowerBoundKey(const std::string& key, std::string* output_key, position_t& out_pos) const {
-    return true;
-}
-
-uint64_t LoudsDense::getMemoryUsage() {
-    return (sizeof(this)
-	    + label_bitmaps_->size()
-	    + child_indicator_bitmaps_->size()
-	    + prefixkey_indicator_bits_->size()
-	    + suffixes_->size());
 }
 
 } //namespace surf

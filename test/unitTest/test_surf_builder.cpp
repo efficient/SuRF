@@ -21,7 +21,8 @@ class SuRFBuilderUnitTest : public ::testing::Test {
 public:
     virtual void SetUp () {
 	bool include_dense = true;
-	builder_ = new SuRFBuilder(include_dense, kReal);
+	uint32_t sparse_dense_ratio = 0;
+	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal);
 	truncateWordSuffixes();
     }
     virtual void TearDown () {
@@ -232,6 +233,7 @@ TEST_F (SuRFBuilderUnitTest, buildDenseTest) {
     for (level_t level = 0; level < builder_->getSparseStartLevel(); level++) {
 	int node_num = -1;
 
+	label_t prev_label = 0;
 	for (unsigned i = 0; i < builder_->getLabels()[level].size(); i++) {
 	    bool is_node_start = SuRFBuilder::readBit(builder_->getLoudsBits()[level], i);
 	    if (is_node_start) 
@@ -249,6 +251,7 @@ TEST_F (SuRFBuilderUnitTest, buildDenseTest) {
 		    ASSERT_TRUE(prefixkey_indicator);
 		else
 		    ASSERT_FALSE(prefixkey_indicator);
+		prev_label = label;
 		continue;
 	    }
 
@@ -257,6 +260,32 @@ TEST_F (SuRFBuilderUnitTest, buildDenseTest) {
 
 	    // child indicator bitmap test
 	    ASSERT_EQ(has_child_sparse, has_child_dense);
+
+	    // label, child indicator bitmap zero bit test
+	    if (is_node_start) {
+		if (node_num > 0) {
+		    for (unsigned c = prev_label + 1; c < kFanout; c++) {
+			exist_in_node = SuRFBuilder::readBit(builder_->getBitmapLabels()[level], (node_num - 1) * kFanout + c);
+			ASSERT_FALSE(exist_in_node);
+			has_child_dense = SuRFBuilder::readBit(builder_->getBitmapChildIndicatorBits()[level], (node_num - 1) * kFanout + c);
+			ASSERT_FALSE(has_child_dense);
+		    }
+		}
+		for (unsigned c = 0; c < (unsigned)label; c++) {
+		    exist_in_node = SuRFBuilder::readBit(builder_->getBitmapLabels()[level], node_num * kFanout + c);
+		    ASSERT_FALSE(exist_in_node);
+		    has_child_dense = SuRFBuilder::readBit(builder_->getBitmapChildIndicatorBits()[level], node_num * kFanout + c);
+		    ASSERT_FALSE(has_child_dense);
+		}
+	    } else {
+		for (unsigned c = prev_label + 1; c < (unsigned)label; c++) {
+		    exist_in_node = SuRFBuilder::readBit(builder_->getBitmapLabels()[level], node_num * kFanout + c);
+		    ASSERT_FALSE(exist_in_node);
+		    has_child_dense = SuRFBuilder::readBit(builder_->getBitmapChildIndicatorBits()[level], node_num * kFanout + c);
+		    ASSERT_FALSE(has_child_dense);
+		}
+	    }
+	    prev_label = label;
 	}
     }
 }

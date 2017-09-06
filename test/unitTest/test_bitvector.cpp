@@ -21,25 +21,36 @@ static std::vector<std::string> words;
 class BitvectorUnitTest : public ::testing::Test {
 public:
     virtual void SetUp () {
-	bool include_dense = false;
-	builder_ = new SuRFBuilder(include_dense, kReal);
+	bool include_dense = true;
+	uint32_t sparse_dense_ratio = 0;
+	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal);
 	bv_ = NULL;
 	bv2_ = NULL;
+	bv3_ = NULL;
+	bv4_ = NULL;
+	bv5_ = NULL;
 	num_items_ = 0;
     }
     virtual void TearDown () {
 	delete builder_;
 	if (bv_ != NULL) delete bv_;
 	if (bv2_ != NULL) delete bv2_;
+	if (bv3_ != NULL) delete bv3_;
+	if (bv4_ != NULL) delete bv4_;
+	if (bv5_ != NULL) delete bv5_;
     }
 
     void setupWordsTest();
 
     SuRFBuilder* builder_;
-    Bitvector* bv_;
-    Bitvector* bv2_;
-    std::vector<position_t> num_items_per_level_;
-    position_t num_items_;
+    Bitvector* bv_; // sparse: child indicator bits
+    Bitvector* bv2_; // sparse: louds bits
+    Bitvector* bv3_; // dense: label bitmap
+    Bitvector* bv4_; // dense: child indicator bitmap
+    Bitvector* bv5_; // dense: prefixkey indicator bits
+    std::vector<position_t> num_items_per_level_; // sparse
+    position_t num_items_; // sparse
+    std::vector<position_t> num_bits_per_level_; // dense
 };
 
 void BitvectorUnitTest::setupWordsTest() {
@@ -50,24 +61,96 @@ void BitvectorUnitTest::setupWordsTest() {
 	num_items_ += num_items_per_level_[level];
     bv_ = new Bitvector(builder_->getChildIndicatorBits(), num_items_per_level_);
     bv2_ = new Bitvector(builder_->getLoudsBits(), num_items_per_level_);
+
+    for (level_t level = 0; level < builder_->getTreeHeight(); level++)
+	num_bits_per_level_.push_back(builder_->getBitmapLabels()[level].size() * kWordSize);
+    bv3_ = new Bitvector(builder_->getBitmapLabels(), num_bits_per_level_);
+    bv4_ = new Bitvector(builder_->getBitmapChildIndicatorBits(), num_bits_per_level_);
+    bv5_ = new Bitvector(builder_->getPrefixkeyIndicatorBits(), builder_->getNodeCounts());
 }
 
 TEST_F (BitvectorUnitTest, readBitTest) {
     setupWordsTest();
+
     position_t bv_pos = 0;
+    int node_num = -1;
+    label_t prev_label = 0;
+    position_t bv5_pos = 0;
     for (level_t level = 0; level < builder_->getTreeHeight(); level++) {
 	for (position_t pos = 0; pos < num_items_per_level_[level]; pos++) {
-	    bool expected_bit = SuRFBuilder::readBit(builder_->getChildIndicatorBits()[level], pos);
+	    // bv test
+	    bool has_child = SuRFBuilder::readBit(builder_->getChildIndicatorBits()[level], pos);
 	    bool bv_bit = bv_->readBit(bv_pos);
-	    ASSERT_EQ(expected_bit, bv_bit);
+	    ASSERT_EQ(has_child, bv_bit);
 
-	    expected_bit = SuRFBuilder::readBit(builder_->getLoudsBits()[level], pos);
+	    // bv2 test
+	    bool is_node_start = SuRFBuilder::readBit(builder_->getLoudsBits()[level], pos);
 	    bv_bit = bv2_->readBit(bv_pos);
-	    ASSERT_EQ(expected_bit, bv_bit);
+	    ASSERT_EQ(is_node_start, bv_bit);
 
 	    bv_pos++;
+
+	    if (is_node_start)
+		node_num++;
+
+	    // bv5 test
+	    bool is_terminator = false;
+	    if (is_node_start) {
+	        is_terminator = (builder_->getLabels()[level][pos] == kTerminator)
+		    && !SuRFBuilder::readBit(builder_->getChildIndicatorBits()[level], pos);
+		bv_bit = bv5_->readBit(bv5_pos);
+		ASSERT_EQ(is_terminator, bv_bit);
+		bv5_pos++;
+	    }
+
+	    if (is_terminator) {
+		for (unsigned c = prev_label + 1; c < kFanout; c++) {
+		    bool bv3_bit = bv3_->readBit((node_num - 1) * kFanout + c);
+		    ASSERT_FALSE(bv3_bit);
+		    bool bv4_bit = bv4_->readBit((node_num - 1) * kFanout + c);
+		    ASSERT_FALSE(bv4_bit);
+		}
+		prev_label = '\255';
+		continue;
+	    }
+
+	    // bv3 test
+	    label_t label = builder_->getLabels()[level][pos];
+	    bool bv3_bit = bv3_->readBit(node_num * kFanout + label);
+	    ASSERT_TRUE(bv3_bit);
+
+	    // bv4 test
+	    bool bv4_bit = bv4_->readBit(node_num * kFanout + label);
+	    ASSERT_EQ(has_child, bv4_bit);
+
+	    // bv3 bv4 zero bit test
+	    if (is_node_start) {
+		if (node_num > 0) {
+		    for (unsigned c = prev_label + 1; c < kFanout; c++) {
+			bv3_bit = bv3_->readBit((node_num - 1) * kFanout + c);
+			ASSERT_FALSE(bv3_bit);
+			bv4_bit = bv4_->readBit((node_num - 1) * kFanout + c);
+			ASSERT_FALSE(bv4_bit);
+		    }
+		}
+		for (unsigned c = 0; c < (unsigned)label; c++) {
+		    bv3_bit = bv3_->readBit(node_num * kFanout + c);
+		    ASSERT_FALSE(bv3_bit);
+		    bv4_bit = bv4_->readBit(node_num * kFanout + c);
+		    ASSERT_FALSE(bv4_bit);
+		}
+	    } else {
+		for (unsigned c = prev_label + 1; c < (unsigned)label; c++) {
+		    bv3_bit = bv3_->readBit(node_num * kFanout + c);
+		    ASSERT_FALSE(bv3_bit);
+		    bv4_bit = bv4_->readBit(node_num * kFanout + c);
+		    ASSERT_FALSE(bv4_bit);
+		}
+	    }
+	    prev_label = label;
 	}
     }
+
 }
 
 TEST_F (BitvectorUnitTest, distanceToNextSetBitTest) {

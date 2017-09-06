@@ -18,6 +18,7 @@ using word_t = uint64_t;
 static const unsigned kWordSize = 64;
 static const word_t kMsbMask = 0x8000000000000000;
 
+static const bool kIncludeDense = true;
 static const uint32_t kSparseDenseRatio = 64;
 static const label_t kTerminator = 255;
 

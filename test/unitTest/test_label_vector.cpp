@@ -22,7 +22,8 @@ class LabelVectorUnitTest : public ::testing::Test {
 public:
     virtual void SetUp () {
 	bool include_dense = false;
-	builder_ = new SuRFBuilder(include_dense, kReal);
+	uint32_t sparse_dense_ratio = 0;
+	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal);
 	labels_ = NULL;
     }
     virtual void TearDown () {

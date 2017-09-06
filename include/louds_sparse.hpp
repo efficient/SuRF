@@ -24,11 +24,12 @@ public:
 	delete suffixes_;
     }
 
+    // point query: trie walk starts at node "in_node_num" instead of root
+    // in_node_num is provided by louds-dense's lookupKey function
     bool lookupKey(const std::string& key, const position_t in_node_num) const;
+    bool getLowerBoundKey(const std::string& key, std::string* output_key, const position_t in_pos) const;
     bool lookupRange(const std::string& left_key, const std::string& right_key, const position_t in_left_pos, const position_t in_right_pos) const;
     uint32_t countRange(const std::string& left_key, const std::string& right_key, const position_t in_left_pos, const position_t in_right_pos) const;
-
-    bool getLowerBoundKey(const std::string& key, std::string* output_key, const position_t in_pos) const;
 
     uint64_t getMemoryUsage();
 
@@ -42,9 +43,11 @@ private:
     static const position_t kRankBasicBlockSize = 512;
     static const position_t kSelectSampleInterval = 64;
 
-    level_t height_;
-    level_t start_level_;
+    level_t height_; // trie height
+    level_t start_level_; // louds-sparse encoding starts at this level
+    // number of nodes in louds-dense encoding
     position_t node_count_dense_;
+    // number of children(1's in child indicator bitmap) in louds-dense encoding
     position_t child_count_dense_;
 
     LabelVector* labels_;
@@ -73,28 +76,8 @@ LoudsSparse::LoudsSparse(const SuRFBuilder* builder) {
 
     labels_ = new LabelVector(builder->getLabels(), start_level_, height_);
     child_indicator_bits_ = new BitvectorRank(kRankBasicBlockSize, builder->getChildIndicatorBits(), num_items_per_level, start_level_, height_);
-    louds_bits_ = new BitvectorSelect(kSelectSampleInterval, builder->getLoudsBits(), num_items_per_level, start_level_, height_); //TODO
+    louds_bits_ = new BitvectorSelect(kSelectSampleInterval, builder->getLoudsBits(), num_items_per_level, start_level_, height_);
     suffixes_ = new SuffixVector(builder->getSuffixConfig(), builder->getSuffixes(), start_level_, height_);
-}
-
-//TODO: need check off-by-one
-position_t LoudsSparse::getChildNodeNum(const position_t pos) const {
-    return (child_indicator_bits_->rank(pos) + child_count_dense_);
-}
-
-//TODO: need check off-by-one
-position_t LoudsSparse::getFirstLabelPos(const position_t node_num) const {
-    return louds_bits_->select(node_num - node_count_dense_ + 1);
-}
-
-//TODO: need check off-by-one
-position_t LoudsSparse::getSuffixPos(const position_t pos) const {
-    return (pos - child_indicator_bits_->rank(pos));
-}
-
-position_t LoudsSparse::nodeSize(const position_t pos) const {
-    assert(louds_bits_->readBit(pos));
-    return louds_bits_->distanceToNextSetBit(pos);
 }
 
 bool LoudsSparse::lookupKey(const std::string& key, const position_t in_node_num) const {
@@ -116,6 +99,10 @@ bool LoudsSparse::lookupKey(const std::string& key, const position_t in_node_num
 	return suffixes_->checkEquality(getSuffixPos(pos), key, level + 1);
 }
 
+bool LoudsSparse::getLowerBoundKey(const std::string& key, std::string* output_key, const position_t in_pos) const {
+    return true;
+}
+
 bool LoudsSparse::lookupRange(const std::string& left_key, const std::string& right_key, const position_t in_left_pos, const position_t in_right_pos) const {
     return true;
 }
@@ -124,16 +111,29 @@ uint32_t LoudsSparse::countRange(const std::string& left_key, const std::string&
     return 0;
 }
 
-bool LoudsSparse::getLowerBoundKey(const std::string& key, std::string* output_key, const position_t in_pos) const {
-    return true;
-}
-
 uint64_t LoudsSparse::getMemoryUsage() {
     return (sizeof(this)
 	    + labels_->size()
 	    + child_indicator_bits_->size()
 	    + louds_bits_->size()
 	    + suffixes_->size());
+}
+
+position_t LoudsSparse::getChildNodeNum(const position_t pos) const {
+    return (child_indicator_bits_->rank(pos) + child_count_dense_);
+}
+
+position_t LoudsSparse::getFirstLabelPos(const position_t node_num) const {
+    return louds_bits_->select(node_num + 1 - node_count_dense_);
+}
+
+position_t LoudsSparse::getSuffixPos(const position_t pos) const {
+    return (pos - child_indicator_bits_->rank(pos));
+}
+
+position_t LoudsSparse::nodeSize(const position_t pos) const {
+    assert(louds_bits_->readBit(pos));
+    return louds_bits_->distanceToNextSetBit(pos);
 }
 
 } // namespace surf

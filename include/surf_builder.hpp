@@ -14,7 +14,7 @@ namespace surf {
 class SuRFBuilder {
 public: 
     SuRFBuilder() : sparse_start_level_(0), suffix_config_(kNone) {};
-    explicit SuRFBuilder(bool include_dense, SuffixType suffix_config) : include_dense_(include_dense), sparse_start_level_(0), suffix_config_(suffix_config) {};
+    explicit SuRFBuilder(bool include_dense, uint32_t sparse_dense_ratio, SuffixType suffix_config) : include_dense_(include_dense), sparse_dense_ratio_(sparse_dense_ratio), sparse_start_level_(0), suffix_config_(suffix_config) {};
 
     ~SuRFBuilder() {};
 
@@ -108,7 +108,7 @@ private:
 
     // Compute sparse_start_level_ according to the pre-defined
     // size ratio between Sparse and Dense levels.
-    // Dense size < Sparse size / kSparseDenseRatio
+    // Dense size < Sparse size / sparse_dense_ratio_
     void determineCutoffLevel();
 
     uint64_t computeDenseMem(const level_t downto_level) const;
@@ -131,6 +131,7 @@ private:
     // trie level < sparse_start_level_: LOUDS-Dense
     // trie level >= sparse_start_level_: LOUDS-Sparse
     bool include_dense_;
+    uint32_t sparse_dense_ratio_;
     level_t sparse_start_level_;
 
     // LOUDS-Sparse bit/byte vectors
@@ -288,7 +289,7 @@ void SuRFBuilder::determineCutoffLevel() {
     level_t cutoff_level = 0;
     uint64_t dense_mem = computeDenseMem(cutoff_level);
     uint64_t sparse_mem = computeSparseMem(cutoff_level);
-    while (dense_mem * kSparseDenseRatio < sparse_mem) {
+    while ((cutoff_level < getTreeHeight()) && (dense_mem * sparse_dense_ratio_ < sparse_mem)) {
 	cutoff_level++;
 	dense_mem = computeDenseMem(cutoff_level);
 	sparse_mem = computeSparseMem(cutoff_level);
@@ -297,7 +298,7 @@ void SuRFBuilder::determineCutoffLevel() {
 }
 
 uint64_t SuRFBuilder::computeDenseMem(const level_t downto_level) const {
-    assert(downto_level < getTreeHeight());
+    assert(downto_level <= getTreeHeight());
     uint64_t mem = 0;
     for (level_t level = 0; level < downto_level; level++) {
 	mem += (2 * kFanout * node_counts_[level]);
@@ -321,6 +322,8 @@ uint64_t SuRFBuilder::computeSparseMem(const level_t start_level) const {
 void SuRFBuilder::buildDense() {
     for (level_t level = 0; level < sparse_start_level_; level++) {
 	initDenseVectors(level);
+	if (getNumItems(level) == 0) continue;
+
 	position_t node_num = 0;
 	if (isTerminator(level, 0))
 	    setBit(prefixkey_indicator_bits_[level], 0);

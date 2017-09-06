@@ -32,18 +32,15 @@ public:
     SuffixVector* suffixes_;
 };
 
-TEST_F (SuffixVectorUnitTest, checkEqualityHashTest) {
+TEST_F (SuffixVectorUnitTest, buildTest) {
     bool include_dense = false;
-    builder_ = new SuRFBuilder(include_dense, kHash);
+    uint32_t sparse_dense_ratio = 0;
+    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kHash);
     builder_->build(words);
     suffixes_ = new SuffixVector(kHash, builder_->getSuffixes());
-
-    position_t pos = 0;
-    for (unsigned i = 0; i < words.size(); i++) {
-	bool suffix_match = suffixes_->checkEquality(pos, words[i]);
-	ASSERT_TRUE(suffix_match);
-    }
 }
+
+//TODO checkEqualityTest
 
 void loadWordList() {
     std::ifstream infile(kFilePath);

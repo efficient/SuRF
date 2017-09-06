@@ -7,21 +7,21 @@
 #include <vector>
 
 #include "config.hpp"
-#include "louds_sparse.hpp"
+#include "louds_dense.hpp"
 #include "surf_builder.hpp"
 
 namespace surf {
 
-namespace sparsetest {
+namespace densetest {
 
 static const std::string kFilePath = "../../../test/words.txt";
 static const int kTestSize = 234369;
 static std::vector<std::string> words;
 
-class SparseUnitTest : public ::testing::Test {
+class DenseUnitTest : public ::testing::Test {
 public:
     virtual void SetUp () {
-	bool include_dense = false;
+	bool include_dense = true;
 	uint32_t sparse_dense_ratio = 0;
 	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal);
 	truncateWordSuffixes();
@@ -33,7 +33,7 @@ public:
     void truncateWordSuffixes();
 
     SuRFBuilder* builder_;
-    LoudsSparse* louds_sparse_;
+    LoudsDense* louds_dense_;
     std::vector<std::string> words_trunc_;
 };
 
@@ -50,7 +50,7 @@ static int getMax(int a, int b) {
     return a;
 }
 
-void SparseUnitTest::truncateWordSuffixes() {
+void DenseUnitTest::truncateWordSuffixes() {
     assert(words.size() > 1);
     
     int commonPrefixLen = 0;
@@ -73,13 +73,13 @@ void SparseUnitTest::truncateWordSuffixes() {
     }
 }
 
-TEST_F (SparseUnitTest, lookupTest) {
+TEST_F (DenseUnitTest, lookupTest) {
     builder_->build(words);
-    louds_sparse_ = new LoudsSparse(builder_);
-    position_t in_node_num = 0;
+    louds_dense_ = new LoudsDense(builder_);
+    position_t out_node_num = 0;
 
     for (unsigned i = 0; i < words.size(); i++) {
-	bool key_exist = louds_sparse_->lookupKey(words[i], in_node_num);
+	bool key_exist = louds_dense_->lookupKey(words[i], out_node_num);
 	ASSERT_TRUE(key_exist);
     }
 
@@ -87,7 +87,7 @@ TEST_F (SparseUnitTest, lookupTest) {
 	for (unsigned j = 0; j < words_trunc_[i].size() && j < words[i].size(); j++) {
 	    std::string key = words[i];
 	    key[j] = 'A';
-	    bool key_exist = louds_sparse_->lookupKey(key, in_node_num);
+	    bool key_exist = louds_dense_->lookupKey(key, out_node_num);
 	    ASSERT_FALSE(key_exist);
 	}
     }
@@ -105,12 +105,12 @@ void loadWordList() {
     }
 }
 
-} // namespace sparsetest
+} // namespace densetest
 
 } // namespace surf
 
 int main (int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
-    surf::sparsetest::loadWordList();
+    surf::densetest::loadWordList();
     return RUN_ALL_TESTS();
 }
