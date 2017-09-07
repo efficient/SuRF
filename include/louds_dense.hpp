@@ -22,6 +22,8 @@ public:
 	delete suffixes_;
     }
 
+    // Returns whether key exists in the trie so far
+    // out_node_num == 0 means search terminates in louds-dense.
     bool lookupKey(const std::string& key, position_t& out_node_num) const;
     bool getLowerBoundKey(const std::string& key, std::string* output_key, position_t& out_pos) const;
     bool lookupRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const;
@@ -47,15 +49,15 @@ private:
 
 
 LoudsDense::LoudsDense(const SuRFBuilder* builder) {
-    height_ = builder->getTreeHeight();
+    height_ = builder->getSparseStartLevel();
     std::vector<position_t> num_bits_per_level;
     for (level_t level = 0; level < height_; level++)
 	num_bits_per_level.push_back(builder->getBitmapLabels()[level].size() * kWordSize);
 
-    label_bitmaps_ = new BitvectorRank(kRankBasicBlockSize, builder->getBitmapLabels(), num_bits_per_level);
-    child_indicator_bitmaps_ = new BitvectorRank(kRankBasicBlockSize, builder->getBitmapChildIndicatorBits(), num_bits_per_level);
-    prefixkey_indicator_bits_ = new BitvectorRank(kRankBasicBlockSize, builder->getPrefixkeyIndicatorBits(), builder->getNodeCounts());
-    suffixes_ = new SuffixVector(builder->getSuffixConfig(), builder->getSuffixes());
+    label_bitmaps_ = new BitvectorRank(kRankBasicBlockSize, builder->getBitmapLabels(), num_bits_per_level, 0, height_);
+    child_indicator_bitmaps_ = new BitvectorRank(kRankBasicBlockSize, builder->getBitmapChildIndicatorBits(), num_bits_per_level, 0, height_);
+    prefixkey_indicator_bits_ = new BitvectorRank(kRankBasicBlockSize, builder->getPrefixkeyIndicatorBits(), builder->getNodeCounts(), 0, height_);
+    suffixes_ = new SuffixVector(builder->getSuffixConfig(), builder->getSuffixes(), 0, height_);
 }
 
 bool LoudsDense::lookupKey(const std::string& key, position_t& out_node_num) const {
@@ -80,7 +82,7 @@ bool LoudsDense::lookupKey(const std::string& key, position_t& out_node_num) con
     }
     //search will continue in LoudsSparse
     out_node_num = node_num;
-    return false;
+    return true;
 }
 
 bool LoudsDense::getLowerBoundKey(const std::string& key, std::string* output_key, position_t& out_pos) const {

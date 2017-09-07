@@ -68,7 +68,7 @@ LoudsSparse::LoudsSparse(const SuRFBuilder* builder) {
     if (start_level_ == 0)
 	child_count_dense_ = 0;
     else
-	child_count_dense_ = node_count_dense_ + builder->getNodeCounts()[start_level_];
+	child_count_dense_ = node_count_dense_ + builder->getNodeCounts()[start_level_] - 1;
 
     std::vector<position_t> num_items_per_level;
     for (level_t level = 0; level < height_; level++)

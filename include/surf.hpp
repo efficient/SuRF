@@ -15,8 +15,9 @@ class SuRF {
 public:
     SuRF() {};
 
-    SuRF(const std::vector<std::string>& keys, SuffixType suffix_config) {
-	builder = new SuRFBuilder(suffix_config);
+    SuRF(const std::vector<std::string>& keys, bool include_dense, 
+	 uint32_t sparse_dense_ratio,SuffixType suffix_config) {
+	builder = new SuRFBuilder(suffix_config, sparse_dense_ratio, suffix_config);
 	builder->build(keys);
 	louds_dense_ = new LoudsDense(builder);
 	louds_sparse_ = new LoudsSparse(builder);
@@ -45,6 +46,8 @@ private:
 bool SuRF::lookupKey(const std::string& key) {
     position_t connect_node_num = 0;
     if (!louds_dense_->lookupKey(key, connect_node_num))
+	return false;
+    else if (connect_node_num != 0)
 	return louds_sparse_->lookupKey(key, connect_node_num);
     return true;
 }

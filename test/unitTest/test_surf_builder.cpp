@@ -216,7 +216,7 @@ TEST_F (SuRFBuilderUnitTest, buildSparseTest) {
 
 	    // suffix test
 	    if (!has_child) {
-		suffix_t suffix = builder_->getSuffixes()[level+1][suffix_pos];
+		suffix_t suffix = builder_->getSuffixes()[level][suffix_pos];
 		suffix_t expected_suffix = 0;
 		if ((level+1) < words[i].length())
 		    expected_suffix = words[i][level+1];
