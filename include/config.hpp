@@ -28,6 +28,17 @@ enum SuffixType {
     kReal = 2
 };
 
+std::string uint64ToString(uint64_t key) {
+    uint64_t endian_swapped_key = __builtin_bswap64(key);
+    return std::string(reinterpret_cast<const char*>(&endian_swapped_key), 8);
+}
+
+uint64_t stringToUint64(std::string str_key) {
+    uint64_t int_key = 0;
+    memcpy(reinterpret_cast<char*>(&int_key), str_key.data(), 8);
+    return __builtin_bswap64(int_key);
+}
+
 } // namespace surf
 
 #endif // CONFIG_H_

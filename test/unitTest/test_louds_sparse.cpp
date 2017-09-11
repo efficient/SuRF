@@ -15,7 +15,10 @@ namespace surf {
 namespace sparsetest {
 
 static const std::string kFilePath = "../../../test/words.txt";
-static const int kTestSize = 234369;
+static const int kWordTestSize = 234369;
+static const uint64_t kIntTestStart = 10;
+static const int kIntTestBound = 10000001;
+static const uint64_t kIntTestSkip = 10; // should be less than 128
 static std::vector<std::string> words;
 
 class SparseUnitTest : public ::testing::Test {
@@ -25,16 +28,19 @@ public:
 	uint32_t sparse_dense_ratio = 0;
 	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal);
 	truncateWordSuffixes();
+	fillinInts();
     }
     virtual void TearDown () {
 	delete builder_;
     }
 
     void truncateWordSuffixes();
+    void fillinInts();
 
     SuRFBuilder* builder_;
     LoudsSparse* louds_sparse_;
     std::vector<std::string> words_trunc_;
+    std::vector<std::string> ints_;
 };
 
 static int getCommonPrefixLen(const std::string &a, const std::string &b) {
@@ -73,7 +79,13 @@ void SparseUnitTest::truncateWordSuffixes() {
     }
 }
 
-TEST_F (SparseUnitTest, lookupTest) {
+void SparseUnitTest::fillinInts() {
+    for (uint64_t i = kIntTestStart; i < kIntTestBound; i += kIntTestSkip) {
+	ints_.push_back(surf::uint64ToString(i));
+    }
+}
+
+TEST_F (SparseUnitTest, lookupWordTest) {
     builder_->build(words);
     louds_sparse_ = new LoudsSparse(builder_);
     position_t in_node_num = 0;
@@ -91,14 +103,64 @@ TEST_F (SparseUnitTest, lookupTest) {
 	    ASSERT_FALSE(key_exist);
 	}
     }
-
 }
 
+TEST_F (SparseUnitTest, lookupIntTest) {
+    builder_->build(ints_);
+    louds_sparse_ = new LoudsSparse(builder_);
+    position_t in_node_num = 0;
+
+    for (uint64_t i = kIntTestStart; i < kIntTestBound; i += kIntTestSkip) {
+	bool key_exist = louds_sparse_->lookupKey(surf::uint64ToString(i), in_node_num);
+	if (i % kIntTestSkip == 0)
+	    ASSERT_TRUE(key_exist);
+	else
+	    ASSERT_FALSE(key_exist);
+    }
+}
+    /*
+TEST_F (SparseUnitTest, lowerBoundStringTest) {
+    builder_->build(words);
+    louds_sparse_ = new LoudsSparse(builder_);
+    position_t in_node_num = 0;
+    std::string output_key;
+
+    for (unsigned i = 0; i < words.size(); i++) {
+	bool key_exist = louds_sparse_->getLowerBoundKey(words[i], output_key, in_node_num);
+	ASSERT_TRUE(key_exist);
+
+	auto res = std::mismatch(output_key.begin(), output_key.end(), words[i].begin());
+	bool is_prefix = (res.first == output_key.end());
+	ASSERT_TRUE(is_prefix);
+    }
+}
+
+TEST_F (SparseUnitTest, lowerBoundIntTest) {
+    builder_->build(ints_);
+    louds_sparse_ = new LoudsSparse(builder_);
+    position_t in_node_num = 0;
+    std::string output_key;
+
+    bool key_exist;
+    for (uint64_t i = 0; i < kIntTestBound; i++) {
+	key_exist = louds_sparse_->getLowerBoundKey(surf::uint64ToString(i), output_key, in_node_num);
+	ASSERT_TRUE(key_exist);
+	uint64_t output_int = surf::stringToUint64(output_key);
+	uint64_t expected_int = (i / kIntTestSkip) * kIntTestSkip;
+	if (i % kIntTestSkip)
+	    expected_int += kIntTestSkip;
+	ASSERT_EQ(expected_int, output_int);
+    }
+
+    key_exist = louds_sparse_->getLowerBoundKey(surf::uint64ToString(kIntTestBound), output_key, in_node_num);
+    ASSERT_FALSE(key_exist);
+}
+    */
 void loadWordList() {
     std::ifstream infile(kFilePath);
     std::string key;
     int count = 0;
-    while (infile.good() && count < kTestSize) {
+    while (infile.good() && count < kWordTestSize) {
 	infile >> key;
 	words.push_back(key);
 	count++;

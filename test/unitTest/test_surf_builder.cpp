@@ -15,6 +15,7 @@ namespace buildertest {
 
 static const std::string kFilePath = "../../../test/words.txt";
 static const int kTestSize = 234369;
+static const int kIntTestSize = 1000000;
 static std::vector<std::string> words;
 
 class SuRFBuilderUnitTest : public ::testing::Test {
@@ -23,14 +24,24 @@ public:
 	bool include_dense = true;
 	uint32_t sparse_dense_ratio = 0;
 	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal);
-	truncateWordSuffixes();
+	truncateSuffixes(words, words_trunc_);
+	fillinInts();
+	truncateSuffixes(ints_, ints_trunc_);
     }
     virtual void TearDown () {
 	delete builder_;
     }
 
-    void truncateWordSuffixes();
-    bool DoesPrefixMatchInWordsTrunc(int i, int j, int len);
+    void truncateSuffixes(const std::vector<std::string> &keys, 
+			  std::vector<std::string> &keys_trunc);
+    bool DoesPrefixMatchInTrunc(const std::vector<std::string> &keys_trunc, 
+				     int i, int j, int len);
+
+    void fillinInts();
+
+    void testSparse(const std::vector<std::string> &keys, 
+		    const std::vector<std::string> &keys_trunc);
+    void testDense();
 
     //debug
     void printDenseNode(level_t level, position_t node_num);
@@ -38,6 +49,8 @@ public:
 
     SuRFBuilder *builder_;
     std::vector<std::string> words_trunc_;
+    std::vector<std::string> ints_;
+    std::vector<std::string> ints_trunc_;
 };
 
 static int getCommonPrefixLen(const std::string &a, const std::string &b) {
@@ -53,26 +66,32 @@ static int getMax(int a, int b) {
     return a;
 }
 
-void SuRFBuilderUnitTest::truncateWordSuffixes() {
-    assert(words.size() > 1);
+void SuRFBuilderUnitTest::truncateSuffixes(const std::vector<std::string> &keys, std::vector<std::string> &keys_trunc) {
+    assert(keys.size() > 1);
     
     int commonPrefixLen = 0;
-    for (unsigned i = 0; i < words.size(); i++) {
+    for (unsigned i = 0; i < keys.size(); i++) {
 	if (i == 0) {
-	    commonPrefixLen = getCommonPrefixLen(words[i], words[i+1]);
-	} else if (i == words.size() - 1) {
-	    commonPrefixLen = getCommonPrefixLen(words[i-1], words[i]);
+	    commonPrefixLen = getCommonPrefixLen(keys[i], keys[i+1]);
+	} else if (i == keys.size() - 1) {
+	    commonPrefixLen = getCommonPrefixLen(keys[i-1], keys[i]);
 	} else {
-	    commonPrefixLen = getMax(getCommonPrefixLen(words[i-1], words[i]),
-				     getCommonPrefixLen(words[i], words[i+1]));
+	    commonPrefixLen = getMax(getCommonPrefixLen(keys[i-1], keys[i]),
+				     getCommonPrefixLen(keys[i], keys[i+1]));
 	}
 
-	if (commonPrefixLen < words[i].length()) {
-	    words_trunc_.push_back(words[i].substr(0, commonPrefixLen + 1));
+	if (commonPrefixLen < keys[i].length()) {
+	    keys_trunc.push_back(keys[i].substr(0, commonPrefixLen + 1));
 	} else {
-	    words_trunc_.push_back(words[i]);
-	    words_trunc_[i] += (char)kTerminator;
+	    keys_trunc.push_back(keys[i]);
+	    keys_trunc[i] += (char)kTerminator;
 	}
+    }
+}
+
+void SuRFBuilderUnitTest::fillinInts() {
+    for (uint64_t i = 0; i < kIntTestSize; i += 10) {
+	ints_.push_back(surf::uint64ToString(i));
     }
 }
 
@@ -170,45 +189,44 @@ void SuRFBuilderUnitTest::printSparseNode(level_t level, position_t pos) {
     std::cout << "\n";
 }
 
-bool SuRFBuilderUnitTest::DoesPrefixMatchInWordsTrunc(int i, int j, int len) {
-    if (i < 0 || i >= words_trunc_.size()) return false;
-    if (j < 0 || j >= words_trunc_.size()) return false;
+bool SuRFBuilderUnitTest::DoesPrefixMatchInTrunc(const std::vector<std::string> &keys_trunc, int i, int j, int len) {
+    if (i < 0 || i >= keys_trunc.size()) return false;
+    if (j < 0 || j >= keys_trunc.size()) return false;
     if (len <= 0) return true;
-    if (words_trunc_[i].length() < len) return false;
-    if (words_trunc_[j].length() < len) return false;
-    if (words_trunc_[i].substr(0, len).compare(words_trunc_[j].substr(0, len)) == 0)
+    if (keys_trunc[i].length() < len) return false;
+    if (keys_trunc[j].length() < len) return false;
+    if (keys_trunc[i].substr(0, len).compare(keys_trunc[j].substr(0, len)) == 0)
 	return true;
     return false;
 }
 
-TEST_F (SuRFBuilderUnitTest, buildSparseTest) {
-    builder_->build(words);
-
-    for (level_t level = 0; level < builder_->getTreeHeight(); level++) {
+void SuRFBuilderUnitTest::testSparse(const std::vector<std::string> &keys, 
+				     const std::vector<std::string> &keys_trunc) {
+   for (level_t level = 0; level < builder_->getTreeHeight(); level++) {
 	position_t pos = 0; pos--;
 	position_t suffix_pos = 0;
-	for (int i = 0; i < (int)words_trunc_.size(); i++) {
-	    if (level >= words_trunc_[i].length())
+	for (int i = 0; i < (int)keys_trunc.size(); i++) {
+	    if (level >= keys_trunc[i].length())
 		continue;
-	    if (DoesPrefixMatchInWordsTrunc(i-1, i, level+1))
+	    if (DoesPrefixMatchInTrunc(keys_trunc, i-1, i, level+1))
 		continue;
 	    pos++;
 
 	    // label test
-	    label_t label = words_trunc_[i][level];
+	    label_t label = keys_trunc[i][level];
 	    bool exist_in_node = (builder_->getLabels()[level][pos] == label);
 	    ASSERT_TRUE(exist_in_node);
 
 	    // child indicator test
 	    bool has_child = SuRFBuilder::readBit(builder_->getChildIndicatorBits()[level], pos);
-	    bool same_prefix_in_prev_key = DoesPrefixMatchInWordsTrunc(i-1, i, level+1);
-	    bool same_prefix_in_next_key = DoesPrefixMatchInWordsTrunc(i, i+1, level+1);
+	    bool same_prefix_in_prev_key = DoesPrefixMatchInTrunc(keys_trunc, i-1, i, level+1);
+	    bool same_prefix_in_next_key = DoesPrefixMatchInTrunc(keys_trunc, i, i+1, level+1);
 	    bool expected_has_child = same_prefix_in_prev_key || same_prefix_in_next_key;
 	    ASSERT_EQ(expected_has_child, has_child);
 
 	    // LOUDS bit test
 	    bool louds_bit = SuRFBuilder::readBit(builder_->getLoudsBits()[level], pos);
-	    bool expected_louds_bit = !DoesPrefixMatchInWordsTrunc(i-1, i, level);
+	    bool expected_louds_bit = !DoesPrefixMatchInTrunc(keys_trunc, i-1, i, level);
 	    if (pos == 0)
 		ASSERT_TRUE(louds_bit);
 	    else
@@ -218,8 +236,8 @@ TEST_F (SuRFBuilderUnitTest, buildSparseTest) {
 	    if (!has_child) {
 		suffix_t suffix = builder_->getSuffixes()[level][suffix_pos];
 		suffix_t expected_suffix = 0;
-		if ((level+1) < words[i].length())
-		    expected_suffix = words[i][level+1];
+		if ((level+1) < keys[i].length())
+		    expected_suffix = keys[i][level+1];
 		ASSERT_EQ(expected_suffix, suffix);
 		suffix_pos++;
 	    }
@@ -227,9 +245,7 @@ TEST_F (SuRFBuilderUnitTest, buildSparseTest) {
     }
 }
 
-TEST_F (SuRFBuilderUnitTest, buildDenseTest) {
-    builder_->build(words);
-
+void SuRFBuilderUnitTest::testDense() {
     for (level_t level = 0; level < builder_->getSparseStartLevel(); level++) {
 	int node_num = -1;
 
@@ -288,6 +304,26 @@ TEST_F (SuRFBuilderUnitTest, buildDenseTest) {
 	    prev_label = label;
 	}
     }
+}
+
+TEST_F (SuRFBuilderUnitTest, buildSparseStringTest) {
+    builder_->build(words);
+    testSparse(words, words_trunc_);
+}
+
+TEST_F (SuRFBuilderUnitTest, buildSparseIntTest) {
+    builder_->build(ints_);
+    testSparse(ints_, ints_trunc_);
+}
+
+TEST_F (SuRFBuilderUnitTest, buildDenseStringTest) {
+    builder_->build(words);
+    testDense();
+}
+
+TEST_F (SuRFBuilderUnitTest, buildDenseIntTest) {
+    builder_->build(ints_);
+    testDense();
 }
 
 void loadWordList() {

@@ -30,7 +30,8 @@ public:
     }
 
     bool lookupKey(const std::string& key);
-    bool getLowerBoundKey(const std::string& key, std::string* out_key);
+    bool getKeyGreaterThan(const std::string& key, std::string& out_key);
+    bool getKeyGreaterThanOrEqualTo(const std::string& key, std::string& out_key);
     bool lookupRange(const std::string& left_key, const std::string& right_key);
     uint32_t countRange(const std::string& left_key, const std::string& right_key);
 
@@ -52,10 +53,17 @@ bool SuRF::lookupKey(const std::string& key) {
     return true;
 }
 
-bool SuRF::getLowerBoundKey(const std::string& key, std::string* output_key) {
+bool SuRF::getKeyGreaterThan(const std::string& key, std::string& output_key) {
     position_t connect_pos = 0;
-    if (!louds_dense_->getLowerBoundKey(key, output_key, connect_pos))
-	return louds_sparse_->getLowerBoundKey(key, output_key, connect_pos);
+    if (!louds_dense_->getKeyGreaterThan(key, output_key, connect_pos))
+	return louds_sparse_->getKeyGreaterThan(key, output_key, connect_pos);
+    return true;
+}
+
+bool SuRF::getKeyGreaterThanOrEqualTo(const std::string& key, std::string& output_key) {
+    position_t connect_pos = 0;
+    if (!louds_dense_->getKeyGreaterThanOrEqualTo(key, output_key, connect_pos))
+	return louds_sparse_->getKeyGreaterThanOrEqualTo(key, output_key, connect_pos);
     return true;
 }
 

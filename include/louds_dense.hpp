@@ -25,7 +25,8 @@ public:
     // Returns whether key exists in the trie so far
     // out_node_num == 0 means search terminates in louds-dense.
     bool lookupKey(const std::string& key, position_t& out_node_num) const;
-    bool getLowerBoundKey(const std::string& key, std::string* output_key, position_t& out_pos) const;
+    bool getKeyGreaterThan(const std::string& key, std::string& output_key, position_t& out_pos) const;
+    bool getKeyGreaterThanOrEqualTo(const std::string& key, std::string& output_key, position_t& out_pos) const;
     bool lookupRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const;
     uint32_t countRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const;
 
@@ -64,7 +65,7 @@ bool LoudsDense::lookupKey(const std::string& key, position_t& out_node_num) con
     position_t node_num = 0;
     position_t pos = 0;
     for (level_t level = 0; level < height_; level++) {
-	pos = (node_num * kNodeFanout) + key[level];
+	pos = (node_num * kNodeFanout) + (label_t)key[level];
 	if (level >= key.length()) { //if run out of searchKey bytes
 	    if (prefixkey_indicator_bits_->readBit(node_num)) //if the prefix is also a key
 		return suffixes_->checkEquality(getSuffixPos(node_num, pos), key, level + 1);
@@ -85,7 +86,11 @@ bool LoudsDense::lookupKey(const std::string& key, position_t& out_node_num) con
     return true;
 }
 
-bool LoudsDense::getLowerBoundKey(const std::string& key, std::string* output_key, position_t& out_pos) const {
+bool LoudsDense::getKeyGreaterThan(const std::string& key, std::string& output_key, position_t& out_pos) const {
+    return true;
+}
+
+bool LoudsDense::getKeyGreaterThanOrEqualTo(const std::string& key, std::string& output_key, position_t& out_pos) const {
     return true;
 }
 

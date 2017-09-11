@@ -52,17 +52,52 @@ public:
     }
 
     bool search(const label_t target, position_t& pos, const position_t search_len) const;
+    bool searchGreaterThan(const label_t target, position_t& pos, const position_t search_len) const;
 
     bool binarySearch(const label_t target, position_t& pos, const position_t search_len) const;
     bool simdSearch(const label_t target, position_t& pos, const position_t search_len) const;
     bool linearSearch(const label_t target, position_t& pos, const position_t search_len) const;
+
+    bool binarySearchGreaterThan(const label_t target, position_t& pos, const position_t search_len) const;
+    bool linearSearchGreaterThan(const label_t target, position_t& pos, const position_t search_len) const;
 
 private:
     position_t num_bytes_;
     label_t* labels_;
 };
 
-//TODO: need unit test
+//TODO: need performance test
+bool LabelVector::search(const label_t target, position_t& pos, position_t search_len) const {
+    //skip terminator label
+    if ((search_len > 1) && (labels_[pos] == kTerminator)) {
+	pos++;
+	search_len--;
+    }
+
+    //TODO: need new test data
+    if (search_len < 3)
+	return linearSearch(target, pos, search_len);
+    if (search_len < 12)
+	return binarySearch(target, pos, search_len);
+    else
+	return simdSearch(target, pos, search_len);
+}
+
+//TODO: need performance test
+bool LabelVector::searchGreaterThan(const label_t target, position_t& pos, position_t search_len) const {
+    //skip terminator label
+    if ((search_len > 1) && (labels_[pos] == kTerminator)) {
+	pos++;
+	search_len--;
+    }
+
+    //TODO: need new test data
+    if (search_len < 3)
+	return linearSearchGreaterThan(target, pos, search_len);
+    else
+	return binarySearchGreaterThan(target, pos, search_len);
+}
+
 bool LabelVector::binarySearch(const label_t target, position_t& pos, const position_t search_len) const {
     position_t l = pos;
     position_t r = pos + search_len;
@@ -80,7 +115,24 @@ bool LabelVector::binarySearch(const label_t target, position_t& pos, const posi
     return false;
 }
 
-//TODO: need unit test
+    // not done yet
+bool LabelVector::binarySearchGreaterThan(const label_t target, position_t& pos, const position_t search_len) const {
+    position_t l = pos;
+    position_t r = pos + search_len;
+    while (l < r) {
+	position_t m = (l + r) >> 1;
+	if (target < labels_[m]) {
+	    r = m;
+	} else if (target == labels_[m]) {
+	    pos = m;
+	    return true;
+	} else {
+	    l = m + 1;
+	}
+    }
+    return false;
+}
+
 bool LabelVector::simdSearch(const label_t target, position_t& pos, const position_t search_len) const {
     position_t num_labels_searched = 0;
     position_t num_labels_left = search_len;
@@ -112,7 +164,6 @@ bool LabelVector::simdSearch(const label_t target, position_t& pos, const positi
     return false;
 }
 
-//TODO: need unit test
 bool LabelVector::linearSearch(const label_t target, position_t&  pos, const position_t search_len) const {
     for (position_t i = 0; i < search_len; i++) {
 	if (target == labels_[pos + i]) {
@@ -123,21 +174,14 @@ bool LabelVector::linearSearch(const label_t target, position_t&  pos, const pos
     return false;
 }
 
-//TODO: need performance test
-bool LabelVector::search(const label_t target, position_t& pos, position_t search_len) const {
-    //skip terminator label
-    if ((search_len > 1) && (labels_[pos] == kTerminator)) {
-	pos++;
-	search_len--;
+bool LabelVector::linearSearchGreaterThan(const label_t target, position_t&  pos, const position_t search_len) const {
+    for (position_t i = 0; i < search_len; i++) {
+	if (target > labels_[pos + i]) {
+	    pos += i;
+	    return true;
+	}
     }
-
-    //TODO: need new test data
-    if (search_len < 3)
-	return linearSearch(target, pos, search_len);
-    if (search_len < 12)
-	return binarySearch(target, pos, search_len);
-    else
-	return simdSearch(target, pos, search_len);
+    return false;
 }
 
 } // namespace surf

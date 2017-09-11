@@ -14,7 +14,8 @@ namespace surf {
 namespace surftest {
 
 static const std::string kFilePath = "../../../test/words.txt";
-static const int kTestSize = 234369;
+static const int kWordTestSize = 234369;
+static const int kIntTestSize = 1000000;
 static std::vector<std::string> words;
 
 class SuRFUnitTest : public ::testing::Test {
@@ -70,6 +71,12 @@ void SuRFUnitTest::truncateWordSuffixes() {
     }
 }
 
+TEST_F (SuRFUnitTest, IntStringConvertTest) {
+    for (uint64_t i = 0; i < kIntTestSize; i++) {
+	ASSERT_EQ(i, stringToUint64(uint64ToString(i)));
+    }
+}
+
 TEST_F (SuRFUnitTest, lookupTest) {
     surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kReal);
 
@@ -98,7 +105,7 @@ void loadWordList() {
     std::ifstream infile(kFilePath);
     std::string key;
     int count = 0;
-    while (infile.good() && count < kTestSize) {
+    while (infile.good() && count < kWordTestSize) {
 	infile >> key;
 	words.push_back(key);
 	count++;

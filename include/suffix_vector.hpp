@@ -40,42 +40,62 @@ public:
 	delete[] suffixes_;
     }
 
-    suffix_t read(const position_t pos) const {
-	return suffixes_[pos];
-    }
-
-    bool checkEquality(const position_t pos, const std::string& key, const level_t level = 0) const {
-	assert(pos < num_bytes_);
-	switch (type_) {
-	case kHash: {
-	    suffix_t h = suffixHash(key) & kSuffixHashMask;
-	    if (h == suffixes_[pos])
-		return true;
-	    return false;
-	}
-	case kReal: {
-	    if (suffixes_[pos] == 0) //0 means no suffix stored
-		return true;
-	    assert(level < key.length());
-	    if (key[level] == suffixes_[pos])
-		return true;
-	    return false;
-	}
-	default:
-	    return false;
-	}
-
+    SuffixType getType() const {
+	return type_;
     }
 
     position_t size() const {
 	return (sizeof(SuffixVector) + num_bytes_);
     }
 
+    suffix_t read(const position_t pos) const {
+	return suffixes_[pos];
+    }
+
+    bool checkEquality(const position_t pos, const std::string& key, const level_t level = 0) const;
+    int compare(const position_t pos, const std::string& key, const level_t level = 0) const;
+
 private:
     SuffixType type_;
     position_t num_bytes_;
     suffix_t* suffixes_;
 };
+
+bool SuffixVector::checkEquality(const position_t pos, const std::string& key, const level_t level = 0) const {
+    assert(pos < num_bytes_);
+    switch (type_) {
+    case kHash: {
+	suffix_t h = suffixHash(key) & kSuffixHashMask;
+	if (suffixes_[pos] == h)
+	    return true;
+	return false;
+    }
+    case kReal: {
+	if (suffixes_[pos] == 0) //0 means no suffix stored
+	    return true;
+	assert(level < key.length());
+	if (suffixes_[pos] == (label_t)key[level])
+	    return true;
+	return false;
+    }
+    default:
+	return false;
+    }
+}
+
+// TODO: need to write unit test
+int SuffixVector::compare(const position_t pos, const std::string& key, const level_t level = 0) const {
+    assert(pos < num_bytes_);
+    assert(type_ == kReal);
+    assert(level < key.length());
+
+    if (suffixes_[pos] < (label_t)key[level])
+	return -1;
+    else if (suffixes_[pos] == (label_t)key[level])
+	return 0;
+    else
+	return 1;
+}
 
 } // namespace surf
 

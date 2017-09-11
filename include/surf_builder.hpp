@@ -101,7 +101,7 @@ private:
     // Fills in the suffix byte for key
     void insertSuffix(const std::string& key, const level_t level);
 
-    bool isCharCommonPrefix(const char c, const level_t level) const;
+    bool isCharCommonPrefix(const label_t c, const level_t level) const;
     bool isLevelEmpty(const level_t level) const;
     void moveToNextItemSlot(const level_t level);
     void insertKeyByte(const char c, const level_t level, const bool is_start_of_node);
@@ -179,7 +179,7 @@ void SuRFBuilder::buildSparse(const std::vector<std::string>& keys) {
 
 level_t SuRFBuilder::skipCommonPrefix(const std::string& key) {
     level_t level = 0;
-    while (level < key.length() && isCharCommonPrefix(key[level], level)) {
+    while (level < key.length() && isCharCommonPrefix((label_t)key[level], level)) {
 	setBit(child_indicator_bits_[level], getNumItems(level) - 1);
 	level++;
     }
@@ -250,7 +250,7 @@ void SuRFBuilder::insertSuffix(const std::string& key, const level_t level) {
     }
 }
 
-bool SuRFBuilder::isCharCommonPrefix(const char c, const level_t level) const {
+bool SuRFBuilder::isCharCommonPrefix(const label_t c, const level_t level) const {
     return (level < getTreeHeight())
 	&& (!is_last_item_terminator_[level])
 	&& (c == labels_[level].back());

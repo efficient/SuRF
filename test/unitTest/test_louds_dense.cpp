@@ -16,6 +16,9 @@ namespace densetest {
 
 static const std::string kFilePath = "../../../test/words.txt";
 static const int kTestSize = 234369;
+static const uint64_t kIntTestStart = 10;
+static const int kIntTestBound = 10000000;
+static const uint64_t kIntTestSkip = 10;
 static std::vector<std::string> words;
 
 class DenseUnitTest : public ::testing::Test {
@@ -25,16 +28,19 @@ public:
 	uint32_t sparse_dense_ratio = 0;
 	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal);
 	truncateWordSuffixes();
+	fillinInts();
     }
     virtual void TearDown () {
 	delete builder_;
     }
 
     void truncateWordSuffixes();
+    void fillinInts();
 
     SuRFBuilder* builder_;
     LoudsDense* louds_dense_;
     std::vector<std::string> words_trunc_;
+    std::vector<std::string> ints_;
 };
 
 static int getCommonPrefixLen(const std::string &a, const std::string &b) {
@@ -73,6 +79,12 @@ void DenseUnitTest::truncateWordSuffixes() {
     }
 }
 
+void DenseUnitTest::fillinInts() {
+    for (uint64_t i = kIntTestStart; i < kIntTestBound; i += kIntTestSkip) {
+	ints_.push_back(surf::uint64ToString(i));
+    }
+}
+
 TEST_F (DenseUnitTest, lookupTest) {
     builder_->build(words);
     louds_dense_ = new LoudsDense(builder_);
@@ -91,7 +103,23 @@ TEST_F (DenseUnitTest, lookupTest) {
 	    ASSERT_FALSE(key_exist);
 	}
     }
+}
 
+TEST_F (DenseUnitTest, lookupIntTest) {
+    builder_->build(ints_);
+    louds_dense_ = new LoudsDense(builder_);
+    position_t out_node_num = 0;
+
+    for (uint64_t i = kIntTestStart; i < kIntTestBound; i += kIntTestSkip) {
+	bool key_exist = louds_dense_->lookupKey(surf::uint64ToString(i), out_node_num);
+	if (i % kIntTestSkip == 0) {
+	    ASSERT_TRUE(key_exist);
+	    ASSERT_EQ(0, out_node_num);
+	} else {
+	    ASSERT_FALSE(key_exist);
+	    ASSERT_EQ(0, out_node_num);
+	}
+    }
 }
 
 void loadWordList() {
