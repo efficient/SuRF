@@ -13,6 +13,33 @@ namespace surf {
 
 class SuRF {
 public:
+    class Iter {
+    public:
+	Iter() {};
+	Iter(SuRF* filter) {
+	    dense_iter_ = LoudsDense::Iter(filter->louds_dense_);
+	    sparse_iter_ = LoudsSparse::Iter(filter->louds_sparse_);
+	}
+
+	bool isValid() const;
+	std::string getKey() const;
+
+	// Returns true if the status of the iterator after the operation is valid
+	bool operator ++(int);
+
+    private:
+	bool incrementDenseIter();
+	bool incrementSparseIter();
+
+    private:
+	// true implies that dense_iter_ is valid
+	LoudsDense::Iter dense_iter_;
+	LoudsSparse::Iter sparse_iter_;
+
+	friend class SuRF;
+    };
+
+public:
     SuRF() {};
 
     SuRF(const std::vector<std::string>& keys, bool include_dense, 
@@ -30,12 +57,13 @@ public:
     }
 
     bool lookupKey(const std::string& key);
-    bool getKeyGreaterThan(const std::string& key, std::string& out_key);
-    bool getKeyGreaterThanOrEqualTo(const std::string& key, std::string& out_key);
+    SuRF::Iter moveToKeyGreaterThan(const std::string& key, const bool inclusive);
     bool lookupRange(const std::string& left_key, const std::string& right_key);
     uint32_t countRange(const std::string& left_key, const std::string& right_key);
 
     uint64_t getMemoryUsage();
+    level_t getHeight();
+    level_t getSparseStartLevel();
 
 private:
     LoudsDense* louds_dense_;
@@ -53,18 +81,20 @@ bool SuRF::lookupKey(const std::string& key) {
     return true;
 }
 
-bool SuRF::getKeyGreaterThan(const std::string& key, std::string& output_key) {
-    position_t connect_pos = 0;
-    if (!louds_dense_->getKeyGreaterThan(key, output_key, connect_pos))
-	return louds_sparse_->getKeyGreaterThan(key, output_key, connect_pos);
-    return true;
-}
+SuRF::Iter SuRF::moveToKeyGreaterThan(const std::string& key, const bool inclusive) {
+    SuRF::Iter iter(this);
+    louds_dense_->moveToKeyGreaterThan(key, inclusive, iter.dense_iter_);
 
-bool SuRF::getKeyGreaterThanOrEqualTo(const std::string& key, std::string& output_key) {
-    position_t connect_pos = 0;
-    if (!louds_dense_->getKeyGreaterThanOrEqualTo(key, output_key, connect_pos))
-	return louds_sparse_->getKeyGreaterThanOrEqualTo(key, output_key, connect_pos);
-    return true;
+    if (!iter.dense_iter_.isValid() || iter.dense_iter_.isComplete())
+	return iter;
+
+    louds_sparse_->moveToKeyGreaterThan(key, inclusive, iter.sparse_iter_);
+
+    if (iter.sparse_iter_.isValid())
+	return iter;
+
+    iter.incrementDenseIter();
+    return iter;
 }
 
 bool SuRF::lookupRange(const std::string& left_key, const std::string& right_key) {
@@ -86,6 +116,55 @@ uint32_t SuRF::countRange(const std::string& left_key, const std::string& right_
 
 uint64_t SuRF::getMemoryUsage() {
     return (sizeof(SuRF) + louds_dense_->getMemoryUsage() + louds_sparse_->getMemoryUsage());
+}
+
+level_t SuRF::getHeight() {
+    return louds_sparse_->getHeight();
+}
+
+level_t SuRF::getSparseStartLevel() {
+    return louds_sparse_->getStartLevel();
+}
+
+//============================================================================
+
+bool SuRF::Iter::isValid() const {
+    return dense_iter_.isValid() 
+	&& (dense_iter_.isComplete() || sparse_iter_.isValid());
+}
+
+std::string SuRF::Iter::getKey() const {
+    if (!isValid())
+	return std::string();
+
+    if (dense_iter_.isComplete())
+	return dense_iter_.getKey();
+
+    return dense_iter_.getKey() + sparse_iter_.getKey();
+}
+
+bool SuRF::Iter::incrementDenseIter() {
+    if (!dense_iter_.isValid()) return false;
+
+    dense_iter_++;
+    if (!dense_iter_.isValid()) return false;
+    if (dense_iter_.isComplete()) return true;
+
+    sparse_iter_.setStartNodeNum(dense_iter_.getSendOutNodeNum());
+    sparse_iter_.moveToLeftMostKey();
+    return true;
+}
+
+bool SuRF::Iter::incrementSparseIter() {
+    if (!sparse_iter_.isValid()) return false;
+    sparse_iter_++;
+    return sparse_iter_.isValid();
+}
+
+bool SuRF::Iter::operator ++(int) {
+    if (!isValid()) return false;
+    if (incrementSparseIter()) return true;
+    return incrementDenseIter();
 }
 
 } // namespace surf

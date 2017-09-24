@@ -52,8 +52,8 @@ public:
 	return suffixes_[pos];
     }
 
-    bool checkEquality(const position_t pos, const std::string& key, const level_t level = 0) const;
-    int compare(const position_t pos, const std::string& key, const level_t level = 0) const;
+    bool checkEquality(const position_t pos, const std::string& key, const level_t level) const;
+    int compare(const position_t pos, const label_t label) const;
 
 private:
     SuffixType type_;
@@ -61,7 +61,7 @@ private:
     suffix_t* suffixes_;
 };
 
-bool SuffixVector::checkEquality(const position_t pos, const std::string& key, const level_t level = 0) const {
+bool SuffixVector::checkEquality(const position_t pos, const std::string& key, const level_t level) const {
     assert(pos < num_bytes_);
     switch (type_) {
     case kHash: {
@@ -84,14 +84,13 @@ bool SuffixVector::checkEquality(const position_t pos, const std::string& key, c
 }
 
 // TODO: need to write unit test
-int SuffixVector::compare(const position_t pos, const std::string& key, const level_t level = 0) const {
+int SuffixVector::compare(const position_t pos, const label_t label) const {
     assert(pos < num_bytes_);
     assert(type_ == kReal);
-    assert(level < key.length());
 
-    if (suffixes_[pos] < (label_t)key[level])
+    if (suffixes_[pos] < label)
 	return -1;
-    else if (suffixes_[pos] == (label_t)key[level])
+    else if (suffixes_[pos] == label)
 	return 0;
     else
 	return 1;

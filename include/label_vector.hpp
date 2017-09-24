@@ -74,7 +74,6 @@ bool LabelVector::search(const label_t target, position_t& pos, position_t searc
 	search_len--;
     }
 
-    //TODO: need new test data
     if (search_len < 3)
 	return linearSearch(target, pos, search_len);
     if (search_len < 12)
@@ -91,7 +90,6 @@ bool LabelVector::searchGreaterThan(const label_t target, position_t& pos, posit
 	search_len--;
     }
 
-    //TODO: need new test data
     if (search_len < 3)
 	return linearSearchGreaterThan(target, pos, search_len);
     else
@@ -99,24 +97,6 @@ bool LabelVector::searchGreaterThan(const label_t target, position_t& pos, posit
 }
 
 bool LabelVector::binarySearch(const label_t target, position_t& pos, const position_t search_len) const {
-    position_t l = pos;
-    position_t r = pos + search_len;
-    while (l < r) {
-	position_t m = (l + r) >> 1;
-	if (target < labels_[m]) {
-	    r = m;
-	} else if (target == labels_[m]) {
-	    pos = m;
-	    return true;
-	} else {
-	    l = m + 1;
-	}
-    }
-    return false;
-}
-
-    // not done yet
-bool LabelVector::binarySearchGreaterThan(const label_t target, position_t& pos, const position_t search_len) const {
     position_t l = pos;
     position_t r = pos + search_len;
     while (l < r) {
@@ -170,6 +150,32 @@ bool LabelVector::linearSearch(const label_t target, position_t&  pos, const pos
 	    pos += i;
 	    return true;
 	}
+    }
+    return false;
+}
+
+    //TODO: need unit test
+bool LabelVector::binarySearchGreaterThan(const label_t target, position_t& pos, const position_t search_len) const {
+    position_t l = pos;
+    position_t r = pos + search_len;
+    while (l < r) {
+	position_t m = (l + r) >> 1;
+	if (target < labels_[m]) {
+	    r = m;
+	} else if (target == labels_[m]) {
+	    if (m < pos + search_len - 1) {
+		pos = m + 1;
+		return true;
+	    }
+	    return false;
+	} else {
+	    l = m + 1;
+	}
+    }
+
+    if (l < pos + search_len) {
+	pos = l;
+	return true;
     }
     return false;
 }
