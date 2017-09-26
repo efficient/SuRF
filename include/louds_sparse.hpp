@@ -150,13 +150,10 @@ bool LoudsSparse::lookupKey(const std::string& key, const position_t in_node_num
 }
 
 void LoudsSparse::moveToKeyGreaterThan(const std::string& key, const bool inclusive, LoudsSparse::Iter& iter) const {
-    //std::cout << "moveToKeyGreaterThan\n";
     position_t node_num = iter.getStartNodeNum();
     position_t pos = getFirstLabelPos(node_num);
     level_t level;
     for (level = start_level_; level < key.length(); level++) {
-	//std::cout << "\tlevel = " << level << "\n";
-	//std::cout << "\tpos = " << pos << "\n";
 	position_t node_size = nodeSize(pos);
 	// if no exact match
 	if (!labels_->search((label_t)key[level], pos, node_size))
@@ -173,7 +170,6 @@ void LoudsSparse::moveToKeyGreaterThan(const std::string& key, const bool inclus
 	pos = getFirstLabelPos(node_num);
     }
     if ((labels_->read(pos) == kTerminator) && (!child_indicator_bits_->readBit(pos))) {
-	//std::cout << "\tadd term\n";
 	iter.append(kTerminator, pos);
 	iter.is_at_terminator = true;
     }
@@ -214,7 +210,6 @@ position_t LoudsSparse::nodeSize(const position_t pos) const {
 }
 
 void LoudsSparse::moveToLeftInNextSubtrie(position_t pos, const position_t node_size, const label_t label, LoudsSparse::Iter& iter) const {
-    //std::cout << "moveToLeftInNextSubtrie\n";
     // if no label is greater than key[level] in this node
     if (!labels_->searchGreaterThan(label, pos, node_size)) {
 	iter.append(pos + node_size - 1);
@@ -226,8 +221,6 @@ void LoudsSparse::moveToLeftInNextSubtrie(position_t pos, const position_t node_
 }
 
 void LoudsSparse::compareSuffixGreaterThan(const position_t pos, const std::string& key, const level_t level, const bool inclusive, LoudsSparse::Iter& iter) const {
-    //std::cout << "compareSuffixGreaterThan\n";
-    //std::cout << "\titer.key_len_ = " << iter.key_len_ << "\n";
     if (level >= key.length()) {
 	if (!inclusive)
 	    return iter++;
@@ -255,8 +248,8 @@ std::string LoudsSparse::Iter::getKey() const {
     level_t len = key_len_;
     if (is_at_terminator) 
 	len--;
-    position_t suffix_pos = trie_->getSuffixPos(pos_in_trie_[key_len_ - 1]);
     std::string ret_str = std::string((const char*)key_.data(), (size_t)len);
+    position_t suffix_pos = trie_->getSuffixPos(pos_in_trie_[key_len_ - 1]);
     if (trie_->suffixes_->getType() == kReal && trie_->suffixes_->read(suffix_pos) > 0)
 	ret_str += std::string((const char*)(trie_->suffixes_->move(suffix_pos)), sizeof(suffix_t));
     return ret_str;
@@ -283,7 +276,6 @@ void LoudsSparse::Iter::set(const level_t level, const position_t pos) {
 }
 
 void LoudsSparse::Iter::moveToLeftMostKey() {
-    //std::cout << "moveToLeftMostKey\n";
     if (key_len_ == 0) {
 	position_t pos = trie_->getFirstLabelPos(start_node_num_);
 	label_t label = trie_->labels_->read(pos);
@@ -302,16 +294,9 @@ void LoudsSparse::Iter::moveToLeftMostKey() {
     }
 
     while (level < trie_->getHeight()) {
-
-	//std::cout << "\tlevel = " << level << "\n";
-	//std::cout << "\tpos = " << pos << "\n";
-
 	position_t node_num = trie_->getChildNodeNum(pos);
 	pos = trie_->getFirstLabelPos(node_num);
 	label = trie_->labels_->read(pos);
-
-	//std::cout << "\tlabel = " << label << "\n";
-
 	// if trie branch terminates
 	if (!trie_->child_indicator_bits_->readBit(pos)) {
 	    append(label, pos);
@@ -320,7 +305,6 @@ void LoudsSparse::Iter::moveToLeftMostKey() {
 	    is_valid_ = true;
 	    return;
 	}
-
 	append(label, pos);
 	level++;
     }
@@ -328,14 +312,10 @@ void LoudsSparse::Iter::moveToLeftMostKey() {
 }
 
 void LoudsSparse::Iter::operator ++(int) {
-    //std::cout << "++\n";
-    //std::cout << "\tkey_len_ = " << key_len_ << "\n";
     assert(key_len_ > 0);
     is_at_terminator = false;
     position_t pos = pos_in_trie_[key_len_ - 1];
     pos++;
-    //std::cout << "\tpos = " << pos << "\n";
-    // if crossing node boundary
     while (pos >= trie_->louds_bits_->numBits() || trie_->louds_bits_->readBit(pos)) {
 	key_len_--;
 	if (key_len_ == 0) {
@@ -346,11 +326,8 @@ void LoudsSparse::Iter::operator ++(int) {
 	pos++;
     }
     set(key_len_ - 1, pos);
-    //std::cout << "\tkey_len_ = " << key_len_ << "\n";
-    //std::cout << "\tpos = " << pos << "\n";
     return moveToLeftMostKey();
 }
-
 
 } // namespace surf
 

@@ -17,8 +17,8 @@ namespace sparsetest {
 static const std::string kFilePath = "../../../test/words.txt";
 static const int kWordTestSize = 234369;
 static const uint64_t kIntTestStart = 10;
-static const int kIntTestBound = 10000001;
-static const uint64_t kIntTestSkip = 10; // should be less than 128
+static const int kIntTestBound = 1000001;
+static const uint64_t kIntTestSkip = 10;
 static std::vector<std::string> words;
 
 class SparseUnitTest : public ::testing::Test {
@@ -80,7 +80,7 @@ void SparseUnitTest::truncateWordSuffixes() {
 }
 
 void SparseUnitTest::fillinInts() {
-    for (uint64_t i = kIntTestStart; i < kIntTestBound; i += kIntTestSkip) {
+    for (uint64_t i = 0; i < kIntTestBound; i += kIntTestSkip) {
 	ints_.push_back(surf::uint64ToString(i));
     }
 }
@@ -119,7 +119,7 @@ TEST_F (SparseUnitTest, lookupIntTest) {
     }
 }
 
-TEST_F (SparseUnitTest, moveToKeyGreaterThanTest) {
+TEST_F (SparseUnitTest, moveToKeyGreaterThanWordTest) {
     builder_->build(words);
     louds_sparse_ = new LoudsSparse(builder_);
 
@@ -153,28 +153,45 @@ TEST_F (SparseUnitTest, moveToKeyGreaterThanTest) {
     ASSERT_FALSE(iter.isValid());
 }
 
-    /*
-TEST_F (SparseUnitTest, lowerBoundIntTest) {
+TEST_F (SparseUnitTest, moveToKeyGreaterThanIntTest) {
     builder_->build(ints_);
     louds_sparse_ = new LoudsSparse(builder_);
-    position_t in_node_num = 0;
-    std::string output_key;
-
-    bool key_exist;
     for (uint64_t i = 0; i < kIntTestBound; i++) {
-	key_exist = louds_sparse_->getLowerBoundKey(surf::uint64ToString(i), output_key, in_node_num);
-	ASSERT_TRUE(key_exist);
-	uint64_t output_int = surf::stringToUint64(output_key);
-	uint64_t expected_int = (i / kIntTestSkip) * kIntTestSkip;
-	if (i % kIntTestSkip)
-	    expected_int += kIntTestSkip;
-	ASSERT_EQ(expected_int, output_int);
+	bool inclusive = true;
+	LoudsSparse::Iter iter(louds_sparse_);
+	louds_sparse_->moveToKeyGreaterThan(surf::uint64ToString(i), inclusive, iter);
+
+	ASSERT_TRUE(iter.isValid());
+	std::string iter_key = iter.getKey();
+	std::string int_key;
+	if (i % kIntTestSkip == 0)
+	    int_key = surf::uint64ToString(i);
+	else
+	    int_key = surf::uint64ToString(i - (i % kIntTestSkip) + kIntTestSkip);
+	std::string int_prefix = int_key.substr(0, iter_key.length());
+	bool is_prefix = (int_prefix.compare(iter_key) == 0);
+	ASSERT_TRUE(is_prefix);
     }
 
-    key_exist = louds_sparse_->getLowerBoundKey(surf::uint64ToString(kIntTestBound), output_key, in_node_num);
-    ASSERT_FALSE(key_exist);
+    for (uint64_t i = 0; i < kIntTestBound - 1; i++) {
+	bool inclusive = false;
+	LoudsSparse::Iter iter(louds_sparse_);
+	louds_sparse_->moveToKeyGreaterThan(surf::uint64ToString(i), inclusive, iter);
+
+	ASSERT_TRUE(iter.isValid());
+	std::string iter_key = iter.getKey();
+	std::string int_key = surf::uint64ToString(i - (i % kIntTestSkip) + kIntTestSkip);
+	std::string int_prefix = int_key.substr(0, iter_key.length());
+	bool is_prefix = (int_prefix.compare(iter_key) == 0);
+	ASSERT_TRUE(is_prefix);
+    }
+
+    bool inclusive = false;
+    LoudsSparse::Iter iter(louds_sparse_);
+    louds_sparse_->moveToKeyGreaterThan(surf::uint64ToString(kIntTestBound - 1), inclusive, iter);
+    ASSERT_FALSE(iter.isValid());
 }
-    */
+
 void loadWordList() {
     std::ifstream infile(kFilePath);
     std::string key;
