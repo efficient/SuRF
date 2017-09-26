@@ -173,7 +173,9 @@ void LoudsSparse::moveToKeyGreaterThan(const std::string& key, const bool inclus
 	iter.append(kTerminator, pos);
 	iter.is_at_terminator = true;
     }
-    return compareSuffixGreaterThan(pos, key, level+1, inclusive, iter);
+    if (!inclusive)
+	return iter++;
+    iter.is_valid_ = true;
 }
 
 bool LoudsSparse::lookupRange(const std::string& left_key, const std::string& right_key, const position_t in_left_pos, const position_t in_right_pos) const {
@@ -221,13 +223,6 @@ void LoudsSparse::moveToLeftInNextSubtrie(position_t pos, const position_t node_
 }
 
 void LoudsSparse::compareSuffixGreaterThan(const position_t pos, const std::string& key, const level_t level, const bool inclusive, LoudsSparse::Iter& iter) const {
-    if (level >= key.length()) {
-	if (!inclusive)
-	    return iter++;
-	iter.is_valid_ = true;
-	return;
-    }
-
     if (suffixes_->getType() == kReal) {
 	position_t suffix_pos = getSuffixPos(pos);
 	int compare = suffixes_->compare(suffix_pos, key[level]);

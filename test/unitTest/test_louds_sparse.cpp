@@ -122,7 +122,6 @@ TEST_F (SparseUnitTest, lookupIntTest) {
 TEST_F (SparseUnitTest, moveToKeyGreaterThanWordTest) {
     builder_->build(words);
     louds_sparse_ = new LoudsSparse(builder_);
-
     for (unsigned i = 0; i < words.size(); i++) {
 	bool inclusive = true;
 	LoudsSparse::Iter iter(louds_sparse_);
@@ -189,6 +188,42 @@ TEST_F (SparseUnitTest, moveToKeyGreaterThanIntTest) {
     bool inclusive = false;
     LoudsSparse::Iter iter(louds_sparse_);
     louds_sparse_->moveToKeyGreaterThan(surf::uint64ToString(kIntTestBound - 1), inclusive, iter);
+    ASSERT_FALSE(iter.isValid());
+}
+
+TEST_F (SparseUnitTest, IteratorIncrementWordTest) {
+    builder_->build(words);
+    louds_sparse_ = new LoudsSparse(builder_);
+    bool inclusive = true;
+    LoudsSparse::Iter iter(louds_sparse_);
+    louds_sparse_->moveToKeyGreaterThan(words[0], inclusive, iter);    
+    for (unsigned i = 1; i < words.size(); i++) {
+	iter++;
+	ASSERT_TRUE(iter.isValid());
+	std::string iter_key = iter.getKey();
+	std::string word_prefix = words[i].substr(0, iter_key.length());
+	bool is_prefix = (word_prefix.compare(iter_key) == 0);
+	ASSERT_TRUE(is_prefix);
+    }
+    iter++;
+    ASSERT_FALSE(iter.isValid());
+}
+
+TEST_F (SparseUnitTest, IteratorIncrementIntTest) {
+    builder_->build(ints_);
+    louds_sparse_ = new LoudsSparse(builder_);
+    bool inclusive = true;
+    LoudsSparse::Iter iter(louds_sparse_);
+    louds_sparse_->moveToKeyGreaterThan(surf::uint64ToString(0), inclusive, iter);    
+    for (uint64_t i = kIntTestSkip; i < kIntTestBound; i += kIntTestSkip) {
+	iter++;
+	ASSERT_TRUE(iter.isValid());
+	std::string iter_key = iter.getKey();
+	std::string int_prefix = surf::uint64ToString(i).substr(0, iter_key.length());
+	bool is_prefix = (int_prefix.compare(iter_key) == 0);
+	ASSERT_TRUE(is_prefix);
+    }
+    iter++;
     ASSERT_FALSE(iter.isValid());
 }
 
