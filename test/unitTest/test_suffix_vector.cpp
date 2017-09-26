@@ -41,6 +41,7 @@ TEST_F (SuffixVectorUnitTest, buildTest) {
 }
 
 //TODO checkEqualityTest
+//TODO compareTest
 
 void loadWordList() {
     std::ifstream infile(kFilePath);

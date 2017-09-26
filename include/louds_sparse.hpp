@@ -17,8 +17,8 @@ public:
     class Iter {
     public:
 	Iter() : is_valid_(false) {};
-	Iter(LoudsSparse* trie) : is_valid_(false), trie_(trie), 
-				  start_node_num_(0), key_len_(0) {
+	Iter(LoudsSparse* trie) : is_valid_(false), trie_(trie), start_node_num_(0), 
+				  key_len_(0), is_at_terminator(false) {
 	    start_level_ = trie_->getStartLevel();
 	    for (level_t level = start_level_; level < trie_->getHeight(); level++) {
 		key_.push_back(0);
@@ -49,6 +49,7 @@ public:
 
 	std::vector<label_t> key_;
 	std::vector<position_t> pos_in_trie_;
+	bool is_at_terminator;
 
 	friend class LoudsSparse;
     };
@@ -149,10 +150,13 @@ bool LoudsSparse::lookupKey(const std::string& key, const position_t in_node_num
 }
 
 void LoudsSparse::moveToKeyGreaterThan(const std::string& key, const bool inclusive, LoudsSparse::Iter& iter) const {
+    //std::cout << "moveToKeyGreaterThan\n";
     position_t node_num = iter.getStartNodeNum();
     position_t pos = getFirstLabelPos(node_num);
     level_t level;
     for (level = start_level_; level < key.length(); level++) {
+	//std::cout << "\tlevel = " << level << "\n";
+	//std::cout << "\tpos = " << pos << "\n";
 	position_t node_size = nodeSize(pos);
 	// if no exact match
 	if (!labels_->search((label_t)key[level], pos, node_size))
@@ -167,6 +171,11 @@ void LoudsSparse::moveToKeyGreaterThan(const std::string& key, const bool inclus
 	// move to child
 	node_num = getChildNodeNum(pos);
 	pos = getFirstLabelPos(node_num);
+    }
+    if ((labels_->read(pos) == kTerminator) && (!child_indicator_bits_->readBit(pos))) {
+	//std::cout << "\tadd term\n";
+	iter.append(kTerminator, pos);
+	iter.is_at_terminator = true;
     }
     return compareSuffixGreaterThan(pos, key, level+1, inclusive, iter);
 }
@@ -205,6 +214,7 @@ position_t LoudsSparse::nodeSize(const position_t pos) const {
 }
 
 void LoudsSparse::moveToLeftInNextSubtrie(position_t pos, const position_t node_size, const label_t label, LoudsSparse::Iter& iter) const {
+    //std::cout << "moveToLeftInNextSubtrie\n";
     // if no label is greater than key[level] in this node
     if (!labels_->searchGreaterThan(label, pos, node_size)) {
 	iter.append(pos + node_size - 1);
@@ -216,6 +226,8 @@ void LoudsSparse::moveToLeftInNextSubtrie(position_t pos, const position_t node_
 }
 
 void LoudsSparse::compareSuffixGreaterThan(const position_t pos, const std::string& key, const level_t level, const bool inclusive, LoudsSparse::Iter& iter) const {
+    //std::cout << "compareSuffixGreaterThan\n";
+    //std::cout << "\titer.key_len_ = " << iter.key_len_ << "\n";
     if (level >= key.length()) {
 	if (!inclusive)
 	    return iter++;
@@ -232,16 +244,22 @@ void LoudsSparse::compareSuffixGreaterThan(const position_t pos, const std::stri
 	if (!inclusive)
 	    return iter++;
     }
+    iter.is_valid_ = true;
 }
 
 //============================================================================
 
 std::string LoudsSparse::Iter::getKey() const {
-    if (!is_valid_)
+    if (!is_valid_) 
 	return std::string();
+    level_t len = key_len_;
+    if (is_at_terminator) 
+	len--;
     position_t suffix_pos = trie_->getSuffixPos(pos_in_trie_[key_len_ - 1]);
-    return std::string((const char*)key_.data(), (size_t)key_len_) 
-	+ std::string((const char*)&(trie_->suffixes_[suffix_pos]), sizeof(suffix_t));
+    std::string ret_str = std::string((const char*)key_.data(), (size_t)len);
+    if (trie_->suffixes_->getType() == kReal && trie_->suffixes_->read(suffix_pos) > 0)
+	ret_str += std::string((const char*)(trie_->suffixes_->move(suffix_pos)), sizeof(suffix_t));
+    return ret_str;
 }
 
 void LoudsSparse::Iter::append(const position_t pos) {
@@ -265,6 +283,7 @@ void LoudsSparse::Iter::set(const level_t level, const position_t pos) {
 }
 
 void LoudsSparse::Iter::moveToLeftMostKey() {
+    //std::cout << "moveToLeftMostKey\n";
     if (key_len_ == 0) {
 	position_t pos = trie_->getFirstLabelPos(start_node_num_);
 	label_t label = trie_->labels_->read(pos);
@@ -273,15 +292,31 @@ void LoudsSparse::Iter::moveToLeftMostKey() {
 
     level_t level = start_level_ + key_len_ - 1;
     position_t pos = pos_in_trie_[key_len_ - 1];
+    label_t label = trie_->labels_->read(pos);
+
+    if (!trie_->child_indicator_bits_->readBit(pos)) {
+	if (label == kTerminator)
+	    is_at_terminator = true;
+	is_valid_ = true;
+	return;
+    }
+
     while (level < trie_->getHeight()) {
+
+	//std::cout << "\tlevel = " << level << "\n";
+	//std::cout << "\tpos = " << pos << "\n";
+
 	position_t node_num = trie_->getChildNodeNum(pos);
 	pos = trie_->getFirstLabelPos(node_num);
-	label_t label = trie_->labels_->read(pos);
+	label = trie_->labels_->read(pos);
+
+	//std::cout << "\tlabel = " << label << "\n";
 
 	// if trie branch terminates
 	if (!trie_->child_indicator_bits_->readBit(pos)) {
-	    if (label != kTerminator)
-		append(label, pos);
+	    append(label, pos);
+	    if (label == kTerminator)
+		is_at_terminator = true;
 	    is_valid_ = true;
 	    return;
 	}
@@ -293,18 +328,26 @@ void LoudsSparse::Iter::moveToLeftMostKey() {
 }
 
 void LoudsSparse::Iter::operator ++(int) {
+    //std::cout << "++\n";
+    //std::cout << "\tkey_len_ = " << key_len_ << "\n";
     assert(key_len_ > 0);
+    is_at_terminator = false;
     position_t pos = pos_in_trie_[key_len_ - 1];
+    pos++;
+    //std::cout << "\tpos = " << pos << "\n";
     // if crossing node boundary
-    while (trie_->louds_bits_->readBit(pos++)) {
+    while (pos >= trie_->louds_bits_->numBits() || trie_->louds_bits_->readBit(pos)) {
 	key_len_--;
 	if (key_len_ == 0) {
 	    is_valid_ = false;
 	    return;
 	}
 	pos = pos_in_trie_[key_len_ - 1];
+	pos++;
     }
     set(key_len_ - 1, pos);
+    //std::cout << "\tkey_len_ = " << key_len_ << "\n";
+    //std::cout << "\tpos = " << pos << "\n";
     return moveToLeftMostKey();
 }
 

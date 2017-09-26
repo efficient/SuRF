@@ -52,6 +52,10 @@ public:
 	return suffixes_[pos];
     }
 
+    suffix_t* move(const position_t pos) const {
+	return (suffixes_ + pos);
+    }
+
     bool checkEquality(const position_t pos, const std::string& key, const level_t level) const;
     int compare(const position_t pos, const label_t label) const;
 
@@ -83,7 +87,6 @@ bool SuffixVector::checkEquality(const position_t pos, const std::string& key, c
     }
 }
 
-// TODO: need to write unit test
 int SuffixVector::compare(const position_t pos, const label_t label) const {
     assert(pos < num_bytes_);
     assert(type_ == kReal);

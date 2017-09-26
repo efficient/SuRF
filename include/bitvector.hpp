@@ -29,6 +29,10 @@ public:
 	delete[] bits_;
     }
 
+    position_t numBits() const {
+	return num_bits_;
+    }
+
     position_t numWords() const {
 	if (num_bits_ % kWordSize == 0)
 	    return (num_bits_ / kWordSize);

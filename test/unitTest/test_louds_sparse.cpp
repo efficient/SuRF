@@ -118,23 +118,42 @@ TEST_F (SparseUnitTest, lookupIntTest) {
 	    ASSERT_FALSE(key_exist);
     }
 }
-    /*
-TEST_F (SparseUnitTest, lowerBoundStringTest) {
+
+TEST_F (SparseUnitTest, moveToKeyGreaterThanTest) {
     builder_->build(words);
     louds_sparse_ = new LoudsSparse(builder_);
-    position_t in_node_num = 0;
-    std::string output_key;
 
     for (unsigned i = 0; i < words.size(); i++) {
-	bool key_exist = louds_sparse_->getLowerBoundKey(words[i], output_key, in_node_num);
-	ASSERT_TRUE(key_exist);
+	bool inclusive = true;
+	LoudsSparse::Iter iter(louds_sparse_);
+	louds_sparse_->moveToKeyGreaterThan(words[i], inclusive, iter);
 
-	auto res = std::mismatch(output_key.begin(), output_key.end(), words[i].begin());
-	bool is_prefix = (res.first == output_key.end());
+	ASSERT_TRUE(iter.isValid());
+	std::string iter_key = iter.getKey();
+	std::string word_prefix = words[i].substr(0, iter_key.length());
+	bool is_prefix = (word_prefix.compare(iter_key) == 0);
 	ASSERT_TRUE(is_prefix);
     }
+
+    for (unsigned i = 0; i < words.size() - 1; i++) {
+	bool inclusive = false;
+	LoudsSparse::Iter iter(louds_sparse_);
+	louds_sparse_->moveToKeyGreaterThan(words[i], inclusive, iter);
+
+	ASSERT_TRUE(iter.isValid());
+	std::string iter_key = iter.getKey();
+	std::string word_prefix = words[i+1].substr(0, iter_key.length());
+	bool is_prefix = (word_prefix.compare(iter_key) == 0);
+	ASSERT_TRUE(is_prefix);
+    }
+
+    bool inclusive = false;
+    LoudsSparse::Iter iter(louds_sparse_);
+    louds_sparse_->moveToKeyGreaterThan(words[words.size() - 1], inclusive, iter);
+    ASSERT_FALSE(iter.isValid());
 }
 
+    /*
 TEST_F (SparseUnitTest, lowerBoundIntTest) {
     builder_->build(ints_);
     louds_sparse_ = new LoudsSparse(builder_);

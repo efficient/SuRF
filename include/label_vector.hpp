@@ -180,9 +180,9 @@ bool LabelVector::binarySearchGreaterThan(const label_t target, position_t& pos,
     return false;
 }
 
-bool LabelVector::linearSearchGreaterThan(const label_t target, position_t&  pos, const position_t search_len) const {
+bool LabelVector::linearSearchGreaterThan(const label_t target, position_t& pos, const position_t search_len) const {
     for (position_t i = 0; i < search_len; i++) {
-	if (target > labels_[pos + i]) {
+	if (labels_[pos + i] > target) {
 	    pos += i;
 	    return true;
 	}

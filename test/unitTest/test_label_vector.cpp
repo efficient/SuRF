@@ -55,7 +55,7 @@ TEST_F (LabelVectorUnitTest, readTest) {
     }
 }
 
-TEST_F (LabelVectorUnitTest, searchTest) {
+TEST_F (LabelVectorUnitTest, searchAlgTest) {
     setupWordsTest();
     position_t start_pos = 0;
     position_t search_len = 0;
@@ -65,7 +65,7 @@ TEST_F (LabelVectorUnitTest, searchTest) {
 	    if (louds_bit) {
 		position_t binary_search_pos, simd_search_pos, linear_search_pos;
 		bool binary_search_success, simd_search_success, linear_search_success;
-		for (position_t i = start_pos; i < search_len; i++) {
+		for (position_t i = start_pos; i < start_pos + search_len; i++) {
 		    // binary search success
 		    binary_search_pos = start_pos;
 		    binary_search_success = labels_->binarySearch(labels_->read(i), binary_search_pos, search_len);
@@ -111,7 +111,6 @@ TEST_F (LabelVectorUnitTest, searchTest) {
 		start_pos += search_len;
 		search_len = 0;
 	    }
-	    
 
 	    if (builder_->getLabels()[level][pos] == kTerminator
 		&& !SuRFBuilder::readBit(builder_->getChildIndicatorBits()[level], pos))
@@ -122,7 +121,7 @@ TEST_F (LabelVectorUnitTest, searchTest) {
     }
 }
 
-TEST_F (LabelVectorUnitTest, searchTest2) {
+TEST_F (LabelVectorUnitTest, searchTest) {
     setupWordsTest();
     position_t start_pos = 0;
     position_t search_len = 0;
@@ -132,14 +131,13 @@ TEST_F (LabelVectorUnitTest, searchTest2) {
 	    if (louds_bit) {
 		position_t search_pos;
 		bool search_success;
-		for (position_t i = start_pos; i < search_len; i++) {
-		    if ((i == start_pos) && (labels_->read(i) == kTerminator)
-			&& !SuRFBuilder::readBit(builder_->getChildIndicatorBits()[level], pos))
+		for (position_t i = start_pos; i < start_pos + search_len; i++) {
+		    label_t test_label = labels_->read(i);
+		    if (i == start_pos && test_label == kTerminator && search_len > 1)
 			continue;
 		    // search success
 		    search_pos = start_pos;
-		    search_success = labels_->search(labels_->read(i), search_pos, search_len);
-
+		    search_success = labels_->search(test_label, search_pos, search_len);
 		    ASSERT_TRUE(search_success);
 		    ASSERT_EQ(i, search_pos);
 		}
@@ -151,6 +149,54 @@ TEST_F (LabelVectorUnitTest, searchTest2) {
 		search_success = labels_->search('\255', search_pos, search_len);
 		ASSERT_FALSE(search_success);
 
+		start_pos += search_len;
+		search_len = 0;
+	    }
+	    search_len++;
+	}
+    }
+}
+
+TEST_F (LabelVectorUnitTest, searchGreaterThanTest) {
+    setupWordsTest();
+    position_t start_pos = 0;
+    position_t search_len = 0;
+    for (level_t level = 0; level < builder_->getTreeHeight(); level++) {
+	for (position_t pos = 0; pos < builder_->getLabels()[level].size(); pos++) {
+	    bool louds_bit = SuRFBuilder::readBit(builder_->getLoudsBits()[level], pos);
+	    if (louds_bit) {
+		position_t search_pos;
+		position_t terminator_offset = 0;
+		bool search_success;
+		for (position_t i = start_pos; i < start_pos + search_len; i++) {
+		    label_t cur_label = labels_->read(i);
+		    if (i == start_pos && cur_label == kTerminator && search_len > 1) {
+			terminator_offset = 1;
+			continue;
+		    }
+
+		    if (i < start_pos + search_len - 1) {
+			label_t next_label = labels_->read(i+1);
+			// search existing label
+			search_pos = start_pos;
+			search_success = labels_->searchGreaterThan(cur_label, search_pos, search_len);
+			ASSERT_TRUE(search_success);
+			ASSERT_EQ(i+1, search_pos);
+
+			// search midpoint (could be non-existing label)
+			label_t test_label = cur_label + ((next_label - cur_label) / 2);
+			search_pos = start_pos;
+			search_success = labels_->searchGreaterThan(test_label, search_pos, search_len);
+			ASSERT_TRUE(search_success);
+			ASSERT_EQ(i+1, search_pos);
+		    } else {
+			// search out-of-bound label
+			search_pos = start_pos;
+			search_success = labels_->searchGreaterThan(labels_->read(start_pos + search_len - 1), search_pos, search_len);
+			ASSERT_FALSE(search_success);
+			ASSERT_EQ(start_pos + terminator_offset, search_pos);
+		    }
+		}
 		start_pos += search_len;
 		search_len = 0;
 	    }
