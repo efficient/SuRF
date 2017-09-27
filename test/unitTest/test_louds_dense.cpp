@@ -110,7 +110,7 @@ TEST_F (DenseUnitTest, lookupIntTest) {
     louds_dense_ = new LoudsDense(builder_);
     position_t out_node_num = 0;
 
-    for (uint64_t i = kIntTestStart; i < kIntTestBound; i += kIntTestSkip) {
+    for (uint64_t i = 0; i < kIntTestBound; i += kIntTestSkip) {
 	bool key_exist = louds_dense_->lookupKey(surf::uint64ToString(i), out_node_num);
 	if (i % kIntTestSkip == 0) {
 	    ASSERT_TRUE(key_exist);
@@ -131,6 +131,7 @@ TEST_F (DenseUnitTest, moveToKeyGreaterThanWordTest) {
 	louds_dense_->moveToKeyGreaterThan(words[i], inclusive, iter);
 
 	ASSERT_TRUE(iter.isValid());
+	ASSERT_TRUE(iter.isComplete());
 	std::string iter_key = iter.getKey();
 	std::string word_prefix = words[i].substr(0, iter_key.length());
 	bool is_prefix = (word_prefix.compare(iter_key) == 0);
@@ -143,6 +144,7 @@ TEST_F (DenseUnitTest, moveToKeyGreaterThanWordTest) {
 	louds_dense_->moveToKeyGreaterThan(words[i], inclusive, iter);
 
 	ASSERT_TRUE(iter.isValid());
+	ASSERT_TRUE(iter.isComplete());
 	std::string iter_key = iter.getKey();
 	std::string word_prefix = words[i+1].substr(0, iter_key.length());
 	bool is_prefix = (word_prefix.compare(iter_key) == 0);
@@ -164,6 +166,7 @@ TEST_F (DenseUnitTest, moveToKeyGreaterThanIntTest) {
 	louds_dense_->moveToKeyGreaterThan(surf::uint64ToString(i), inclusive, iter);
 
 	ASSERT_TRUE(iter.isValid());
+	ASSERT_TRUE(iter.isComplete());
 	std::string iter_key = iter.getKey();
 	std::string int_key;
 	if (i % kIntTestSkip == 0)
@@ -181,6 +184,7 @@ TEST_F (DenseUnitTest, moveToKeyGreaterThanIntTest) {
 	louds_dense_->moveToKeyGreaterThan(surf::uint64ToString(i), inclusive, iter);
 
 	ASSERT_TRUE(iter.isValid());
+	ASSERT_TRUE(iter.isComplete());
 	std::string iter_key = iter.getKey();
 	std::string int_key = surf::uint64ToString(i - (i % kIntTestSkip) + kIntTestSkip);
 	std::string int_prefix = int_key.substr(0, iter_key.length());
@@ -203,6 +207,7 @@ TEST_F (DenseUnitTest, IteratorIncrementWordTest) {
     for (unsigned i = 1; i < words.size(); i++) {
 	iter++;
 	ASSERT_TRUE(iter.isValid());
+	ASSERT_TRUE(iter.isComplete());
 	std::string iter_key = iter.getKey();
 	std::string word_prefix = words[i].substr(0, iter_key.length());
 	bool is_prefix = (word_prefix.compare(iter_key) == 0);
@@ -221,6 +226,7 @@ TEST_F (DenseUnitTest, IteratorIncrementIntTest) {
     for (uint64_t i = kIntTestSkip; i < kIntTestBound; i += kIntTestSkip) {
 	iter++;
 	ASSERT_TRUE(iter.isValid());
+	ASSERT_TRUE(iter.isComplete());
 	std::string iter_key = iter.getKey();
 	std::string int_prefix = surf::uint64ToString(i).substr(0, iter_key.length());
 	bool is_prefix = (int_prefix.compare(iter_key) == 0);

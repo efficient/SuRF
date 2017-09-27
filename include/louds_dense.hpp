@@ -15,8 +15,11 @@ public:
     class Iter {
     public:
 	Iter() : is_valid_(false) {};
-	Iter(LoudsDense* trie) : is_valid_(false), is_complete_(false), trie_(trie), 
-				 send_out_node_num_(0), key_len_(0), is_at_prefix_key_(false) {
+	Iter(LoudsDense* trie) : is_valid_(false), is_search_complete_(false), 
+				 is_move_left_complete_(false), trie_(trie), 
+				 send_out_node_num_(0), key_len_(0), 
+				 is_at_prefix_key_(false) {
+				 
 	    for (level_t level = 0; level < trie_->getHeight(); level++) {
 		key_.push_back(0);
 		pos_in_trie_.push_back(0);
@@ -24,7 +27,11 @@ public:
 	}
 
 	bool isValid() const { return is_valid_; };
-	bool isComplete() const { return is_complete_; };
+	bool isSearchComplete() const { return is_search_complete_; };
+	bool isMoveLeftComplete() const { return is_move_left_complete_; };
+	bool isComplete() const { return (is_search_complete_ && is_move_left_complete_); };
+
+
 	std::string getKey() const;
 	position_t getSendOutNodeNum() const { return send_out_node_num_; };
 
@@ -35,13 +42,17 @@ public:
 	void append(position_t pos);
 	void set(level_t level, position_t pos);
 	void setSendOutNodeNum(position_t node_num) { send_out_node_num_ = node_num; };
+	void setFlags(const bool is_valid, const bool is_search_complete, 
+		      const bool is_move_left_complete);
 
     private:
 	// True means the iter either points to a valid key 
 	// or to a prefix with length trie_->getHeight()
 	bool is_valid_;
-	// True if the iter points to a complete key
-	bool is_complete_; 
+	// If false, call moveToKeyGreaterThan in LoudsSparse to complete
+	bool is_search_complete_; 
+	// If false, call moveToLeftMostKey in LoudsSparse to complete
+	bool is_move_left_complete_; 
 	LoudsDense* trie_;
 	position_t send_out_node_num_;
 	level_t key_len_; // Does NOT include suffix
@@ -144,9 +155,7 @@ void LoudsDense::moveToKeyGreaterThan(const std::string& key, const bool inclusi
 	    iter.is_at_prefix_key_ = true;
 	    if (!inclusive)
 		return iter++;
-	    iter.is_valid_ = true;
-	    iter.is_complete_ = true;
-	    return;
+	    return iter.setFlags(true, true, true); // valid, search complete, moveLeft complete
 	}
 
 	pos += (label_t)key[level];
@@ -165,6 +174,7 @@ void LoudsDense::moveToKeyGreaterThan(const std::string& key, const bool inclusi
     }
     //search will continue in LoudsSparse
     iter.setSendOutNodeNum(node_num);
+    iter.setFlags(true, false, true); // valid, search INCOMPLETE, moveLeft complete
 }
 
 bool LoudsDense::lookupRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const {
@@ -212,8 +222,7 @@ void LoudsDense::compareSuffixGreaterThan(const position_t pos, const std::strin
 	if (!inclusive)
 	    return iter++;
     }
-    iter.is_valid_ = true;
-    iter.is_complete_ = true;
+    iter.setFlags(true, true, true); // valid, search complete, moveLeft complete    
 }
 
 //============================================================================
@@ -225,7 +234,7 @@ std::string LoudsDense::Iter::getKey() const {
     if (is_at_prefix_key_) 
 	len--;
     std::string ret_str = std::string((const char*)key_.data(), (size_t)len);
-    if (is_complete_ && !is_at_prefix_key_) {
+    if (isComplete() && !is_at_prefix_key_) {
 	position_t suffix_pos = trie_->getSuffixPos(pos_in_trie_[key_len_ - 1], is_at_prefix_key_);
 	if (trie_->suffixes_->getType() == kReal && trie_->suffixes_->read(suffix_pos) > 0)
 	    ret_str += std::string((const char*)(trie_->suffixes_->move(suffix_pos)), sizeof(suffix_t));
@@ -246,16 +255,20 @@ void LoudsDense::Iter::set(level_t level, position_t pos) {
     pos_in_trie_[level] = pos;
 }
 
+void LoudsDense::Iter::setFlags(const bool is_valid, const bool is_search_complete, 
+				const bool is_move_left_complete) {
+    is_valid_ = is_valid;
+    is_search_complete_ = is_search_complete;
+    is_move_left_complete_ = is_move_left_complete;
+}
+
 void LoudsDense::Iter::moveToLeftMostKey() {
     assert(key_len_ > 0);
     level_t level = key_len_ - 1;
     position_t pos = pos_in_trie_[level];
 
-    if (!trie_->child_indicator_bitmaps_->readBit(pos)) {
-	is_valid_ = true;
-	is_complete_ = true;
-	return;
-    }
+    if (!trie_->child_indicator_bitmaps_->readBit(pos))
+	return setFlags(true, true, true); // valid, search complete, moveLeft complete
 
     while (level < trie_->getHeight() - 1) {
 	position_t node_num = trie_->getChildNodeNum(pos);
@@ -263,25 +276,20 @@ void LoudsDense::Iter::moveToLeftMostKey() {
 	if (trie_->prefixkey_indicator_bits_->readBit(node_num)) {
 	    append(trie_->getNextPos(node_num * kNodeFanout - 1));
 	    is_at_prefix_key_ = true;
-	    is_valid_ = true;
-	    is_complete_ = true;
-	    return;
+	    return setFlags(true, true, true); // valid, search complete, moveLeft complete
 	}
 
 	pos = trie_->getNextPos(node_num * kNodeFanout - 1);
 	append(pos);
 
 	// if trie branch terminates
-	if (!trie_->child_indicator_bitmaps_->readBit(pos)) {
-	    is_valid_ = true;
-	    is_complete_ = true;
-	    return;
-	}
+	if (!trie_->child_indicator_bitmaps_->readBit(pos))
+	    return setFlags(true, true, true); // valid, search complete, moveLeft complete
 
 	level++;
     }
     send_out_node_num_ = trie_->getChildNodeNum(pos);
-    is_complete_ = false;
+    setFlags(true, true, false); // valid, search complete, moveLeft INCOMPLETE
 }
 
 void LoudsDense::Iter::operator ++(int) {

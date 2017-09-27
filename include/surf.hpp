@@ -28,6 +28,7 @@ public:
 	bool operator ++(int);
 
     private:
+	void passToSparse();
 	bool incrementDenseIter();
 	bool incrementSparseIter();
 
@@ -85,16 +86,21 @@ SuRF::Iter SuRF::moveToKeyGreaterThan(const std::string& key, const bool inclusi
     SuRF::Iter iter(this);
     louds_dense_->moveToKeyGreaterThan(key, inclusive, iter.dense_iter_);
 
-    if (!iter.dense_iter_.isValid() || iter.dense_iter_.isComplete())
+    if (!iter.dense_iter_.isValid()) return iter;
+    if (iter.dense_iter_.isComplete()) return iter;
+
+    if (!iter.dense_iter_.isSearchComplete()) {
+	iter.passToSparse();
+	louds_sparse_->moveToKeyGreaterThan(key, inclusive, iter.sparse_iter_);
+	if (!iter.sparse_iter_.isValid())
+	    iter.incrementDenseIter();
 	return iter;
-
-    louds_sparse_->moveToKeyGreaterThan(key, inclusive, iter.sparse_iter_);
-
-    if (iter.sparse_iter_.isValid())
+    } else if (!iter.dense_iter_.isMoveLeftComplete()) {
+	iter.passToSparse();
+	iter.sparse_iter_.moveToLeftMostKey();
 	return iter;
-
-    iter.incrementDenseIter();
-    return iter;
+    }
+    assert(false); // shouldn't have reached here
 }
 
 bool SuRF::lookupRange(const std::string& left_key, const std::string& right_key) {
@@ -143,14 +149,18 @@ std::string SuRF::Iter::getKey() const {
     return dense_iter_.getKey() + sparse_iter_.getKey();
 }
 
+void SuRF::Iter::passToSparse() {
+    sparse_iter_.setStartNodeNum(dense_iter_.getSendOutNodeNum());
+}
+
 bool SuRF::Iter::incrementDenseIter() {
     if (!dense_iter_.isValid()) return false;
 
     dense_iter_++;
     if (!dense_iter_.isValid()) return false;
-    if (dense_iter_.isComplete()) return true;
+    if (dense_iter_.isMoveLeftComplete()) return true;
 
-    sparse_iter_.setStartNodeNum(dense_iter_.getSendOutNodeNum());
+    passToSparse();
     sparse_iter_.moveToLeftMostKey();
     return true;
 }

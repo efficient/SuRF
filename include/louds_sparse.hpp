@@ -265,9 +265,9 @@ void LoudsSparse::Iter::append(const label_t label, const position_t pos) {
 }
 
 void LoudsSparse::Iter::set(const level_t level, const position_t pos) {
-    assert((level - start_level_) < key_.size());
-    key_[level - start_level_] = trie_->labels_->read(pos);
-    pos_in_trie_[level - start_level_] = pos;
+    assert(level < key_.size());
+    key_[level] = trie_->labels_->read(pos);
+    pos_in_trie_[level] = pos;
 }
 
 void LoudsSparse::Iter::moveToLeftMostKey() {
@@ -277,8 +277,8 @@ void LoudsSparse::Iter::moveToLeftMostKey() {
 	append(label, pos);
     }
 
-    level_t level = start_level_ + key_len_ - 1;
-    position_t pos = pos_in_trie_[key_len_ - 1];
+    level_t level = key_len_ - 1;
+    position_t pos = pos_in_trie_[level];
     label_t label = trie_->labels_->read(pos);
 
     if (!trie_->child_indicator_bits_->readBit(pos)) {

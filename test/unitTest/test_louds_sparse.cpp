@@ -110,7 +110,7 @@ TEST_F (SparseUnitTest, lookupIntTest) {
     louds_sparse_ = new LoudsSparse(builder_);
     position_t in_node_num = 0;
 
-    for (uint64_t i = kIntTestStart; i < kIntTestBound; i += kIntTestSkip) {
+    for (uint64_t i = 0; i < kIntTestBound; i += kIntTestSkip) {
 	bool key_exist = louds_sparse_->lookupKey(surf::uint64ToString(i), in_node_num);
 	if (i % kIntTestSkip == 0)
 	    ASSERT_TRUE(key_exist);
