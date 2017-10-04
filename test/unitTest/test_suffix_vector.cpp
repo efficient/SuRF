@@ -32,12 +32,28 @@ public:
     SuffixVector* suffixes_;
 };
 
-TEST_F (SuffixVectorUnitTest, buildTest) {
+TEST_F (SuffixVectorUnitTest, buildNoneTest) {
+    bool include_dense = false;
+    uint32_t sparse_dense_ratio = 0;
+    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kNone);
+    builder_->build(words);
+    suffixes_ = new SuffixVector(kNone, builder_->getSuffixes());
+}
+
+TEST_F (SuffixVectorUnitTest, buildHashTest) {
     bool include_dense = false;
     uint32_t sparse_dense_ratio = 0;
     builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kHash);
     builder_->build(words);
     suffixes_ = new SuffixVector(kHash, builder_->getSuffixes());
+}
+
+TEST_F (SuffixVectorUnitTest, buildRealTest) {
+    bool include_dense = false;
+    uint32_t sparse_dense_ratio = 0;
+    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal);
+    builder_->build(words);
+    suffixes_ = new SuffixVector(kReal, builder_->getSuffixes());
 }
 
 //TODO checkEqualityTest

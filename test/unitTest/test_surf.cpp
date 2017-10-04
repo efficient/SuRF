@@ -18,6 +18,7 @@ static const int kWordTestSize = 234369;
 static const uint64_t kIntTestStart = 10;
 static const int kIntTestBound = 1000001;
 static const uint64_t kIntTestSkip = 10;
+static const SuffixType kSuffixConfig = kReal;
 static std::vector<std::string> words;
 
 class SuRFUnitTest : public ::testing::Test {
@@ -91,11 +92,13 @@ TEST_F (SuRFUnitTest, IntStringConvertTest) {
 }
 
 TEST_F (SuRFUnitTest, lookupWordTest) {
-    surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kReal);
+    surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixConfig);
     for (unsigned i = 0; i < words.size(); i++) {
 	bool key_exist = surf_->lookupKey(words[i]);
 	ASSERT_TRUE(key_exist);
     }
+
+    if (kSuffixConfig == kNone) return;
 
     for (unsigned i = 0; i < words.size(); i++) {
 	for (unsigned j = 0; j < words_trunc_[i].size() && j < words[i].size(); j++) {
@@ -108,7 +111,7 @@ TEST_F (SuRFUnitTest, lookupWordTest) {
 }
 
 TEST_F (SuRFUnitTest, lookupIntTest) {
-    surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kReal);
+    surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixConfig);
     for (uint64_t i = 0; i < kIntTestBound; i += kIntTestSkip) {
 	bool key_exist = surf_->lookupKey(surf::uint64ToString(i));
 	if (i % kIntTestSkip == 0)
@@ -119,7 +122,7 @@ TEST_F (SuRFUnitTest, lookupIntTest) {
 }
 
 TEST_F (SuRFUnitTest, moveToKeyGreaterThanWordTest) {
-    surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kReal);
+    surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixConfig);
     for (unsigned i = 0; i < words.size(); i++) {
 	bool inclusive = true;
 	SuRF::Iter iter = surf_->moveToKeyGreaterThan(words[i], inclusive);
@@ -148,7 +151,7 @@ TEST_F (SuRFUnitTest, moveToKeyGreaterThanWordTest) {
 }
 
 TEST_F (SuRFUnitTest, moveToKeyGreaterThanIntTest) {
-    surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kReal);
+    surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixConfig);
     for (uint64_t i = 0; i < kIntTestBound; i++) {
 	bool inclusive = true;
 	SuRF::Iter iter = surf_->moveToKeyGreaterThan(surf::uint64ToString(i), inclusive);
@@ -183,7 +186,7 @@ TEST_F (SuRFUnitTest, moveToKeyGreaterThanIntTest) {
 }
 
 TEST_F (SuRFUnitTest, IteratorIncrementWordTest) {
-    surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kReal);
+    surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixConfig);
     bool inclusive = true;
     SuRF::Iter iter = surf_->moveToKeyGreaterThan(words[0], inclusive);
     for (unsigned i = 1; i < words.size(); i++) {
@@ -199,7 +202,7 @@ TEST_F (SuRFUnitTest, IteratorIncrementWordTest) {
 }
 
 TEST_F (SuRFUnitTest, IteratorIncrementIntTest) {
-    surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kReal);
+    surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixConfig);
     bool inclusive = true;
     SuRF::Iter iter = surf_->moveToKeyGreaterThan(surf::uint64ToString(0), inclusive);
     for (uint64_t i = kIntTestSkip; i < kIntTestBound; i += kIntTestSkip) {

@@ -80,7 +80,6 @@ public:
     bool lookupKey(const std::string& key, position_t& out_node_num) const;
 
     void moveToKeyGreaterThan(const std::string& key, const bool inclusive, LoudsDense::Iter& iter) const;
-    bool lookupRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const;
     uint32_t countRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const;
 
     uint64_t getHeight() const { return height_; };
@@ -172,15 +171,13 @@ void LoudsDense::moveToKeyGreaterThan(const std::string& key, const bool inclusi
 
 	node_num = getChildNodeNum(pos);
     }
+
     //search will continue in LoudsSparse
     iter.setSendOutNodeNum(node_num);
     iter.setFlags(true, false, true); // valid, search INCOMPLETE, moveLeft complete
 }
 
-bool LoudsDense::lookupRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const {
-    return true;
-}
-
+// TODO
 uint32_t LoudsDense::countRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const {
     return 0;
 }

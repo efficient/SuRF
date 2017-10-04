@@ -155,13 +155,11 @@ private:
 
 void SuRFBuilder::build(const std::vector<std::string>& keys) {
     assert(keys.size() > 0);
-
-    //suffixes_.push_back(std::vector<suffix_t>());
     buildSparse(keys);
-
-    if (include_dense_)
+    if (include_dense_) {
 	determineCutoffLevel();
 	buildDense();
+    }
 }
 
 void SuRFBuilder::buildSparse(const std::vector<std::string>& keys) {
@@ -225,23 +223,18 @@ void SuRFBuilder::insertSuffix(const std::string& key, const level_t level) {
     if (level >= getTreeHeight())
 	addLevel();
 
-    //assert(level < suffixes_.size());
     assert(level - 1 < suffixes_.size());
-
     switch (suffix_config_) {
     case kHash: {
 	suffix_t h = suffixHash(key) & 0xFF;
-	//suffixes_[level].push_back(h);
 	suffixes_[level-1].push_back(h);
 	break;
     }
     case kReal: {
 	if (level < key.length())
-	    //suffixes_[level].push_back(key[level]);
 	    suffixes_[level-1].push_back(key[level]);
 	else
 	    // Real suffix byte 0 is treated as NULL
-	    //suffixes_[level].push_back(0);
 	    suffixes_[level-1].push_back(0);
 	break;
     }

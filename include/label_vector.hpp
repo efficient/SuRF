@@ -66,7 +66,6 @@ private:
     label_t* labels_;
 };
 
-//TODO: need performance test
 bool LabelVector::search(const label_t target, position_t& pos, position_t search_len) const {
     //skip terminator label
     if ((search_len > 1) && (labels_[pos] == kTerminator)) {
@@ -82,7 +81,6 @@ bool LabelVector::search(const label_t target, position_t& pos, position_t searc
 	return simdSearch(target, pos, search_len);
 }
 
-//TODO: need performance test
 bool LabelVector::searchGreaterThan(const label_t target, position_t& pos, position_t search_len) const {
     //skip terminator label
     if ((search_len > 1) && (labels_[pos] == kTerminator)) {
@@ -154,7 +152,6 @@ bool LabelVector::linearSearch(const label_t target, position_t&  pos, const pos
     return false;
 }
 
-    //TODO: need unit test
 bool LabelVector::binarySearchGreaterThan(const label_t target, position_t& pos, const position_t search_len) const {
     position_t l = pos;
     position_t r = pos + search_len;

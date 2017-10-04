@@ -71,7 +71,6 @@ public:
 
     // Returns true if iter is valid
     void moveToKeyGreaterThan(const std::string& key, const bool inclusive, LoudsSparse::Iter& iter) const;
-    bool lookupRange(const std::string& left_key, const std::string& right_key, const position_t in_left_pos, const position_t in_right_pos) const;
     uint32_t countRange(const std::string& left_key, const std::string& right_key, const position_t in_left_pos, const position_t in_right_pos) const;
 
     level_t getHeight() const { return height_; };
@@ -178,10 +177,7 @@ void LoudsSparse::moveToKeyGreaterThan(const std::string& key, const bool inclus
     iter.is_valid_ = true;
 }
 
-bool LoudsSparse::lookupRange(const std::string& left_key, const std::string& right_key, const position_t in_left_pos, const position_t in_right_pos) const {
-    return true;
-}
-
+    // TODO
 uint32_t LoudsSparse::countRange(const std::string& left_key, const std::string& right_key, const position_t in_left_pos, const position_t in_right_pos) const {
     return 0;
 }

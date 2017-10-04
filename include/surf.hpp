@@ -45,7 +45,7 @@ public:
 
     SuRF(const std::vector<std::string>& keys, bool include_dense, 
 	 uint32_t sparse_dense_ratio,SuffixType suffix_config) {
-	builder = new SuRFBuilder(suffix_config, sparse_dense_ratio, suffix_config);
+	builder = new SuRFBuilder(include_dense, sparse_dense_ratio, suffix_config);
 	builder->build(keys);
 	louds_dense_ = new LoudsDense(builder);
 	louds_sparse_ = new LoudsSparse(builder);
@@ -59,8 +59,10 @@ public:
 
     bool lookupKey(const std::string& key);
     SuRF::Iter moveToKeyGreaterThan(const std::string& key, const bool inclusive);
-    bool lookupRange(const std::string& left_key, const std::string& right_key);
-    uint32_t countRange(const std::string& left_key, const std::string& right_key);
+    bool lookupRange(const std::string& left_key, const bool left_inclusive, 
+		     const std::string& right_key, const bool right_inclusive);
+    uint32_t countRange(const std::string& left_key, const bool left_inclusive, 
+			const std::string& right_key, const bool right_inclusive);
 
     uint64_t getMemoryUsage();
     level_t getHeight();
@@ -103,21 +105,20 @@ SuRF::Iter SuRF::moveToKeyGreaterThan(const std::string& key, const bool inclusi
     assert(false); // shouldn't have reached here
 }
 
-bool SuRF::lookupRange(const std::string& left_key, const std::string& right_key) {
-    position_t left_connect_pos = 0;
-    position_t right_connect_pos = 0;
-    if (!louds_dense_->lookupRange(left_key, right_key, left_connect_pos, right_connect_pos))
-	return louds_sparse_->lookupRange(left_key, right_key, left_connect_pos, right_connect_pos);
-    return true;
+bool SuRF::lookupRange(const std::string& left_key, const bool left_inclusive, 
+		       const std::string& right_key, const bool right_inclusive) {
+    SuRF::Iter iter = moveToKeyGreaterThan(left_key, left_inclusive);
+    int compare = iter.getKey().compare(right_key);
+    if (right_inclusive)
+	return (compare <= 0);
+    else
+	return (compare < 0);
 }
 
-uint32_t SuRF::countRange(const std::string& left_key, const std::string& right_key) {
-    uint32_t count = 0;
-    position_t left_connect_pos = 0;
-    position_t right_connect_pos = 0;
-    count += louds_dense_->countRange(left_key, right_key, left_connect_pos, right_connect_pos);
-    count += louds_sparse_->countRange(left_key, right_key, left_connect_pos, right_connect_pos);
-    return count;
+// TODO
+uint32_t SuRF::countRange(const std::string& left_key, const bool left_inclusive, 
+			  const std::string& right_key, const bool right_inclusive) {
+    return 0;
 }
 
 uint64_t SuRF::getMemoryUsage() {

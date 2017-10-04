@@ -16,12 +16,15 @@ public:
     SuffixVector(const SuffixType type, const std::vector<std::vector<suffix_t> >& suffixes_per_level,
 		 const level_t start_level = 0, 
 		 level_t end_level = 0/* non-inclusive */) {
+	type_ = type;
+	num_bytes_ = 0;
+
+	if (type_ == kNone)
+	    return;
+
 	if (end_level == 0)
 	    end_level = suffixes_per_level.size();
 
-	type_ = type;
-
-	num_bytes_ = 0;
 	for (level_t level = start_level; level < end_level; level++)
 	    num_bytes_ += suffixes_per_level[level].size();
 
@@ -37,7 +40,8 @@ public:
     }
 
     ~SuffixVector() {
-	delete[] suffixes_;
+	if (type_ != kNone)
+	    delete[] suffixes_;
     }
 
     SuffixType getType() const {
@@ -66,18 +70,22 @@ private:
 };
 
 bool SuffixVector::checkEquality(const position_t pos, const std::string& key, const level_t level) const {
-    assert(pos < num_bytes_);
     switch (type_) {
+    case kNone:
+	return true;
     case kHash: {
+	assert(pos < num_bytes_);
 	suffix_t h = suffixHash(key) & kSuffixHashMask;
 	if (suffixes_[pos] == h)
 	    return true;
 	return false;
     }
     case kReal: {
+	assert(pos < num_bytes_);
 	if (suffixes_[pos] == 0) //0 means no suffix stored
 	    return true;
-	assert(level < key.length());
+	if (level >= key.length())
+	    return false;
 	if (suffixes_[pos] == (label_t)key[level])
 	    return true;
 	return false;
