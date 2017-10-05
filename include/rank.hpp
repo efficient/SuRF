@@ -50,6 +50,11 @@ public:
         return (sizeof(BitvectorRank) + bitvector_mem + rank_lut_mem);
     }
 
+    inline void prefetch(position_t pos) {
+	__builtin_prefetch(bits_ + (pos / kWordSize));
+	__builtin_prefetch(rank_lut_ + (pos / basic_block_size_));
+    }
+
 private:
     void initRankLut() {
         position_t word_per_basic_block = basic_block_size_ / kWordSize;

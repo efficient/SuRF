@@ -150,11 +150,11 @@ std::string SuRF::Iter::getKey() const {
     return dense_iter_.getKey() + sparse_iter_.getKey();
 }
 
-void SuRF::Iter::passToSparse() {
+inline void SuRF::Iter::passToSparse() {
     sparse_iter_.setStartNodeNum(dense_iter_.getSendOutNodeNum());
 }
 
-bool SuRF::Iter::incrementDenseIter() {
+inline bool SuRF::Iter::incrementDenseIter() {
     if (!dense_iter_.isValid()) return false;
 
     dense_iter_++;
@@ -166,7 +166,7 @@ bool SuRF::Iter::incrementDenseIter() {
     return true;
 }
 
-bool SuRF::Iter::incrementSparseIter() {
+inline bool SuRF::Iter::incrementSparseIter() {
     if (!sparse_iter_.isValid()) return false;
     sparse_iter_++;
     return sparse_iter_.isValid();

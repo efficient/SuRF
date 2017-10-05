@@ -36,9 +36,9 @@ public:
 	void operator ++(int);
 
     private:
-	void append(const position_t pos);
-	void append(const label_t label, const position_t pos);
-	void set(const level_t level, const position_t pos);
+	inline void append(const position_t pos);
+	inline void append(const label_t label, const position_t pos);
+	inline void set(const level_t level, const position_t pos);
 
     private:
 	bool is_valid_; // True means the iter currently points to a valid key
@@ -78,13 +78,13 @@ public:
     uint64_t getMemoryUsage() const;
 
 private:
-    position_t getChildNodeNum(const position_t pos) const;
-    position_t getFirstLabelPos(const position_t node_num) const;
-    position_t getSuffixPos(const position_t pos) const;
-    position_t nodeSize(const position_t pos) const;
+    inline position_t getChildNodeNum(const position_t pos) const;
+    inline position_t getFirstLabelPos(const position_t node_num) const;
+    inline position_t getSuffixPos(const position_t pos) const;
+    inline position_t nodeSize(const position_t pos) const;
 
-    void moveToLeftInNextSubtrie(position_t pos, const position_t node_size, const label_t label, LoudsSparse::Iter& iter) const;
-    void compareSuffixGreaterThan(const position_t pos, const std::string& key, const level_t level, const bool inclusive, LoudsSparse::Iter& iter) const;
+    inline void moveToLeftInNextSubtrie(position_t pos, const position_t node_size, const label_t label, LoudsSparse::Iter& iter) const;
+    inline void compareSuffixGreaterThan(const position_t pos, const std::string& key, const level_t level, const bool inclusive, LoudsSparse::Iter& iter) const;
 
 private:
     static const position_t kRankBasicBlockSize = 512;
@@ -132,6 +132,7 @@ bool LoudsSparse::lookupKey(const std::string& key, const position_t in_node_num
     position_t pos = getFirstLabelPos(node_num);
     level_t level = 0;
     for (level = start_level_; level < key.length(); level++) {
+	//child_indicator_bits_->prefetch(pos);
 	if (!labels_->search((label_t)key[level], pos, nodeSize(pos)))
 	    return false;
 
@@ -190,24 +191,24 @@ uint64_t LoudsSparse::getMemoryUsage() const {
 	    + suffixes_->size());
 }
 
-position_t LoudsSparse::getChildNodeNum(const position_t pos) const {
+inline position_t LoudsSparse::getChildNodeNum(const position_t pos) const {
     return (child_indicator_bits_->rank(pos) + child_count_dense_);
 }
 
-position_t LoudsSparse::getFirstLabelPos(const position_t node_num) const {
+inline position_t LoudsSparse::getFirstLabelPos(const position_t node_num) const {
     return louds_bits_->select(node_num + 1 - node_count_dense_);
 }
 
-position_t LoudsSparse::getSuffixPos(const position_t pos) const {
+inline position_t LoudsSparse::getSuffixPos(const position_t pos) const {
     return (pos - child_indicator_bits_->rank(pos));
 }
 
-position_t LoudsSparse::nodeSize(const position_t pos) const {
+inline position_t LoudsSparse::nodeSize(const position_t pos) const {
     assert(louds_bits_->readBit(pos));
     return louds_bits_->distanceToNextSetBit(pos);
 }
 
-void LoudsSparse::moveToLeftInNextSubtrie(position_t pos, const position_t node_size, const label_t label, LoudsSparse::Iter& iter) const {
+inline void LoudsSparse::moveToLeftInNextSubtrie(position_t pos, const position_t node_size, const label_t label, LoudsSparse::Iter& iter) const {
     // if no label is greater than key[level] in this node
     if (!labels_->searchGreaterThan(label, pos, node_size)) {
 	iter.append(pos + node_size - 1);
@@ -218,7 +219,7 @@ void LoudsSparse::moveToLeftInNextSubtrie(position_t pos, const position_t node_
     }
 }
 
-void LoudsSparse::compareSuffixGreaterThan(const position_t pos, const std::string& key, const level_t level, const bool inclusive, LoudsSparse::Iter& iter) const {
+inline void LoudsSparse::compareSuffixGreaterThan(const position_t pos, const std::string& key, const level_t level, const bool inclusive, LoudsSparse::Iter& iter) const {
     if (suffixes_->getType() == kReal) {
 	position_t suffix_pos = getSuffixPos(pos);
 	int compare = suffixes_->compare(suffix_pos, key[level]);
@@ -246,21 +247,21 @@ std::string LoudsSparse::Iter::getKey() const {
     return ret_str;
 }
 
-void LoudsSparse::Iter::append(const position_t pos) {
+inline void LoudsSparse::Iter::append(const position_t pos) {
     assert(key_len_ < key_.size());
     key_[key_len_] = trie_->labels_->read(pos);
     pos_in_trie_[key_len_] = pos;
     key_len_++;
 }
 
-void LoudsSparse::Iter::append(const label_t label, const position_t pos) {
+inline void LoudsSparse::Iter::append(const label_t label, const position_t pos) {
     assert(key_len_ < key_.size());
     key_[key_len_] = label;
     pos_in_trie_[key_len_] = pos;
     key_len_++;
 }
 
-void LoudsSparse::Iter::set(const level_t level, const position_t pos) {
+inline void LoudsSparse::Iter::set(const level_t level, const position_t pos) {
     assert(level < key_.size());
     key_[level] = trie_->labels_->read(pos);
     pos_in_trie_[level] = pos;

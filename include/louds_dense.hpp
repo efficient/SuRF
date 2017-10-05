@@ -39,10 +39,10 @@ public:
 	void operator ++(int);
 
     private:
-	void append(position_t pos);
-	void set(level_t level, position_t pos);
-	void setSendOutNodeNum(position_t node_num) { send_out_node_num_ = node_num; };
-	void setFlags(const bool is_valid, const bool is_search_complete, 
+	inline void append(position_t pos);
+	inline void set(level_t level, position_t pos);
+	inline void setSendOutNodeNum(position_t node_num) { send_out_node_num_ = node_num; };
+	inline void setFlags(const bool is_valid, const bool is_search_complete, 
 		      const bool is_move_left_complete);
 
     private:
@@ -86,11 +86,11 @@ public:
     uint64_t getMemoryUsage() const;
 
 private:
-    position_t getChildNodeNum(const position_t pos) const;
-    position_t getSuffixPos(const position_t pos, const bool is_prefix_key) const;
-    position_t getNextPos(const position_t pos) const;
+    inline position_t getChildNodeNum(const position_t pos) const;
+    inline position_t getSuffixPos(const position_t pos, const bool is_prefix_key) const;
+    inline position_t getNextPos(const position_t pos) const;
 
-    void compareSuffixGreaterThan(const position_t pos, const std::string& key, const level_t level, const bool inclusive, LoudsDense::Iter& iter) const;
+    inline void compareSuffixGreaterThan(const position_t pos, const std::string& key, const level_t level, const bool inclusive, LoudsDense::Iter& iter) const;
 
 private:
     static const position_t kNodeFanout = 256;
@@ -129,6 +129,8 @@ bool LoudsDense::lookupKey(const std::string& key, position_t& out_node_num) con
 		return false;
 	}
 	pos += (label_t)key[level];
+
+	//child_indicator_bitmaps_->prefetch(pos);
 
 	if (!label_bitmaps_->readBit(pos)) //if key byte does not exist
 	    return false;
@@ -190,11 +192,11 @@ uint64_t LoudsDense::getMemoryUsage() const {
 	    + suffixes_->size());
 }
 
-position_t LoudsDense::getChildNodeNum(const position_t pos) const {
+inline position_t LoudsDense::getChildNodeNum(const position_t pos) const {
     return child_indicator_bitmaps_->rank(pos);
 }
 
-position_t LoudsDense::getSuffixPos(const position_t pos, const bool is_prefix_key) const {
+inline position_t LoudsDense::getSuffixPos(const position_t pos, const bool is_prefix_key) const {
     position_t node_num = pos / kNodeFanout;
     position_t suffix_pos = (label_bitmaps_->rank(pos)
 			     - child_indicator_bitmaps_->rank(pos)
@@ -205,11 +207,11 @@ position_t LoudsDense::getSuffixPos(const position_t pos, const bool is_prefix_k
     return suffix_pos;
 }
 
-position_t LoudsDense::getNextPos(const position_t pos) const {
+inline position_t LoudsDense::getNextPos(const position_t pos) const {
     return pos + label_bitmaps_->distanceToNextSetBit(pos);
 }
 
-void LoudsDense::compareSuffixGreaterThan(const position_t pos, const std::string& key, const level_t level, const bool inclusive, LoudsDense::Iter& iter) const {
+inline void LoudsDense::compareSuffixGreaterThan(const position_t pos, const std::string& key, const level_t level, const bool inclusive, LoudsDense::Iter& iter) const {
     if (suffixes_->getType() == kReal) {
 	position_t suffix_pos = getSuffixPos(pos, false);
 	int compare = suffixes_->compare(suffix_pos, key[level]);
@@ -239,20 +241,20 @@ std::string LoudsDense::Iter::getKey() const {
     return ret_str;
 }
 
-void LoudsDense::Iter::append(position_t pos) {
+inline void LoudsDense::Iter::append(position_t pos) {
     assert(key_len_ < key_.size());
     key_[key_len_] = (label_t)(pos % kNodeFanout);
     pos_in_trie_[key_len_] = pos;
     key_len_++;
 }
 
-void LoudsDense::Iter::set(level_t level, position_t pos) {
+inline void LoudsDense::Iter::set(level_t level, position_t pos) {
     assert(level < key_.size());
     key_[level] = (label_t)(pos % kNodeFanout);
     pos_in_trie_[level] = pos;
 }
 
-void LoudsDense::Iter::setFlags(const bool is_valid, const bool is_search_complete, 
+inline void LoudsDense::Iter::setFlags(const bool is_valid, const bool is_search_complete, 
 				const bool is_move_left_complete) {
     is_valid_ = is_valid;
     is_search_complete_ = is_search_complete;

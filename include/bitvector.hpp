@@ -45,7 +45,7 @@ public:
         return (sizeof(Bitvector) + numWords() * (kWordSize / 8));
     }
 
-    bool readBit(const position_t pos) const;
+    inline bool readBit(const position_t pos) const;
 
     position_t distanceToNextSetBit(const position_t pos) const;
 

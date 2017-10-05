@@ -74,6 +74,7 @@ void loadKeysFromFile(const std::string& file_name, const bool is_key_int,
 void selectKeysToInsert(const unsigned percent, 
 			std::vector<std::string> &insert_keys, 
 			std::vector<std::string> &keys) {
+    random_shuffle(keys.begin(), keys.end());
     uint64_t num_insert_keys = keys.size() * percent / 100;
     for (uint64_t i = 0; i < num_insert_keys; i++)
 	insert_keys.push_back(keys[i]);

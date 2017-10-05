@@ -108,6 +108,7 @@ int main(int argc, char *argv[]) {
 	    positives += (int)filter->lookup(txn_keys[i]);
     } else if (query_type.compare(std::string("range")) == 0) {
 	for (int i = 0; i < txn_keys.size(); i++)
+	//for (int i = 0; i < 5; i++)
 	    positives += (int)filter->lookupRange(txn_keys[i], upper_bound_keys[i]);
     }
     double end_time = bench::getNow();
@@ -126,7 +127,7 @@ int main(int argc, char *argv[]) {
 	}
     } else if (query_type.compare(std::string("range")) == 0) {
 	for (int i = 0; i < txn_keys.size(); i++) {
-	    ht_iter = ht.lower_bound(txn_keys[i]);
+	    ht_iter = ht.upper_bound(txn_keys[i]);
 	    if (ht_iter != ht.end()) {
 		std::string fetched_key = ht_iter->first;
 		true_positives += (fetched_key.compare(upper_bound_keys[i]) < 0);
@@ -134,7 +135,7 @@ int main(int argc, char *argv[]) {
 	}
     }
     int64_t false_positives = positives - true_positives;
-    //assert(false_positives >= 0);
+    assert(false_positives >= 0);
     int64_t true_negatives = txn_keys.size() - true_positives;
 
     // print
