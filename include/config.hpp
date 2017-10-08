@@ -11,9 +11,6 @@ using position_t = uint32_t;
 using label_t = uint8_t;
 static const position_t kFanout = 256;
 
-    //using suffix_t = uint8_t;
-    //static const suffix_t kSuffixHashMask = 0xFF;
-
 using word_t = uint64_t;
 static const unsigned kWordSize = 64;
 static const word_t kMsbMask = 0x8000000000000000;

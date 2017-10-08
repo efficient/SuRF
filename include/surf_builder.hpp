@@ -15,7 +15,10 @@ namespace surf {
 class SuRFBuilder {
 public: 
     SuRFBuilder() : sparse_start_level_(0), suffix_type_(kNone) {};
-    explicit SuRFBuilder(bool include_dense, uint32_t sparse_dense_ratio, SuffixType suffix_type, position_t suffix_len) : include_dense_(include_dense), sparse_dense_ratio_(sparse_dense_ratio), sparse_start_level_(0), suffix_type_(suffix_type), suffix_len_(suffix_len) {};
+    explicit SuRFBuilder(bool include_dense, uint32_t sparse_dense_ratio, 
+			 SuffixType suffix_type, level_t suffix_len) 
+	: include_dense_(include_dense), sparse_dense_ratio_(sparse_dense_ratio), 
+	  sparse_start_level_(0), suffix_type_(suffix_type), suffix_len_(suffix_len) {};
 
     ~SuRFBuilder() {};
 
@@ -77,7 +80,7 @@ public:
     SuffixType getSuffixType() const {
 	return suffix_type_;
     }
-    position_t getSuffixLen() const {
+    level_t getSuffixLen() const {
 	return suffix_len_;
     }
 
@@ -112,8 +115,6 @@ private:
     inline bool isLevelEmpty(const level_t level) const;
     inline void moveToNextItemSlot(const level_t level);
     void insertKeyByte(const char c, const level_t level, const bool is_start_of_node);
-
-    inline word_t constructSuffix(const std::string& key, const level_t level);
     inline void storeSuffix(const level_t level, const word_t suffix);
 
     // Compute sparse_start_level_ according to the pre-defined
@@ -155,7 +156,7 @@ private:
     std::vector<std::vector<word_t> > prefixkey_indicator_bits_;
 
     SuffixType suffix_type_;
-    position_t suffix_len_;
+    level_t suffix_len_;
     std::vector<std::vector<word_t> > suffixes_;
     std::vector<position_t> suffix_counts_;
 
@@ -234,7 +235,7 @@ inline void SuRFBuilder::insertSuffix(const std::string& key, const level_t leve
     if (level >= getTreeHeight())
 	addLevel();
     assert(level - 1 < suffixes_.size());
-    word_t suffix_word = BitvectorSuffix::constructSuffix(key, level, suffix_len_);
+    word_t suffix_word = BitvectorSuffix::constructSuffix(key, level, suffix_type_, suffix_len_);
     storeSuffix(level, suffix_word);
     /*
     switch (suffix_type_) {
@@ -305,8 +306,8 @@ inline void SuRFBuilder::storeSuffix(const level_t level, const word_t suffix) {
     position_t offset = pos % kWordSize;
     position_t word_remaining_len = kWordSize - offset - 1;
     if (suffix_len_ <= word_remaining_len) {
-	suffix <<= (word_remaining_len - suffix_len_);
-	suffixes_[level-1][word_id] += suffix;
+	word_t shifted_suffix = suffix << (word_remaining_len - suffix_len_);
+	suffixes_[level-1][word_id] += shifted_suffix;
     } else {
 	word_t suffix_left_part = suffix >> (suffix_len_ - word_remaining_len);
 	suffixes_[level-1][word_id] += suffix_left_part;
@@ -316,7 +317,7 @@ inline void SuRFBuilder::storeSuffix(const level_t level, const word_t suffix) {
 	clearMSBits(suffix_right_part, (suffix_len_ - word_remaining_len));
 	suffixes_[level-1][word_id] += suffix_right_part;
     }
-    suffix_positions_[level-1]++;
+    suffix_counts_[level-1]++;
 }
 
 inline void SuRFBuilder::determineCutoffLevel() {

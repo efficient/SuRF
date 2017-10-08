@@ -11,19 +11,20 @@ namespace bench {
 class FilterFactory {
 public:
     static Filter* createFilter(const std::string& filter_type, 
+				const uint32_t suffix_len,
 				const std::vector<std::string>& keys) {
 	if (filter_type.compare(std::string("SuRF")) == 0)
-	    return new FilterSuRF(keys, surf::kNone);
+	    return new FilterSuRF(keys, surf::kNone, suffix_len);
 	else if (filter_type.compare(std::string("SuRFHash")) == 0)
-	    return new FilterSuRF(keys, surf::kHash);
+	    return new FilterSuRF(keys, surf::kHash, suffix_len);
 	else if (filter_type.compare(std::string("SuRFReal")) == 0)
-	    return new FilterSuRF(keys, surf::kReal);
+	    return new FilterSuRF(keys, surf::kReal, suffix_len);
 	else if (filter_type.compare(std::string("Bloom")) == 0)
 	    return new FilterBloom(keys);
 	else if (filter_type.compare(std::string("ARF")) == 0)
 	    return new FilterARF(keys);
 	else
-	    return new FilterSuRF(keys, surf::kReal); // default
+	    return new FilterSuRF(keys, surf::kReal, suffix_len); // default
     }
 };
 

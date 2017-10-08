@@ -24,14 +24,8 @@ static std::vector<std::string> words;
 class DenseUnitTest : public ::testing::Test {
 public:
     virtual void SetUp () {
-	bool include_dense = true;
-	uint32_t sparse_dense_ratio = 0;
-	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal);
 	truncateWordSuffixes();
 	fillinInts();
-    }
-    virtual void TearDown () {
-	delete builder_;
     }
 
     void truncateWordSuffixes();
@@ -86,26 +80,39 @@ void DenseUnitTest::fillinInts() {
 }
 
 TEST_F (DenseUnitTest, lookupTest) {
-    builder_->build(words);
-    louds_dense_ = new LoudsDense(builder_);
-    position_t out_node_num = 0;
+    bool include_dense = true;
+    uint32_t sparse_dense_ratio = 0;
+    level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
+    for (int i = 0; i < 5; i++) {
+	level_t suffix_len = suffix_len_array[i];
+	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+	builder_->build(words);
+	louds_dense_ = new LoudsDense(builder_);
+	position_t out_node_num = 0;
 
-    for (unsigned i = 0; i < words.size(); i++) {
-	bool key_exist = louds_dense_->lookupKey(words[i], out_node_num);
-	ASSERT_TRUE(key_exist);
-    }
-
-    for (unsigned i = 0; i < words.size(); i++) {
-	for (unsigned j = 0; j < words_trunc_[i].size() && j < words[i].size(); j++) {
-	    std::string key = words[i];
-	    key[j] = 'A';
-	    bool key_exist = louds_dense_->lookupKey(key, out_node_num);
-	    ASSERT_FALSE(key_exist);
+	for (unsigned i = 0; i < words.size(); i++) {
+	    bool key_exist = louds_dense_->lookupKey(words[i], out_node_num);
+	    ASSERT_TRUE(key_exist);
 	}
+
+	for (unsigned i = 0; i < words.size(); i++) {
+	    for (unsigned j = 0; j < words_trunc_[i].size() && j < words[i].size(); j++) {
+		std::string key = words[i];
+		key[j] = 'A';
+		bool key_exist = louds_dense_->lookupKey(key, out_node_num);
+		ASSERT_FALSE(key_exist);
+	    }
+	}
+	delete builder_;
+	delete louds_dense_;
     }
 }
 
 TEST_F (DenseUnitTest, lookupIntTest) {
+    bool include_dense = true;
+    uint32_t sparse_dense_ratio = 0;
+    level_t suffix_len = 8;
+    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
     builder_->build(ints_);
     louds_dense_ = new LoudsDense(builder_);
     position_t out_node_num = 0;
@@ -120,44 +127,59 @@ TEST_F (DenseUnitTest, lookupIntTest) {
 	    ASSERT_EQ(0, out_node_num);
 	}
     }
+    delete builder_;
+    delete louds_dense_;
 }
 
 TEST_F (DenseUnitTest, moveToKeyGreaterThanWordTest) {
-    builder_->build(words);
-    louds_dense_ = new LoudsDense(builder_);
-    for (unsigned i = 0; i < words.size(); i++) {
-	bool inclusive = true;
-	LoudsDense::Iter iter(louds_dense_);
-	louds_dense_->moveToKeyGreaterThan(words[i], inclusive, iter);
+    bool include_dense = true;
+    uint32_t sparse_dense_ratio = 0;
+    level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
+    for (int i = 0; i < 5; i++) {
+	level_t suffix_len = suffix_len_array[i];
+	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+	builder_->build(words);
+	louds_dense_ = new LoudsDense(builder_);
+	for (unsigned i = 0; i < words.size(); i++) {
+	    bool inclusive = true;
+	    LoudsDense::Iter iter(louds_dense_);
+	    louds_dense_->moveToKeyGreaterThan(words[i], inclusive, iter);
 
-	ASSERT_TRUE(iter.isValid());
-	ASSERT_TRUE(iter.isComplete());
-	std::string iter_key = iter.getKey();
-	std::string word_prefix = words[i].substr(0, iter_key.length());
-	bool is_prefix = (word_prefix.compare(iter_key) == 0);
-	ASSERT_TRUE(is_prefix);
-    }
+	    ASSERT_TRUE(iter.isValid());
+	    ASSERT_TRUE(iter.isComplete());
+	    std::string iter_key = iter.getKey();
+	    std::string word_prefix = words[i].substr(0, iter_key.length());
+	    bool is_prefix = (word_prefix.compare(iter_key) == 0);
+	    ASSERT_TRUE(is_prefix);
+	}
 
-    for (unsigned i = 0; i < words.size() - 1; i++) {
+	for (unsigned i = 0; i < words.size() - 1; i++) {
+	    bool inclusive = false;
+	    LoudsDense::Iter iter(louds_dense_);
+	    louds_dense_->moveToKeyGreaterThan(words[i], inclusive, iter);
+
+	    ASSERT_TRUE(iter.isValid());
+	    ASSERT_TRUE(iter.isComplete());
+	    std::string iter_key = iter.getKey();
+	    std::string word_prefix = words[i+1].substr(0, iter_key.length());
+	    bool is_prefix = (word_prefix.compare(iter_key) == 0);
+	    ASSERT_TRUE(is_prefix);
+	}
+
 	bool inclusive = false;
 	LoudsDense::Iter iter(louds_dense_);
-	louds_dense_->moveToKeyGreaterThan(words[i], inclusive, iter);
-
-	ASSERT_TRUE(iter.isValid());
-	ASSERT_TRUE(iter.isComplete());
-	std::string iter_key = iter.getKey();
-	std::string word_prefix = words[i+1].substr(0, iter_key.length());
-	bool is_prefix = (word_prefix.compare(iter_key) == 0);
-	ASSERT_TRUE(is_prefix);
+	louds_dense_->moveToKeyGreaterThan(words[words.size() - 1], inclusive, iter);
+	ASSERT_FALSE(iter.isValid());
+	delete builder_;
+	delete louds_dense_;
     }
-
-    bool inclusive = false;
-    LoudsDense::Iter iter(louds_dense_);
-    louds_dense_->moveToKeyGreaterThan(words[words.size() - 1], inclusive, iter);
-    ASSERT_FALSE(iter.isValid());
 }
 
 TEST_F (DenseUnitTest, moveToKeyGreaterThanIntTest) {
+    bool include_dense = true;
+    uint32_t sparse_dense_ratio = 0;
+    level_t suffix_len = 8;
+    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
     builder_->build(ints_);
     louds_dense_ = new LoudsDense(builder_);
     for (uint64_t i = 0; i < kIntTestBound; i++) {
@@ -196,9 +218,15 @@ TEST_F (DenseUnitTest, moveToKeyGreaterThanIntTest) {
     LoudsDense::Iter iter(louds_dense_);
     louds_dense_->moveToKeyGreaterThan(surf::uint64ToString(kIntTestBound - 1), inclusive, iter);
     ASSERT_FALSE(iter.isValid());
+    delete builder_;
+    delete louds_dense_;
 }
 
 TEST_F (DenseUnitTest, IteratorIncrementWordTest) {
+    bool include_dense = true;
+    uint32_t sparse_dense_ratio = 0;
+    level_t suffix_len = 8;
+    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
     builder_->build(words);
     louds_dense_ = new LoudsDense(builder_);
     bool inclusive = true;
@@ -215,9 +243,15 @@ TEST_F (DenseUnitTest, IteratorIncrementWordTest) {
     }
     iter++;
     ASSERT_FALSE(iter.isValid());
+    delete builder_;
+    delete louds_dense_;
 }
 
 TEST_F (DenseUnitTest, IteratorIncrementIntTest) {
+    bool include_dense = true;
+    uint32_t sparse_dense_ratio = 0;
+    level_t suffix_len = 8;
+    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
     builder_->build(ints_);
     louds_dense_ = new LoudsDense(builder_);
     bool inclusive = true;
@@ -234,6 +268,8 @@ TEST_F (DenseUnitTest, IteratorIncrementIntTest) {
     }
     iter++;
     ASSERT_FALSE(iter.isValid());
+    delete builder_;
+    delete louds_dense_;
 }
 
 void loadWordList() {

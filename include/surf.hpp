@@ -22,6 +22,7 @@ public:
 	}
 
 	bool isValid() const;
+	int compare(const std::string& key);
 	std::string getKey() const;
 
 	// Returns true if the status of the iterator after the operation is valid
@@ -43,9 +44,10 @@ public:
 public:
     SuRF() {};
 
-    SuRF(const std::vector<std::string>& keys, bool include_dense, 
-	 uint32_t sparse_dense_ratio,SuffixType suffix_config) {
-	builder = new SuRFBuilder(include_dense, sparse_dense_ratio, suffix_config);
+    SuRF(const std::vector<std::string>& keys, 
+	 const bool include_dense, const uint32_t sparse_dense_ratio,
+	 const SuffixType suffix_type, const level_t suffix_len) {
+	builder = new SuRFBuilder(include_dense, sparse_dense_ratio, suffix_type, suffix_len);
 	builder->build(keys);
 	louds_dense_ = new LoudsDense(builder);
 	louds_sparse_ = new LoudsSparse(builder);
@@ -108,7 +110,7 @@ SuRF::Iter SuRF::moveToKeyGreaterThan(const std::string& key, const bool inclusi
 bool SuRF::lookupRange(const std::string& left_key, const bool left_inclusive, 
 		       const std::string& right_key, const bool right_inclusive) {
     SuRF::Iter iter = moveToKeyGreaterThan(left_key, left_inclusive);
-    int compare = iter.getKey().compare(right_key);
+    int compare = iter.compare(right_key);
     if (right_inclusive)
 	return (compare <= 0);
     else
@@ -140,13 +142,19 @@ bool SuRF::Iter::isValid() const {
 	&& (dense_iter_.isComplete() || sparse_iter_.isValid());
 }
 
+int SuRF::Iter::compare(const std::string& key) {
+    assert(isValid());
+    int dense_compare = dense_iter_.compare(key);
+    if (dense_iter_.isComplete() || dense_compare != 0) 
+	return dense_compare;
+    return sparse_iter_.compare(key);
+}
+
 std::string SuRF::Iter::getKey() const {
     if (!isValid())
 	return std::string();
-
     if (dense_iter_.isComplete())
 	return dense_iter_.getKey();
-
     return dense_iter_.getKey() + sparse_iter_.getKey();
 }
 

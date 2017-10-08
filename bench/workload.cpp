@@ -5,24 +5,26 @@ int main(int argc, char *argv[]) {
     if (argc != 9) {
 	std::cout << "Usage:\n";
 	std::cout << "1. filter type: SuRF, SuRFHash, SuRFReal, Bloom, ARF\n";
-	std::cout << "2. workload type: mixed, alterByte (only for email key)\n";
-	std::cout << "3. percentage of keys inserted: 0 < num <= 100\n";
-	std::cout << "4. byte position (conting from last, only for alterByte): num\n";
-	std::cout << "5. key type: randint, timestamp, email\n";
-	std::cout << "6. query type: point, range\n";
-	std::cout << "7. range size: num\n";
-	std::cout << "8. distribution: uniform, zipfian, latest\n";
+	std::cout << "2. suffix length: 0 < len <= 64 (for SuRFHash and SuRFReal only)\n";
+	std::cout << "3. workload type: mixed, alterByte (only for email key)\n";
+	std::cout << "4. percentage of keys inserted: 0 < num <= 100\n";
+	std::cout << "5. byte position (conting from last, only for alterByte): num\n";
+	std::cout << "6. key type: randint, timestamp, email\n";
+	std::cout << "7. query type: point, range\n";
+	std::cout << "8. range size: num\n";
+	std::cout << "9. distribution: uniform, zipfian, latest\n";
 	return -1;
     }
 
     std::string filter_type = argv[1];
-    std::string workload_type = argv[2];
-    unsigned percent = atoi(argv[3]);
-    unsigned byte_pos = atoi(argv[4]);
-    std::string key_type = argv[5];
-    std::string query_type = argv[6];
-    uint64_t range_size = atoi(argv[7]);
-    std::string distribution = argv[8];
+    uint32_t suffix_len = (uint32_t)atoi(argv[2]);
+    std::string workload_type = argv[3];
+    unsigned percent = atoi(argv[4]);
+    unsigned byte_pos = atoi(argv[5]);
+    std::string key_type = argv[6];
+    std::string query_type = argv[7];
+    uint64_t range_size = atoi(argv[8]);
+    std::string distribution = argv[9];
 
     // check args ====================================================
     if (filter_type.compare(std::string("SuRF")) != 0
@@ -31,6 +33,11 @@ int main(int argc, char *argv[]) {
 	&& filter_type.compare(std::string("Bloom")) != 0
 	&& filter_type.compare(std::string("ARF")) != 0) {
 	std::cout << bench::kRed << "WRONG filter type\n" << bench::kNoColor;
+	return -1;
+    }
+
+    if (suffix_len == 0 || suffix_len > 64) {
+	std::cout << bench::kRed << "WRONG suffix length\n" << bench::kNoColor;
 	return -1;
     }
 
@@ -98,7 +105,7 @@ int main(int argc, char *argv[]) {
     }
 
     // create filter ==============================================
-    bench::Filter* filter = bench::FilterFactory::createFilter(filter_type, insert_keys);
+    bench::Filter* filter = bench::FilterFactory::createFilter(filter_type, suffix_len, insert_keys);
 
     // execute transactions =======================================
     int64_t positives = 0;

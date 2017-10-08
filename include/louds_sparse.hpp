@@ -122,7 +122,7 @@ LoudsSparse::LoudsSparse(const SuRFBuilder* builder) {
     for (level_t level = 0; level < height_; level++)
 	num_items_per_level.push_back(builder->getLabels()[level].size());
 
-    position_t suffix_len = builder->getSuffixLen();
+    level_t suffix_len = builder->getSuffixLen();
     std::vector<position_t> num_suffix_bits_per_level;
     for (level_t level = 0; level < height_; level++)
 	num_suffix_bits_per_level.push_back(builder->getSuffixCounts()[level] * suffix_len);
@@ -130,7 +130,7 @@ LoudsSparse::LoudsSparse(const SuRFBuilder* builder) {
     labels_ = new LabelVector(builder->getLabels(), start_level_, height_);
     child_indicator_bits_ = new BitvectorRank(kRankBasicBlockSize, builder->getChildIndicatorBits(), num_items_per_level, start_level_, height_);
     louds_bits_ = new BitvectorSelect(kSelectSampleInterval, builder->getLoudsBits(), num_items_per_level, start_level_, height_);
-    suffixes_ = new BitvectorSelect(builder->getSuffixType(), suffix_len, builder->getSuffixes(), num_suffix_bits_per_level, start_level_, height_);
+    suffixes_ = new BitvectorSuffix(builder->getSuffixType(), suffix_len, builder->getSuffixes(), num_suffix_bits_per_level, start_level_, height_);
 }
 
 bool LoudsSparse::lookupKey(const std::string& key, const position_t in_node_num) const {
@@ -244,8 +244,7 @@ int LoudsSparse::Iter::compare(const std::string& key) {
     std::string key_sparse = key.substr(start_level_);
     std::string iter_key = getKey();
     int compare = iter_key.compare(key_sparse);
-    if (compare != 0)
-	return compare;
+    if (compare != 0) return compare;
     position_t suffix_pos = trie_->getSuffixPos(pos_in_trie_[key_len_ - 1]);
     return trie_->suffixes_->compare(suffix_pos, key, key_len_);
 }

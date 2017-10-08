@@ -21,15 +21,9 @@ static std::vector<std::string> words;
 class SuRFBuilderUnitTest : public ::testing::Test {
 public:
     virtual void SetUp () {
-	bool include_dense = true;
-	uint32_t sparse_dense_ratio = 0;
-	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal);
 	truncateSuffixes(words, words_trunc_);
 	fillinInts();
 	truncateSuffixes(ints_, ints_trunc_);
-    }
-    virtual void TearDown () {
-	delete builder_;
     }
 
     void truncateSuffixes(const std::vector<std::string> &keys, 
@@ -202,9 +196,9 @@ bool SuRFBuilderUnitTest::DoesPrefixMatchInTrunc(const std::vector<std::string> 
 
 void SuRFBuilderUnitTest::testSparse(const std::vector<std::string> &keys, 
 				     const std::vector<std::string> &keys_trunc) {
-   for (level_t level = 0; level < builder_->getTreeHeight(); level++) {
+    for (level_t level = 0; level < builder_->getTreeHeight(); level++) {
 	position_t pos = 0; pos--;
-	position_t suffix_pos = 0;
+	position_t suffix_bitpos = 0;
 	for (int i = 0; i < (int)keys_trunc.size(); i++) {
 	    if (level >= keys_trunc[i].length())
 		continue;
@@ -213,7 +207,7 @@ void SuRFBuilderUnitTest::testSparse(const std::vector<std::string> &keys,
 	    pos++;
 
 	    // label test
-	    label_t label = keys_trunc[i][level];
+	    label_t label = (label_t)keys_trunc[i][level];
 	    bool exist_in_node = (builder_->getLabels()[level][pos] == label);
 	    ASSERT_TRUE(exist_in_node);
 
@@ -234,12 +228,33 @@ void SuRFBuilderUnitTest::testSparse(const std::vector<std::string> &keys,
 
 	    // suffix test
 	    if (!has_child) {
+		position_t suffix_len = builder_->getSuffixLen();
+		if (((keys[i].length() - level) * 8) >= suffix_len) {
+		    for (position_t bitpos = 0; bitpos < suffix_len; bitpos++) {
+			position_t byte_id = bitpos / 8;
+			position_t byte_offset = bitpos % 8;
+			uint8_t byte_mask = 0x80;
+			byte_mask >>= byte_offset;
+			bool expected_suffix_bit = (bool)(keys[i][level + byte_id] & byte_mask);
+			bool stored_suffix_bit = SuRFBuilder::readBit(builder_->getSuffixes()[level], suffix_bitpos);
+			ASSERT_EQ(expected_suffix_bit, stored_suffix_bit);
+			suffix_bitpos++;
+		    }
+		} else {
+		    for (position_t bitpos = 0; bitpos < suffix_len; bitpos++) {
+			bool stored_suffix_bit = SuRFBuilder::readBit(builder_->getSuffixes()[level], suffix_bitpos);
+			ASSERT_FALSE(stored_suffix_bit);
+			suffix_bitpos++;
+		    }
+		}
+		/*
 		suffix_t suffix = builder_->getSuffixes()[level][suffix_pos];
 		suffix_t expected_suffix = 0;
 		if ((level+1) < keys[i].length())
 		    expected_suffix = keys[i][level+1];
 		ASSERT_EQ(expected_suffix, suffix);
 		suffix_pos++;
+		*/
 	    }
 	}
     }
@@ -307,23 +322,55 @@ void SuRFBuilderUnitTest::testDense() {
 }
 
 TEST_F (SuRFBuilderUnitTest, buildSparseStringTest) {
-    builder_->build(words);
-    testSparse(words, words_trunc_);
+    bool include_dense = true;
+    uint32_t sparse_dense_ratio = 0;
+    level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
+    for (int i = 0; i < 5; i++) {
+	level_t suffix_len = suffix_len_array[i];
+	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+	builder_->build(words);
+	testSparse(words, words_trunc_);
+	delete builder_;
+    }
 }
 
 TEST_F (SuRFBuilderUnitTest, buildSparseIntTest) {
-    builder_->build(ints_);
-    testSparse(ints_, ints_trunc_);
+    bool include_dense = true;
+    uint32_t sparse_dense_ratio = 0;
+    level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
+    for (int i = 0; i < 5; i++) {
+	level_t suffix_len = suffix_len_array[i];
+	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+	builder_->build(ints_);
+	testSparse(ints_, ints_trunc_);
+	delete builder_;
+    }
 }
 
 TEST_F (SuRFBuilderUnitTest, buildDenseStringTest) {
-    builder_->build(words);
-    testDense();
+    bool include_dense = true;
+    uint32_t sparse_dense_ratio = 0;
+    level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
+    for (int i = 0; i < 5; i++) {
+	level_t suffix_len = suffix_len_array[i];
+	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+	builder_->build(words);
+	testDense();
+	delete builder_;
+    }
 }
 
 TEST_F (SuRFBuilderUnitTest, buildDenseIntTest) {
-    builder_->build(ints_);
-    testDense();
+    bool include_dense = true;
+    uint32_t sparse_dense_ratio = 0;
+    level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
+    for (int i = 0; i < 5; i++) {
+	level_t suffix_len = suffix_len_array[i];
+	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+	builder_->build(ints_);
+	testDense();
+	delete builder_;
+    }
 }
 
 void loadWordList() {

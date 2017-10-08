@@ -15,7 +15,7 @@ add_unit_test(test_louds_dense)
 add_unit_test(test_louds_sparse)
 add_unit_test(test_rank)
 add_unit_test(test_select)
-add_unit_test(test_suffix_vector)
+add_unit_test(test_suffix)
 add_unit_test(test_surf)
 add_unit_test(test_surf_builder)
 

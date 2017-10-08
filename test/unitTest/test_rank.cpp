@@ -23,7 +23,8 @@ public:
     virtual void SetUp () {
 	bool include_dense = false;
 	uint32_t sparse_dense_ratio = 0;
-	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal);
+	level_t suffix_len = 8;
+	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
 	bv_ = NULL;
 	bv2_ = NULL;
 	num_items_ = 0;
