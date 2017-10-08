@@ -7,7 +7,7 @@
 #include "label_vector.hpp"
 #include "rank.hpp"
 #include "select.hpp"
-#include "suffix_vector.hpp"
+#include "suffix.hpp"
 #include "surf_builder.hpp"
 
 namespace surf {
@@ -27,6 +27,7 @@ public:
 	}
 
 	bool isValid() const { return is_valid_; };
+	int compare(const std::string& key);
 	std::string getKey() const;
 
 	position_t getStartNodeNum() const { return start_node_num_; };
@@ -100,7 +101,7 @@ private:
     LabelVector* labels_;
     BitvectorRank* child_indicator_bits_;
     BitvectorSelect* louds_bits_;
-    SuffixVector* suffixes_;
+    BitvectorSuffix* suffixes_;
 };
 
 
@@ -121,10 +122,15 @@ LoudsSparse::LoudsSparse(const SuRFBuilder* builder) {
     for (level_t level = 0; level < height_; level++)
 	num_items_per_level.push_back(builder->getLabels()[level].size());
 
+    position_t suffix_len = builder->getSuffixLen();
+    std::vector<position_t> num_suffix_bits_per_level;
+    for (level_t level = 0; level < height_; level++)
+	num_suffix_bits_per_level.push_back(builder->getSuffixCounts()[level] * suffix_len);
+
     labels_ = new LabelVector(builder->getLabels(), start_level_, height_);
     child_indicator_bits_ = new BitvectorRank(kRankBasicBlockSize, builder->getChildIndicatorBits(), num_items_per_level, start_level_, height_);
     louds_bits_ = new BitvectorSelect(kSelectSampleInterval, builder->getLoudsBits(), num_items_per_level, start_level_, height_);
-    suffixes_ = new SuffixVector(builder->getSuffixConfig(), builder->getSuffixes(), start_level_, height_);
+    suffixes_ = new BitvectorSelect(builder->getSuffixType(), suffix_len, builder->getSuffixes(), num_suffix_bits_per_level, start_level_, height_);
 }
 
 bool LoudsSparse::lookupKey(const std::string& key, const position_t in_node_num) const {
@@ -222,7 +228,7 @@ inline void LoudsSparse::moveToLeftInNextSubtrie(position_t pos, const position_
 inline void LoudsSparse::compareSuffixGreaterThan(const position_t pos, const std::string& key, const level_t level, const bool inclusive, LoudsSparse::Iter& iter) const {
     if (suffixes_->getType() == kReal) {
 	position_t suffix_pos = getSuffixPos(pos);
-	int compare = suffixes_->compare(suffix_pos, key[level]);
+	int compare = suffixes_->compare(suffix_pos, key, level);
 	if ((compare < 0) || (compare == 0 && !inclusive))
 	    return iter++;
     } else {
@@ -234,7 +240,24 @@ inline void LoudsSparse::compareSuffixGreaterThan(const position_t pos, const st
 
 //============================================================================
 
+int LoudsSparse::Iter::compare(const std::string& key) {
+    std::string key_sparse = key.substr(start_level_);
+    std::string iter_key = getKey();
+    int compare = iter_key.compare(key_sparse);
+    if (compare != 0)
+	return compare;
+    position_t suffix_pos = trie_->getSuffixPos(pos_in_trie_[key_len_ - 1]);
+    return trie_->suffixes_->compare(suffix_pos, key, key_len_);
+}
+
 std::string LoudsSparse::Iter::getKey() const {
+    if (!is_valid_) 
+	return std::string();
+    level_t len = key_len_;
+    if (is_at_terminator) 
+	len--;
+    return std::string((const char*)key_.data(), (size_t)len);
+    /*
     if (!is_valid_) 
 	return std::string();
     level_t len = key_len_;
@@ -245,6 +268,7 @@ std::string LoudsSparse::Iter::getKey() const {
     if (trie_->suffixes_->getType() == kReal && trie_->suffixes_->read(suffix_pos) > 0)
 	ret_str += std::string((const char*)(trie_->suffixes_->move(suffix_pos)), sizeof(suffix_t));
     return ret_str;
+    */
 }
 
 inline void LoudsSparse::Iter::append(const position_t pos) {

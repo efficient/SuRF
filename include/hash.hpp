@@ -56,3 +56,4 @@ inline uint32_t suffixHash(const char* key, const int keylen) {
 } // namespace surf
 
 #endif // HASH_H_
+

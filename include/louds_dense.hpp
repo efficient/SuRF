@@ -114,7 +114,7 @@ LoudsDense::LoudsDense(const SuRFBuilder* builder) {
     label_bitmaps_ = new BitvectorRank(kRankBasicBlockSize, builder->getBitmapLabels(), num_bits_per_level, 0, height_);
     child_indicator_bitmaps_ = new BitvectorRank(kRankBasicBlockSize, builder->getBitmapChildIndicatorBits(), num_bits_per_level, 0, height_);
     prefixkey_indicator_bits_ = new BitvectorRank(kRankBasicBlockSize, builder->getPrefixkeyIndicatorBits(), builder->getNodeCounts(), 0, height_);
-    suffixes_ = new SuffixVector(builder->getSuffixConfig(), builder->getSuffixes(), 0, height_);
+    suffixes_ = new SuffixVector(builder->getSuffixType(), builder->getSuffixes(), 0, height_);
 }
 
 bool LoudsDense::lookupKey(const std::string& key, position_t& out_node_num) const {
@@ -214,7 +214,7 @@ inline position_t LoudsDense::getNextPos(const position_t pos) const {
 inline void LoudsDense::compareSuffixGreaterThan(const position_t pos, const std::string& key, const level_t level, const bool inclusive, LoudsDense::Iter& iter) const {
     if (suffixes_->getType() == kReal) {
 	position_t suffix_pos = getSuffixPos(pos, false);
-	int compare = suffixes_->compare(suffix_pos, key[level]);
+	int compare = suffixes_->compare(suffix_pos, key, level);
 	if ((compare < 0) || (compare == 0 && !inclusive))
 	    return iter++;
     } else {
