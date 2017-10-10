@@ -34,29 +34,28 @@ public:
 private:
     static inline word_t constructHashSuffix(const std::string& key, const level_t len) {
 	word_t suffix = suffixHash(key);
-	clearMSBits(suffix, len);
+	suffix <<= (kWordSize - len - kHashShift);
+	suffix >>= (kWordSize - len);
 	return suffix;
     }
 
     static inline word_t constructRealSuffix(const std::string& key, const level_t level, const level_t len) {
+	if (key.length() < level || ((key.length() - level) * 8) < len)
+	    return 0;
 	word_t suffix = 0;
-	level_t key_len = (level_t)key.length();
 	level_t num_complete_bytes = len / 8;
 	if (num_complete_bytes > 0) {
-	    if (level < key_len)
-		suffix += (word_t)key[level];
+	    suffix += (word_t)key[level];
 	    for (position_t i = 1; i < num_complete_bytes; i++) {
 		suffix <<= 8;
-		if ((level + i) < key_len)
-		    suffix += (word_t)key[level + i];
+		suffix += (word_t)(uint8_t)key[level + i];
 	    }
 	}
 	level_t offset = len % 8;
 	if (offset > 0) {
-	    suffix << offset;
+	    suffix <<= offset;
 	    word_t remaining_bits = 0;
-	    if ((level + num_complete_bytes) < key_len)
-		remaining_bits = (word_t)key[level + num_complete_bytes];
+	    remaining_bits = (word_t)(uint8_t)key[level + num_complete_bytes];
 	    remaining_bits >>= (8 - offset);
 	    suffix += remaining_bits;
 	}
@@ -104,31 +103,38 @@ private:
 };
 
 word_t BitvectorSuffix::read(const position_t idx) const {
+    if (type_ == kNone) return 0;
     assert(idx * suffix_len_ < num_bits_);
     position_t bit_pos = idx * suffix_len_;
     position_t word_id = bit_pos / kWordSize;
     position_t offset = bit_pos & (kWordSize - 1);
-    return (bits_[word_id] << offset) >> (kWordSize - suffix_len_);
+    word_t ret_word = (bits_[word_id] << offset) >> (kWordSize - suffix_len_);
+    if (offset + suffix_len_ > kWordSize)
+	ret_word += (bits_[word_id+1] >> (kWordSize - offset - suffix_len_));
+    return ret_word;
 }
 
 bool BitvectorSuffix::checkEquality(const position_t idx, const std::string& key, const level_t level) const {
     if (type_ == kNone) return true;
     assert(idx * suffix_len_ < num_bits_);
     word_t stored_suffix = read(idx);
-    // if no suffix info for the stored key
-    if (type_ == kReal && stored_suffix == 0) return true;
-    // if the querying key is shorter than the stored key
-    if (type_ == kReal && ((key.length() - level) * 8) < suffix_len_) return false;
+    if (type_ == kReal) {
+	// if no suffix info for the stored key
+	if (stored_suffix == 0) return true;
+	// if the querying key is shorter than the stored key
+	if (key.length() < level || ((key.length() - level) * 8) < suffix_len_) return false;
+    }
     word_t querying_suffix = constructSuffix(key, level, type_, suffix_len_);
     if (stored_suffix == querying_suffix) return true;
     return false;
 }
 
+// If no real suffix is stored for the key, compare returns 0.
 int BitvectorSuffix::compare(const position_t idx, const std::string& key, const level_t level) const {
-    assert(type_ == kReal);
+    if (type_ == kNone || type_ == kHash) return 0;
     assert(idx * suffix_len_ < num_bits_);
     word_t stored_suffix = read(idx);
-    if (stored_suffix == 0) return -1;
+    if (stored_suffix == 0) return 0;
     word_t querying_suffix = constructRealSuffix(key, level, suffix_len_);
     if (stored_suffix < querying_suffix) return -1;
     else if (stored_suffix == querying_suffix) return 0;

@@ -2,7 +2,7 @@
 #include "filter_factory.hpp"
 
 int main(int argc, char *argv[]) {
-    if (argc != 9) {
+    if (argc != 10) {
 	std::cout << "Usage:\n";
 	std::cout << "1. filter type: SuRF, SuRFHash, SuRFReal, Bloom, ARF\n";
 	std::cout << "2. suffix length: 0 < len <= 64 (for SuRFHash and SuRFReal only)\n";

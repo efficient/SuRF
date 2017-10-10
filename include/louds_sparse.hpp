@@ -18,7 +18,7 @@ public:
     public:
 	Iter() : is_valid_(false) {};
 	Iter(LoudsSparse* trie) : is_valid_(false), trie_(trie), start_node_num_(0), 
-				  key_len_(0), is_at_terminator(false) {
+				  key_len_(0), is_at_terminator_(false) {
 	    start_level_ = trie_->getStartLevel();
 	    for (level_t level = start_level_; level < trie_->getHeight(); level++) {
 		key_.push_back(0);
@@ -50,7 +50,7 @@ public:
 
 	std::vector<label_t> key_;
 	std::vector<position_t> pos_in_trie_;
-	bool is_at_terminator;
+	bool is_at_terminator_;
 
 	friend class LoudsSparse;
     };
@@ -69,8 +69,6 @@ public:
     // point query: trie walk starts at node "in_node_num" instead of root
     // in_node_num is provided by louds-dense's lookupKey function
     bool lookupKey(const std::string& key, const position_t in_node_num) const;
-
-    // Returns true if iter is valid
     void moveToKeyGreaterThan(const std::string& key, const bool inclusive, LoudsSparse::Iter& iter) const;
     uint32_t countRange(const std::string& left_key, const std::string& right_key, const position_t in_left_pos, const position_t in_right_pos) const;
 
@@ -118,19 +116,28 @@ LoudsSparse::LoudsSparse(const SuRFBuilder* builder) {
     else
 	child_count_dense_ = node_count_dense_ + builder->getNodeCounts()[start_level_] - 1;
 
+    labels_ = new LabelVector(builder->getLabels(), start_level_, height_);
+
     std::vector<position_t> num_items_per_level;
     for (level_t level = 0; level < height_; level++)
 	num_items_per_level.push_back(builder->getLabels()[level].size());
 
-    level_t suffix_len = builder->getSuffixLen();
-    std::vector<position_t> num_suffix_bits_per_level;
-    for (level_t level = 0; level < height_; level++)
-	num_suffix_bits_per_level.push_back(builder->getSuffixCounts()[level] * suffix_len);
+    child_indicator_bits_ = new BitvectorRank(kRankBasicBlockSize, builder->getChildIndicatorBits(), 
+					      num_items_per_level, start_level_, height_);
+    louds_bits_ = new BitvectorSelect(kSelectSampleInterval, builder->getLoudsBits(), 
+				      num_items_per_level, start_level_, height_);
 
-    labels_ = new LabelVector(builder->getLabels(), start_level_, height_);
-    child_indicator_bits_ = new BitvectorRank(kRankBasicBlockSize, builder->getChildIndicatorBits(), num_items_per_level, start_level_, height_);
-    louds_bits_ = new BitvectorSelect(kSelectSampleInterval, builder->getLoudsBits(), num_items_per_level, start_level_, height_);
-    suffixes_ = new BitvectorSuffix(builder->getSuffixType(), suffix_len, builder->getSuffixes(), num_suffix_bits_per_level, start_level_, height_);
+    if (builder->getSuffixType() == kNone) {
+	suffixes_ = new BitvectorSuffix();
+    } else {
+	level_t suffix_len = builder->getSuffixLen();
+	std::vector<position_t> num_suffix_bits_per_level;
+	for (level_t level = 0; level < height_; level++)
+	    num_suffix_bits_per_level.push_back(builder->getSuffixCounts()[level] * suffix_len);
+
+	suffixes_ = new BitvectorSuffix(builder->getSuffixType(), suffix_len, builder->getSuffixes(), 
+					num_suffix_bits_per_level, start_level_, height_);
+    }
 }
 
 bool LoudsSparse::lookupKey(const std::string& key, const position_t in_node_num) const {
@@ -177,7 +184,7 @@ void LoudsSparse::moveToKeyGreaterThan(const std::string& key, const bool inclus
     }
     if ((labels_->read(pos) == kTerminator) && (!child_indicator_bits_->readBit(pos))) {
 	iter.append(kTerminator, pos);
-	iter.is_at_terminator = true;
+	iter.is_at_terminator_ = true;
     }
     if (!inclusive)
 	return iter++;
@@ -241,33 +248,24 @@ inline void LoudsSparse::compareSuffixGreaterThan(const position_t pos, const st
 //============================================================================
 
 int LoudsSparse::Iter::compare(const std::string& key) {
-    std::string key_sparse = key.substr(start_level_);
+    if (is_at_terminator_ && (key_len_ - 1) < (key.length() - start_level_))
+	return -1;
     std::string iter_key = getKey();
-    int compare = iter_key.compare(key_sparse);
+    std::string key_sparse = key.substr(start_level_);
+    std::string key_sparse_same_length = key_sparse.substr(0, iter_key.length());
+    int compare = iter_key.compare(key_sparse_same_length);
     if (compare != 0) return compare;
     position_t suffix_pos = trie_->getSuffixPos(pos_in_trie_[key_len_ - 1]);
-    return trie_->suffixes_->compare(suffix_pos, key, key_len_);
+    return trie_->suffixes_->compare(suffix_pos, key_sparse, key_len_);
 }
 
 std::string LoudsSparse::Iter::getKey() const {
     if (!is_valid_) 
 	return std::string();
     level_t len = key_len_;
-    if (is_at_terminator) 
+    if (is_at_terminator_)
 	len--;
     return std::string((const char*)key_.data(), (size_t)len);
-    /*
-    if (!is_valid_) 
-	return std::string();
-    level_t len = key_len_;
-    if (is_at_terminator) 
-	len--;
-    std::string ret_str = std::string((const char*)key_.data(), (size_t)len);
-    position_t suffix_pos = trie_->getSuffixPos(pos_in_trie_[key_len_ - 1]);
-    if (trie_->suffixes_->getType() == kReal && trie_->suffixes_->read(suffix_pos) > 0)
-	ret_str += std::string((const char*)(trie_->suffixes_->move(suffix_pos)), sizeof(suffix_t));
-    return ret_str;
-    */
 }
 
 inline void LoudsSparse::Iter::append(const position_t pos) {
@@ -303,7 +301,7 @@ void LoudsSparse::Iter::moveToLeftMostKey() {
 
     if (!trie_->child_indicator_bits_->readBit(pos)) {
 	if (label == kTerminator)
-	    is_at_terminator = true;
+	    is_at_terminator_ = true;
 	is_valid_ = true;
 	return;
     }
@@ -316,7 +314,7 @@ void LoudsSparse::Iter::moveToLeftMostKey() {
 	if (!trie_->child_indicator_bits_->readBit(pos)) {
 	    append(label, pos);
 	    if (label == kTerminator)
-		is_at_terminator = true;
+		is_at_terminator_ = true;
 	    is_valid_ = true;
 	    return;
 	}
@@ -328,7 +326,7 @@ void LoudsSparse::Iter::moveToLeftMostKey() {
 
 void LoudsSparse::Iter::operator ++(int) {
     assert(key_len_ > 0);
-    is_at_terminator = false;
+    is_at_terminator_ = false;
     position_t pos = pos_in_trie_[key_len_ - 1];
     pos++;
     while (pos >= trie_->louds_bits_->numBits() || trie_->louds_bits_->readBit(pos)) {

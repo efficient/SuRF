@@ -83,8 +83,8 @@ TEST_F (DenseUnitTest, lookupTest) {
     bool include_dense = true;
     uint32_t sparse_dense_ratio = 0;
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
-    for (int i = 0; i < 5; i++) {
-	level_t suffix_len = suffix_len_array[i];
+    for (int k = 0; k < 5; k++) {
+	level_t suffix_len = suffix_len_array[k];
 	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
 	builder_->build(words);
 	louds_dense_ = new LoudsDense(builder_);
@@ -135,8 +135,8 @@ TEST_F (DenseUnitTest, moveToKeyGreaterThanWordTest) {
     bool include_dense = true;
     uint32_t sparse_dense_ratio = 0;
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
-    for (int i = 0; i < 5; i++) {
-	level_t suffix_len = suffix_len_array[i];
+    for (int k = 0; k < 5; k++) {
+	level_t suffix_len = suffix_len_array[k];
 	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
 	builder_->build(words);
 	louds_dense_ = new LoudsDense(builder_);

@@ -20,6 +20,8 @@ static const bool kIncludeDense = true;
 static const uint32_t kSparseDenseRatio = 64;
 static const label_t kTerminator = 255;
 
+static const int kHashShift = 7;
+
 enum SuffixType {
     kNone = 0,
     kHash = 1,
@@ -35,11 +37,6 @@ static uint64_t stringToUint64(const std::string& str_word) {
     uint64_t int_word = 0;
     memcpy(reinterpret_cast<char*>(&int_word), str_word.data(), 8);
     return __builtin_bswap64(int_word);
-}
-
-static void clearMSBits(word_t& word, const position_t content_len) {
-    word <<= (kWordSize - content_len);
-    word >>= (kWordSize - content_len);
 }
 
 } // namespace surf

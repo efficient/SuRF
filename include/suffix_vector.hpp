@@ -8,7 +8,7 @@
 
 namespace surf {
 
-//Current version only supports one-byte suffixes
+// DEPRECATED
 class SuffixVector {
 public:
     SuffixVector() : type_(kNone), num_bytes_(0), suffixes_(NULL) {};

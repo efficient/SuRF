@@ -1,30 +1,30 @@
 #!bin/bash
 
-../build/bench/workload Bloom mixed 50 0 randint point 0 zipfian
+#../build/bench/workload Bloom 3 mixed 50 0 randint point 0 zipfian
 
-../build/bench/workload SuRF mixed 50 0 randint point 0 zipfian
+#../build/bench/workload SuRF 3 mixed 50 0 randint point 0 zipfian
 
-../build/bench/workload SuRFHash mixed 50 0 randint point 0 zipfian
+#../build/bench/workload SuRFHash 3 mixed 50 0 randint point 0 zipfian
 
-../build/bench/workload SuRFReal mixed 50 0 randint point 0 zipfian
-
-
-../build/bench/workload Bloom mixed 50 0 timestamp point 0 zipfian
-
-../build/bench/workload SuRF mixed 50 0 timestamp point 0 zipfian
-
-../build/bench/workload SuRFHash mixed 50 0 timestamp point 0 zipfian
-
-../build/bench/workload SuRFReal mixed 50 0 timestamp point 0 zipfian
+../build/bench/workload SuRFReal 3 mixed 50 0 randint point 0 zipfian
 
 
-../build/bench/workload Bloom mixed 50 0 email point 0 zipfian
+#../build/bench/workload Bloom 3 mixed 50 0 timestamp point 0 zipfian
 
-../build/bench/workload SuRF mixed 50 0 email point 0 zipfian
+#../build/bench/workload SuRF 3 mixed 50 0 timestamp point 0 zipfian
 
-../build/bench/workload SuRFHash mixed 50 0 email point 0 zipfian
+#../build/bench/workload SuRFHash 3 mixed 50 0 timestamp point 0 zipfian
 
-../build/bench/workload SuRFReal mixed 50 0 email point 0 zipfian
+#../build/bench/workload SuRFReal 3 mixed 50 0 timestamp point 0 zipfian
+
+
+#../build/bench/workload Bloom 3 mixed 50 0 email point 0 zipfian
+
+#../build/bench/workload SuRF 3 mixed 50 0 email point 0 zipfian
+
+#../build/bench/workload SuRFHash 3 mixed 50 0 email point 0 zipfian
+
+#../build/bench/workload SuRFReal 3 mixed 50 0 email point 0 zipfian
 
 
 #../build/bench/workload SuRF mixed 50 0 randint range 352187318272 zipfian

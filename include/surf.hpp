@@ -60,6 +60,8 @@ public:
     }
 
     bool lookupKey(const std::string& key);
+    // This function searches in a conservative way: if inclusive is true
+    // and the stored key prefix matches key, iter stays at this key prefix.
     SuRF::Iter moveToKeyGreaterThan(const std::string& key, const bool inclusive);
     bool lookupRange(const std::string& left_key, const bool left_inclusive, 
 		     const std::string& right_key, const bool right_inclusive);
@@ -96,8 +98,9 @@ SuRF::Iter SuRF::moveToKeyGreaterThan(const std::string& key, const bool inclusi
     if (!iter.dense_iter_.isSearchComplete()) {
 	iter.passToSparse();
 	louds_sparse_->moveToKeyGreaterThan(key, inclusive, iter.sparse_iter_);
-	if (!iter.sparse_iter_.isValid())
+	if (!iter.sparse_iter_.isValid()) {
 	    iter.incrementDenseIter();
+	}
 	return iter;
     } else if (!iter.dense_iter_.isMoveLeftComplete()) {
 	iter.passToSparse();
@@ -110,6 +113,7 @@ SuRF::Iter SuRF::moveToKeyGreaterThan(const std::string& key, const bool inclusi
 bool SuRF::lookupRange(const std::string& left_key, const bool left_inclusive, 
 		       const std::string& right_key, const bool right_inclusive) {
     SuRF::Iter iter = moveToKeyGreaterThan(left_key, left_inclusive);
+    if (!iter.isValid()) return false;
     int compare = iter.compare(right_key);
     if (right_inclusive)
 	return (compare <= 0);

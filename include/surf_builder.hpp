@@ -237,25 +237,6 @@ inline void SuRFBuilder::insertSuffix(const std::string& key, const level_t leve
     assert(level - 1 < suffixes_.size());
     word_t suffix_word = BitvectorSuffix::constructSuffix(key, level, suffix_type_, suffix_len_);
     storeSuffix(level, suffix_word);
-    /*
-    switch (suffix_type_) {
-    case kHash: {
-	suffix_t h = suffixHash(key) & 0xFF;
-	suffixes_[level-1].push_back(h);
-	break;
-    }
-    case kReal: {
-	if (level < key.length())
-	    suffixes_[level-1].push_back(key[level]);
-	else
-	    // Real suffix byte 0 is treated as NULL
-	    suffixes_[level-1].push_back(0);
-	break;
-    }
-    default:
-	; // kNone
-    }
-    */
 }
 
 inline bool SuRFBuilder::isCharCommonPrefix(const label_t c, const level_t level) const {
@@ -297,6 +278,7 @@ void SuRFBuilder::insertKeyByte(const char c, const level_t level, const bool is
     moveToNextItemSlot(level);
 }
 
+
 inline void SuRFBuilder::storeSuffix(const level_t level, const word_t suffix) {
     position_t pos = suffix_counts_[level-1] * suffix_len_;
     assert(pos <= (suffixes_[level-1].size() * kWordSize));
@@ -304,7 +286,7 @@ inline void SuRFBuilder::storeSuffix(const level_t level, const word_t suffix) {
 	suffixes_[level-1].push_back(0);
     position_t word_id = pos / kWordSize;
     position_t offset = pos % kWordSize;
-    position_t word_remaining_len = kWordSize - offset - 1;
+    position_t word_remaining_len = kWordSize - offset;
     if (suffix_len_ <= word_remaining_len) {
 	word_t shifted_suffix = suffix << (word_remaining_len - suffix_len_);
 	suffixes_[level-1][word_id] += shifted_suffix;
@@ -313,8 +295,7 @@ inline void SuRFBuilder::storeSuffix(const level_t level, const word_t suffix) {
 	suffixes_[level-1][word_id] += suffix_left_part;
 	suffixes_[level-1].push_back(0);
 	word_id++;
-	word_t suffix_right_part = suffix; 
-	clearMSBits(suffix_right_part, (suffix_len_ - word_remaining_len));
+	word_t suffix_right_part = suffix << (kWordSize - (suffix_len_ - word_remaining_len));
 	suffixes_[level-1][word_id] += suffix_right_part;
     }
     suffix_counts_[level-1]++;

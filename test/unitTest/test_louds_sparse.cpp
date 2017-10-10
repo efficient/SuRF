@@ -83,8 +83,8 @@ TEST_F (SparseUnitTest, lookupWordTest) {
     bool include_dense = false;
     uint32_t sparse_dense_ratio = 0;
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
-    for (int i = 0; i < 5; i++) {
-	level_t suffix_len = suffix_len_array[i];
+    for (int k = 0; k < 5; k++) {
+	level_t suffix_len = suffix_len_array[k];
 	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
 	builder_->build(words);
 	louds_sparse_ = new LoudsSparse(builder_);
@@ -137,31 +137,31 @@ TEST_F (SparseUnitTest, moveToKeyGreaterThanWordTest) {
 	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
 	builder_->build(words);
 	louds_sparse_ = new LoudsSparse(builder_);
-	for (unsigned i = 0; i < words.size(); i++) {
-	    bool inclusive = true;
+
+	bool inclusive = true;
+	for (unsigned j = 0; j < words.size(); j++) {
 	    LoudsSparse::Iter iter(louds_sparse_);
-	    louds_sparse_->moveToKeyGreaterThan(words[i], inclusive, iter);
+	    louds_sparse_->moveToKeyGreaterThan(words[j], inclusive, iter);
 
 	    ASSERT_TRUE(iter.isValid());
 	    std::string iter_key = iter.getKey();
-	    std::string word_prefix = words[i].substr(0, iter_key.length());
+	    std::string word_prefix = words[j].substr(0, iter_key.length());
 	    bool is_prefix = (word_prefix.compare(iter_key) == 0);
 	    ASSERT_TRUE(is_prefix);
 	}
 
-	for (unsigned i = 0; i < words.size() - 1; i++) {
-	    bool inclusive = false;
+	inclusive = false;
+	for (unsigned j = 0; j < words.size() - 1; j++) {
 	    LoudsSparse::Iter iter(louds_sparse_);
-	    louds_sparse_->moveToKeyGreaterThan(words[i], inclusive, iter);
+	    louds_sparse_->moveToKeyGreaterThan(words[j], inclusive, iter);
 
 	    ASSERT_TRUE(iter.isValid());
 	    std::string iter_key = iter.getKey();
-	    std::string word_prefix = words[i+1].substr(0, iter_key.length());
+	    std::string word_prefix = words[j+1].substr(0, iter_key.length());
 	    bool is_prefix = (word_prefix.compare(iter_key) == 0);
 	    ASSERT_TRUE(is_prefix);
 	}
 
-	bool inclusive = false;
 	LoudsSparse::Iter iter(louds_sparse_);
 	louds_sparse_->moveToKeyGreaterThan(words[words.size() - 1], inclusive, iter);
 	ASSERT_FALSE(iter.isValid());

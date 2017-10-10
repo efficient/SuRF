@@ -57,27 +57,33 @@ void SuffixUnitTest::computeWordsBySuffixStartLevel() {
 				     getCommonPrefixLen(words[i], words[i+1]));
 	}
 
-	while (words_by_suffix_start_level_.size() < (unsigned)(commonPrefixLen + 2))
+	while (words_by_suffix_start_level_.size() < (unsigned)(commonPrefixLen + 1))
 	    words_by_suffix_start_level_.push_back(std::vector<std::string>());
 
-	words_by_suffix_start_level_[commonPrefixLen + 1].push_back(words[i]);
+	words_by_suffix_start_level_[commonPrefixLen].push_back(words[i]);
     }
 }
 
 TEST_F (SuffixUnitTest, constructSuffixTest) {
     // Real suffix test
-    level_t level = 2;
+    const level_t level = 2;
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int i = 0; i < 5; i++) {
 	level_t suffix_len = suffix_len_array[i];
 	for (unsigned j = 0; j < words.size(); j++) {
 	    word_t suffix = BitvectorSuffix::constructSuffix(words[j], level, kReal, suffix_len);
+	    if (words[j].length() < level || ((words[j].length() - level) * 8) < suffix_len) {
+		ASSERT_EQ(0, suffix);
+		continue;
+	    }
 	    for (position_t bitpos = 0; bitpos < suffix_len; bitpos++) {
 		position_t byte_id = bitpos / 8;
 		position_t byte_offset = bitpos % 8;
 		uint8_t byte_mask = 0x80;
 		byte_mask >>= byte_offset;
-		bool expected_suffix_bit = (bool)(words[i][level + byte_id] & byte_mask);
+		bool expected_suffix_bit = false;
+		if (level + byte_id < words[j].size())
+		    expected_suffix_bit = (bool)(words[j][level + byte_id] & byte_mask);
 
 		word_t word_mask = kMsbMask;
 		word_mask >>= (kWordSize - suffix_len + bitpos);
@@ -95,7 +101,7 @@ TEST_F (SuffixUnitTest, CheckEqualityTest) {
     SuffixType suffix_type_array[2] = {kHash, kReal};
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int i = 0; i < 2; i++) {
-	for (int j = 0; j < 5; i++) {
+	for (int j = 0; j < 5; j++) {
 	    // build test
 	    SuffixType suffix_type = suffix_type_array[i];
 	    level_t suffix_len = suffix_len_array[j];
@@ -112,10 +118,10 @@ TEST_F (SuffixUnitTest, CheckEqualityTest) {
 	    // checkEquality test
 	    position_t suffix_idx = 0;
 	    for (level_t level = 0; level < words_by_suffix_start_level_.size(); level++) {
-		for (unsigned i = 0; i < words_by_suffix_start_level_[level].size(); i++) {
+		for (unsigned k = 0; k < words_by_suffix_start_level_[level].size(); k++) {
 		    bool is_equal = suffixes_->checkEquality(suffix_idx,
-							   words_by_suffix_start_level_[level][i],
-							   level);
+							     words_by_suffix_start_level_[level][k],
+							     (level + 1));
 		    ASSERT_TRUE(is_equal);
 		    suffix_idx++;
 		}

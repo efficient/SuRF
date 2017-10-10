@@ -229,13 +229,15 @@ void SuRFBuilderUnitTest::testSparse(const std::vector<std::string> &keys,
 	    // suffix test
 	    if (!has_child) {
 		position_t suffix_len = builder_->getSuffixLen();
-		if (((keys[i].length() - level) * 8) >= suffix_len) {
+		if (((keys[i].length() - level - 1) * 8) >= suffix_len) {
 		    for (position_t bitpos = 0; bitpos < suffix_len; bitpos++) {
 			position_t byte_id = bitpos / 8;
 			position_t byte_offset = bitpos % 8;
 			uint8_t byte_mask = 0x80;
 			byte_mask >>= byte_offset;
-			bool expected_suffix_bit = (bool)(keys[i][level + byte_id] & byte_mask);
+			bool expected_suffix_bit = false;
+			if (level + 1 + byte_id < keys[i].size())
+			    expected_suffix_bit = (bool)(keys[i][level + 1 + byte_id] & byte_mask);
 			bool stored_suffix_bit = SuRFBuilder::readBit(builder_->getSuffixes()[level], suffix_bitpos);
 			ASSERT_EQ(expected_suffix_bit, stored_suffix_bit);
 			suffix_bitpos++;
@@ -247,14 +249,6 @@ void SuRFBuilderUnitTest::testSparse(const std::vector<std::string> &keys,
 			suffix_bitpos++;
 		    }
 		}
-		/*
-		suffix_t suffix = builder_->getSuffixes()[level][suffix_pos];
-		suffix_t expected_suffix = 0;
-		if ((level+1) < keys[i].length())
-		    expected_suffix = keys[i][level+1];
-		ASSERT_EQ(expected_suffix, suffix);
-		suffix_pos++;
-		*/
 	    }
 	}
     }

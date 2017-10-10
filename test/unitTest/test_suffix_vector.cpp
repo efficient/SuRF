@@ -12,6 +12,7 @@
 
 namespace surf {
 
+// DEPRECATED
 namespace suffixvectortest {
 
 static const std::string kFilePath = "../../../test/words.txt";

@@ -111,15 +111,25 @@ LoudsDense::LoudsDense(const SuRFBuilder* builder) {
     for (level_t level = 0; level < height_; level++)
 	num_bits_per_level.push_back(builder->getBitmapLabels()[level].size() * kWordSize);
 
-    level_t suffix_len = builder->getSuffixLen();
-    std::vector<position_t> num_suffix_bits_per_level;
-    for (level_t level = 0; level < height_; level++)
-	num_suffix_bits_per_level.push_back(builder->getSuffixCounts()[level] * suffix_len);
+    label_bitmaps_ = new BitvectorRank(kRankBasicBlockSize, builder->getBitmapLabels(), 
+				       num_bits_per_level, 0, height_);
+    child_indicator_bitmaps_ = new BitvectorRank(kRankBasicBlockSize, 
+						 builder->getBitmapChildIndicatorBits(), 
+						 num_bits_per_level, 0, height_);
+    prefixkey_indicator_bits_ = new BitvectorRank(kRankBasicBlockSize, 
+						  builder->getPrefixkeyIndicatorBits(), 
+						  builder->getNodeCounts(), 0, height_);
 
-    label_bitmaps_ = new BitvectorRank(kRankBasicBlockSize, builder->getBitmapLabels(), num_bits_per_level, 0, height_);
-    child_indicator_bitmaps_ = new BitvectorRank(kRankBasicBlockSize, builder->getBitmapChildIndicatorBits(), num_bits_per_level, 0, height_);
-    prefixkey_indicator_bits_ = new BitvectorRank(kRankBasicBlockSize, builder->getPrefixkeyIndicatorBits(), builder->getNodeCounts(), 0, height_);
-    suffixes_ = new BitvectorSuffix(builder->getSuffixType(), suffix_len, builder->getSuffixes(), num_suffix_bits_per_level, 0, height_);
+    if (builder->getSuffixType() == kNone) {
+	suffixes_ = new BitvectorSuffix();
+    } else {
+	level_t suffix_len = builder->getSuffixLen();
+	std::vector<position_t> num_suffix_bits_per_level;
+	for (level_t level = 0; level < height_; level++)
+	    num_suffix_bits_per_level.push_back(builder->getSuffixCounts()[level] * suffix_len);
+	suffixes_ = new BitvectorSuffix(builder->getSuffixType(), suffix_len, builder->getSuffixes(), 
+					num_suffix_bits_per_level, 0, height_);
+    }
 }
 
 bool LoudsDense::lookupKey(const std::string& key, position_t& out_node_num) const {
@@ -156,7 +166,7 @@ void LoudsDense::moveToKeyGreaterThan(const std::string& key, const bool inclusi
     for (level_t level = 0; level < height_; level++) {
 	// if is_at_prefix_key_, pos is at the next valid position in the child node
 	pos = node_num * kNodeFanout;
-	if (level >= key.length()) { //if run out of searchKey bytes
+	if (level >= key.length()) { // if run out of searchKey bytes
 	    iter.append(getNextPos(pos - 1));
 	    iter.is_at_prefix_key_ = true;
 	    if (!inclusive)
@@ -170,12 +180,10 @@ void LoudsDense::moveToKeyGreaterThan(const std::string& key, const bool inclusi
 	// if no exact match
 	if (!label_bitmaps_->readBit(pos))
 	    return iter++;
-
 	//if trie branch terminates
 	if (!child_indicator_bitmaps_->readBit(pos)) {
 	    return compareSuffixGreaterThan(pos, key, level+1, inclusive, iter);
 	}
-
 	node_num = getChildNodeNum(pos);
     }
 
@@ -207,7 +215,7 @@ inline position_t LoudsDense::getSuffixPos(const position_t pos, const bool is_p
 			     - child_indicator_bitmaps_->rank(pos)
 			     + prefixkey_indicator_bits_->rank(node_num)
 			     - 1);
-    if (is_prefix_key && label_bitmaps_->readBit(pos))
+    if (is_prefix_key && label_bitmaps_->readBit(pos) && !child_indicator_bitmaps_->readBit(pos))
 	suffix_pos--;
     return suffix_pos;
 }
@@ -232,8 +240,10 @@ inline void LoudsDense::compareSuffixGreaterThan(const position_t pos, const std
 //============================================================================
 
 int LoudsDense::Iter::compare(const std::string& key) {
-    std::string key_dense = key.substr(0, trie_->getHeight());
+    if (is_at_prefix_key_ && (key_len_ - 1) < key.length())
+	return -1;
     std::string iter_key = getKey();
+    std::string key_dense = key.substr(0, iter_key.length());
     int compare = iter_key.compare(key_dense);
     if (compare != 0) return compare;
     if (isComplete()) {
@@ -247,18 +257,9 @@ std::string LoudsDense::Iter::getKey() const {
     if (!is_valid_)
 	return std::string();
     level_t len = key_len_;
-    if (is_at_prefix_key_) 
+    if (is_at_prefix_key_)
 	len--;
     return std::string((const char*)key_.data(), (size_t)len);
-    /*
-    std::string ret_str = std::string((const char*)key_.data(), (size_t)len);
-    if (isComplete() && !is_at_prefix_key_) {
-	position_t suffix_pos = trie_->getSuffixPos(pos_in_trie_[key_len_ - 1], is_at_prefix_key_);
-	if (trie_->suffixes_->getType() == kReal && trie_->suffixes_->read(suffix_pos) > 0)
-	    ret_str += std::string((const char*)(trie_->suffixes_->move(suffix_pos)), sizeof(suffix_t));
-    }
-    return ret_str;
-    */
 }
 
 inline void LoudsDense::Iter::append(position_t pos) {
@@ -285,7 +286,6 @@ void LoudsDense::Iter::moveToLeftMostKey() {
     assert(key_len_ > 0);
     level_t level = key_len_ - 1;
     position_t pos = pos_in_trie_[level];
-
     if (!trie_->child_indicator_bitmaps_->readBit(pos))
 	return setFlags(true, true, true); // valid, search complete, moveLeft complete
 
