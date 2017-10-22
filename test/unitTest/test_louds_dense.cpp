@@ -85,6 +85,7 @@ void DenseUnitTest::fillinInts() {
 void DenseUnitTest::testSerialize() {
     louds_dense_->serialize(&dst_);    
     uint64_t size = extractBlockSize(dst_, 0);
+    louds_dense_->destroy();
     delete louds_dense_;
     louds_dense_ = new LoudsDense();
     uint64_t offset = 0;
@@ -119,6 +120,7 @@ TEST_F (DenseUnitTest, lookupWordTest) {
 	louds_dense_ = new LoudsDense(builder_);
 	testLookupWord();
 	delete builder_;
+	louds_dense_->destroy();
 	delete louds_dense_;
     }
 }
@@ -159,6 +161,7 @@ TEST_F (DenseUnitTest, lookupIntTest) {
 	}
     }
     delete builder_;
+    louds_dense_->destroy();
     delete louds_dense_;
 }
 
@@ -202,6 +205,7 @@ TEST_F (DenseUnitTest, moveToKeyGreaterThanWordTest) {
 	louds_dense_->moveToKeyGreaterThan(words[words.size() - 1], inclusive, iter);
 	ASSERT_FALSE(iter.isValid());
 	delete builder_;
+	louds_dense_->destroy();
 	delete louds_dense_;
     }
 }
@@ -250,6 +254,7 @@ TEST_F (DenseUnitTest, moveToKeyGreaterThanIntTest) {
     louds_dense_->moveToKeyGreaterThan(surf::uint64ToString(kIntTestBound - 1), inclusive, iter);
     ASSERT_FALSE(iter.isValid());
     delete builder_;
+    louds_dense_->destroy();
     delete louds_dense_;
 }
 
@@ -275,6 +280,7 @@ TEST_F (DenseUnitTest, IteratorIncrementWordTest) {
     iter++;
     ASSERT_FALSE(iter.isValid());
     delete builder_;
+    louds_dense_->destroy();
     delete louds_dense_;
 }
 
@@ -300,6 +306,7 @@ TEST_F (DenseUnitTest, IteratorIncrementIntTest) {
     iter++;
     ASSERT_FALSE(iter.isValid());
     delete builder_;
+    louds_dense_->destroy();
     delete louds_dense_;
 }
 

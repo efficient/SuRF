@@ -26,7 +26,7 @@ public:
     }
 
     ~Bitvector() {
-	delete[] bits_;
+	//delete[] bits_;
     }
 
     position_t numBits() const {

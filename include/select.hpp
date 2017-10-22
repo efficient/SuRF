@@ -27,7 +27,7 @@ public:
     }
 
     ~BitvectorSelect() {
-	delete[] select_lut_;
+	//delete[] select_lut_;
     }
 
     // Returns the postion of the rank-th 1 bit.
@@ -114,6 +114,11 @@ public:
 	bv_select->select_lut_ = const_cast<position_t*>(reinterpret_cast<const position_t*>(&data[offset]));
 	uint64_t select_lut_size = (bv_select->num_ones_ / bv_select->sample_interval_ + 1) * sizeof(uint32_t);
 	offset += select_lut_size;
+    }
+
+    void destroy() {
+	delete[] bits_;
+	delete[] select_lut_;
     }
 
 private:

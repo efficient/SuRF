@@ -57,6 +57,7 @@ void SelectUnitTest::setupWordsTest() {
 void SelectUnitTest::testSerialize() {
     bv_->serialize(&dst_);
     uint64_t size = extractBlockSize(dst_, 0);
+    bv_->destroy();
     delete bv_;
     bv_ = new BitvectorSelect();
     uint64_t offset = 0;
@@ -85,6 +86,7 @@ TEST_F (SelectUnitTest, readBitTest) {
 	    bv_pos++;
 	}
     }
+    bv_->destroy();
     delete bv_;
 }
 

@@ -60,10 +60,10 @@ public:
     LoudsSparse(const SuRFBuilder* builder);
 
     ~LoudsSparse() {
-	delete labels_;
-	delete child_indicator_bits_;
-	delete louds_bits_;
-	delete suffixes_;
+	//delete labels_;
+	//delete child_indicator_bits_;
+	//delete louds_bits_;
+	//delete suffixes_;
     }
 
     // point query: trie walk starts at node "in_node_num" instead of root
@@ -134,6 +134,13 @@ public:
 	BitvectorSelect::deSerialize(src, offset, louds_sparse->louds_bits_);
 	louds_sparse->suffixes_ = new BitvectorSuffix();
 	BitvectorSuffix::deSerialize(src, offset, louds_sparse->suffixes_);
+    }
+
+    void destroy() {
+	labels_->destroy();
+	child_indicator_bits_->destroy();
+	louds_bits_->destroy();
+	suffixes_->destroy();
     }
 
 private:

@@ -51,8 +51,8 @@ public:
     }
 
     ~SuRF() {
-	delete louds_dense_;
-	delete louds_sparse_;
+	//delete louds_dense_;
+	//delete louds_sparse_;
     }
 
     void create(const std::vector<std::string>& keys, 
@@ -87,6 +87,11 @@ public:
 	LoudsDense::deSerialize(src, offset, surf->louds_dense_);
 	surf->louds_sparse_ = new LoudsSparse();
 	LoudsSparse::deSerialize(src, offset, surf->louds_sparse_);
+    }
+
+    void destroy() {
+	louds_dense_->destroy();
+	louds_sparse_->destroy();
     }
 
 private:

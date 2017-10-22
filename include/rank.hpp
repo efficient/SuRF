@@ -26,7 +26,7 @@ public:
     }
 
     ~BitvectorRank() {
-	delete[] rank_lut_;
+	//delete[] rank_lut_;
     }
 
     // Counts the number of 1's in the bitvector up to position pos.
@@ -88,6 +88,11 @@ public:
 	bv_rank->rank_lut_ = const_cast<position_t*>(reinterpret_cast<const position_t*>(&data[offset]));
 	uint64_t rank_lut_size = (bv_rank->num_bits_ / bv_rank->basic_block_size_ + 1) * sizeof(uint32_t);
 	offset += rank_lut_size;
+    }
+
+    void destroy() {
+	delete[] bits_;
+	delete[] rank_lut_;
     }
 
 private:

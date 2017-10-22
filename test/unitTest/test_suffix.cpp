@@ -70,6 +70,7 @@ void SuffixUnitTest::computeWordsBySuffixStartLevel() {
 void SuffixUnitTest::testSerialize() {
     suffixes_->serialize(&dst_);
     uint64_t size = extractBlockSize(dst_, 0);
+    suffixes_->destroy();
     delete suffixes_;
     suffixes_ = new BitvectorSuffix();
     uint64_t offset = 0;
@@ -142,6 +143,7 @@ TEST_F (SuffixUnitTest, checkEqualityTest) {
 
 	    testCheckEquality();
 	    delete builder_;
+	    suffixes_->destroy();
 	    delete suffixes_;
 	}
     }

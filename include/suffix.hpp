@@ -133,6 +133,10 @@ public:
 	}
     }
 
+    void destroy() {
+	delete[] bits_;
+    }
+
 private:
     SuffixType type_;
     level_t suffix_len_; // in bits

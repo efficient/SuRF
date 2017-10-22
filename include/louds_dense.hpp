@@ -69,10 +69,10 @@ public:
     LoudsDense(const SuRFBuilder* builder);
 
     ~LoudsDense() {
-	delete label_bitmaps_;
-	delete child_indicator_bitmaps_;
-	delete prefixkey_indicator_bits_;
-	delete suffixes_;
+	//delete label_bitmaps_;
+	//delete child_indicator_bitmaps_;
+	//delete prefixkey_indicator_bits_;
+	//delete suffixes_;
     }
 
     // Returns whether key exists in the trie so far
@@ -124,6 +124,13 @@ public:
 	BitvectorRank::deSerialize(src, offset, louds_dense->prefixkey_indicator_bits_);
 	louds_dense->suffixes_ = new BitvectorSuffix();
 	BitvectorSuffix::deSerialize(src, offset, louds_dense->suffixes_);
+    }
+
+    void destroy() {
+	label_bitmaps_->destroy();
+	child_indicator_bitmaps_->destroy();
+	prefixkey_indicator_bits_->destroy();
+	suffixes_->destroy();
     }
 
 private:

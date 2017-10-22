@@ -48,6 +48,7 @@ void LabelVectorUnitTest::setupWordsTest() {
 void LabelVectorUnitTest::testSerialize() {
     labels_->serialize(&dst_);
     uint64_t size = extractBlockSize(dst_, 0);
+    labels_->destroy();
     delete labels_;
     labels_ = new LabelVector();
     uint64_t offset = 0;
@@ -100,6 +101,7 @@ TEST_F (LabelVectorUnitTest, readTest) {
 	    lv_pos++;
 	}
     }
+    labels_->destroy();
     delete labels_;
 }
 
@@ -167,12 +169,14 @@ TEST_F (LabelVectorUnitTest, searchAlgTest) {
 		search_len++;
 	}
     }
+    labels_->destroy();
     delete labels_;
 }
 
 TEST_F (LabelVectorUnitTest, searchTest) {
     setupWordsTest();
     testSearch();
+    labels_->destroy();
     delete labels_;
 }
 

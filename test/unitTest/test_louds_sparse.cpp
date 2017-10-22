@@ -85,6 +85,7 @@ void SparseUnitTest::fillinInts() {
 void SparseUnitTest::testSerialize() {
     louds_sparse_->serialize(&dst_);    
     uint64_t size = extractBlockSize(dst_, 0);
+    louds_sparse_->destroy();
     delete louds_sparse_;
     louds_sparse_ = new LoudsSparse();
     uint64_t offset = 0;
@@ -120,6 +121,7 @@ TEST_F (SparseUnitTest, lookupWordTest) {
 
 	testLookupWord();
 	delete builder_;
+	louds_sparse_->destroy();
 	delete louds_sparse_;
     }
 }
@@ -157,6 +159,7 @@ TEST_F (SparseUnitTest, lookupIntTest) {
 	    ASSERT_FALSE(key_exist);
     }
     delete builder_;
+    louds_sparse_->destroy();
     delete louds_sparse_;
 }
 
@@ -198,6 +201,7 @@ TEST_F (SparseUnitTest, moveToKeyGreaterThanWordTest) {
 	louds_sparse_->moveToKeyGreaterThan(words[words.size() - 1], inclusive, iter);
 	ASSERT_FALSE(iter.isValid());
 	delete builder_;
+	louds_sparse_->destroy();
 	delete louds_sparse_;
     }
 }
@@ -244,6 +248,7 @@ TEST_F (SparseUnitTest, moveToKeyGreaterThanIntTest) {
     louds_sparse_->moveToKeyGreaterThan(surf::uint64ToString(kIntTestBound - 1), inclusive, iter);
     ASSERT_FALSE(iter.isValid());
     delete builder_;
+    louds_sparse_->destroy();
     delete louds_sparse_;
 }
 

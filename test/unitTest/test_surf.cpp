@@ -83,6 +83,7 @@ void SuRFUnitTest::fillinInts() {
 void SuRFUnitTest::testSerialize() {
     surf_->serialize(&dst_);    
     uint64_t size = extractBlockSize(dst_, 0);
+    surf_->destroy();
     delete surf_;
     surf_ = new SuRF();
     SuRF::deSerialize(dst_, surf_);
@@ -120,6 +121,7 @@ TEST_F (SuRFUnitTest, lookupWordTest) {
 	//surf_ = new SuRF();
 	//surf_->create(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	testLookupWord();
+	surf_->destroy();
 	delete surf_;
     }
 }
@@ -150,6 +152,7 @@ TEST_F (SuRFUnitTest, lookupIntTest) {
 	    else
 		ASSERT_FALSE(key_exist);
 	}
+	surf_->destroy();
 	delete surf_;
     }
 }
@@ -186,6 +189,7 @@ TEST_F (SuRFUnitTest, moveToKeyGreaterThanWordTest) {
 	bool inclusive = false;
 	SuRF::Iter iter = surf_->moveToKeyGreaterThan(words[words.size() - 1], inclusive);
 	ASSERT_FALSE(iter.isValid());
+	surf_->destroy();
 	delete surf_;
     }
 }
@@ -228,6 +232,7 @@ TEST_F (SuRFUnitTest, moveToKeyGreaterThanIntTest) {
 	bool inclusive = false;
 	SuRF::Iter iter = surf_->moveToKeyGreaterThan(surf::uint64ToString(kIntTestBound - 1), inclusive);
 	ASSERT_FALSE(iter.isValid());
+	surf_->destroy();
 	delete surf_;
     }
 }
@@ -251,6 +256,7 @@ TEST_F (SuRFUnitTest, IteratorIncrementWordTest) {
 	}
 	iter++;
 	ASSERT_FALSE(iter.isValid());
+	surf_->destroy();
 	delete surf_;
     }
 }
@@ -274,6 +280,7 @@ TEST_F (SuRFUnitTest, IteratorIncrementIntTest) {
 	}
 	iter++;
 	ASSERT_FALSE(iter.isValid());
+	surf_->destroy();
 	delete surf_;
     }
 }

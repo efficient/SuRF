@@ -19,6 +19,7 @@ public:
     }
 
     ~FilterSuRF() {
+	filter_->destroy();
 	delete filter_;
     }
 

@@ -61,6 +61,7 @@ void RankUnitTest::setupWordsTest() {
 void RankUnitTest::testSerialize() {
     bv_->serialize(&dst_);
     uint64_t size = extractBlockSize(dst_, 0);
+    bv_->destroy();
     delete bv_;
     bv_ = new BitvectorRank();
     uint64_t offset = 0;
@@ -68,6 +69,7 @@ void RankUnitTest::testSerialize() {
 
     bv2_->serialize(&dst2_);
     size = extractBlockSize(dst2_, 0);
+    bv2_->destroy();
     delete bv2_;
     bv2_ = new BitvectorRank();
     offset = 0;
@@ -104,14 +106,18 @@ TEST_F (RankUnitTest, readBitTest) {
 	    bv_pos++;
 	}
     }
+    bv_->destroy();
     delete bv_;
+    bv2_->destroy();
     delete bv2_;
 }
 
 TEST_F (RankUnitTest, rankTest) {
     setupWordsTest();
     testRank();
+    bv_->destroy();
     delete bv_;
+    bv2_->destroy();
     delete bv2_;
 }
 

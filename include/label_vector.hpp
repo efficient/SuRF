@@ -36,7 +36,7 @@ public:
     }
 
     ~LabelVector() {
-	delete[] labels_;
+	//delete[] labels_;
     }
 
     position_t size() const {
@@ -80,6 +80,10 @@ public:
 	lv->labels_ = const_cast<label_t*>(reinterpret_cast<const label_t*>(&data[offset]));
 	uint64_t labels_size = lv->num_bytes_;
 	offset += labels_size;
+    }
+
+    void destroy() {
+	delete[] labels_;	
     }
 
 private:
