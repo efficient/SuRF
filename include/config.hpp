@@ -29,6 +29,9 @@ enum SuffixType {
     kReal = 2
 };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+    
 static std::string uint64ToString(const uint64_t word) {
     uint64_t endian_swapped_word = __builtin_bswap64(word);
     return std::string(reinterpret_cast<const char*>(&endian_swapped_word), 8);
@@ -45,6 +48,8 @@ static uint64_t extractBlockSize(const std::string& str, uint64_t offset) {
     memcpy((&size), &str[offset], sizeof(uint64_t));
     return size;
 }
+
+#pragma GCC diagnostic pop
 
 } // namespace surf
 
