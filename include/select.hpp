@@ -68,11 +68,52 @@ public:
     }
 
     position_t size() {
-        position_t bitvector_mem = (num_bits_ / kWordSize) * (kWordSize / 8);
-	if (num_bits_ % kWordSize == 0)
-	    bitvector_mem += (kWordSize / 8);
+        //position_t bitvector_mem = (num_bits_ / kWordSize) * (kWordSize / 8);
+	//if (num_bits_ % kWordSize == 0)
+	//bitvector_mem += (kWordSize / 8);
+	position_t bitvector_mem = numWords() * (kWordSize / 8);
         position_t select_lut_mem = (num_ones_ / sample_interval_ + 1) * sizeof(uint32_t);
         return (sizeof(BitvectorSelect) + bitvector_mem + select_lut_mem);
+    }
+
+    void serialize(std::string* dst) const {
+	uint64_t num_bits_size = sizeof(num_bits_);
+	uint64_t bits_size = numWords() * (kWordSize / 8);
+	uint64_t sample_interval_size = sizeof(sample_interval_);
+	uint64_t num_ones_size = sizeof(num_ones_);
+	uint64_t select_lut_size = (num_ones_ / sample_interval_ + 1) * sizeof(uint32_t);
+	uint64_t size = num_bits_size + bits_size + sample_interval_size
+	    + num_ones_size + select_lut_size;
+	dst->resize(size, 0);
+	uint64_t offset = 0;
+	memcpy(&(*dst)[offset], &num_bits_, num_bits_size);
+	offset += num_bits_size;
+	memcpy(&(*dst)[offset], &sample_interval_, sample_interval_size);
+	offset += sample_interval_size;
+	memcpy(&(*dst)[offset], &num_ones_, num_ones_size);
+	offset += num_ones_size;
+	memcpy(&(*dst)[offset], bits_, bits_size);
+	offset += bits_size;
+	memcpy(&(*dst)[offset], select_lut_, select_lut_size);
+    }
+
+    static void deSerialize(const std::string& src, uint64_t& offset, BitvectorSelect* bv_select) {
+	uint64_t num_bits_size = sizeof(bv_select->num_bits_);
+	uint64_t sample_interval_size = sizeof(bv_select->sample_interval_);
+	uint64_t num_ones_size = sizeof(bv_select->num_ones_);
+	const char* data = src.data();
+	memcpy(&(bv_select->num_bits_), &data[offset], num_bits_size);
+	offset += num_bits_size;
+	memcpy(&(bv_select->sample_interval_), &data[offset], sample_interval_size);
+	offset += sample_interval_size;
+	memcpy(&(bv_select->num_ones_), &data[offset], num_ones_size);
+	offset += num_ones_size;
+	uint64_t bits_size = bv_select->numWords() * (kWordSize / 8);
+	bv_select->bits_ = const_cast<word_t*>(reinterpret_cast<const word_t*>(&data[offset]));
+	offset += bits_size;
+	bv_select->select_lut_ = const_cast<position_t*>(reinterpret_cast<const position_t*>(&data[offset]));
+	uint64_t select_lut_size = (bv_select->num_ones_ / bv_select->sample_interval_ + 1) * sizeof(uint32_t);
+	offset += select_lut_size;
     }
 
 private:

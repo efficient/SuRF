@@ -25,10 +25,13 @@ public:
     }
 
     void computeWordsBySuffixStartLevel();
+    void testSerialize();
+    void testCheckEquality();
 
     SuRFBuilder* builder_;
     BitvectorSuffix* suffixes_;
     std::vector<std::vector<std::string> > words_by_suffix_start_level_;
+    std::string dst_;
 };
 
 static int getCommonPrefixLen(const std::string &a, const std::string &b) {
@@ -64,6 +67,28 @@ void SuffixUnitTest::computeWordsBySuffixStartLevel() {
     }
 }
 
+void SuffixUnitTest::testSerialize() {
+    suffixes_->serialize(&dst_);
+    uint64_t size = extractBlockSize(dst_, 0);
+    delete suffixes_;
+    suffixes_ = new BitvectorSuffix();
+    uint64_t offset = 0;
+    BitvectorSuffix::deSerialize(dst_, offset, suffixes_);
+}
+
+void SuffixUnitTest::testCheckEquality() {
+    position_t suffix_idx = 0;
+    for (level_t level = 0; level < words_by_suffix_start_level_.size(); level++) {
+	for (unsigned k = 0; k < words_by_suffix_start_level_[level].size(); k++) {
+	    bool is_equal = suffixes_->checkEquality(suffix_idx,
+						     words_by_suffix_start_level_[level][k],
+						     (level + 1));
+	    ASSERT_TRUE(is_equal);
+	    suffix_idx++;
+	}
+    }
+}
+
 TEST_F (SuffixUnitTest, constructSuffixTest) {
     // Real suffix test
     const level_t level = 2;
@@ -95,7 +120,7 @@ TEST_F (SuffixUnitTest, constructSuffixTest) {
     }
 }
 
-TEST_F (SuffixUnitTest, CheckEqualityTest) {
+TEST_F (SuffixUnitTest, checkEqualityTest) {
     bool include_dense = false;
     uint32_t sparse_dense_ratio = 0;
     SuffixType suffix_type_array[2] = {kHash, kReal};
@@ -115,19 +140,36 @@ TEST_F (SuffixUnitTest, CheckEqualityTest) {
 		num_suffix_bits_per_level.push_back(builder_->getSuffixCounts()[level] * suffix_len);
 	    suffixes_ = new BitvectorSuffix(builder_->getSuffixType(), suffix_len, builder_->getSuffixes(), num_suffix_bits_per_level, 0, height);
 
-	    // checkEquality test
-	    position_t suffix_idx = 0;
-	    for (level_t level = 0; level < words_by_suffix_start_level_.size(); level++) {
-		for (unsigned k = 0; k < words_by_suffix_start_level_[level].size(); k++) {
-		    bool is_equal = suffixes_->checkEquality(suffix_idx,
-							     words_by_suffix_start_level_[level][k],
-							     (level + 1));
-		    ASSERT_TRUE(is_equal);
-		    suffix_idx++;
-		}
-	    }
+	    testCheckEquality();
 	    delete builder_;
 	    delete suffixes_;
+	}
+    }
+}
+
+TEST_F (SuffixUnitTest, serializeTest) {
+    bool include_dense = false;
+    uint32_t sparse_dense_ratio = 0;
+    SuffixType suffix_type_array[2] = {kHash, kReal};
+    level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
+    for (int i = 0; i < 2; i++) {
+	for (int j = 0; j < 5; j++) {
+	    // build test
+	    SuffixType suffix_type = suffix_type_array[i];
+	    level_t suffix_len = suffix_len_array[j];
+	    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, suffix_type, suffix_len);
+	    builder_->build(words);
+
+	    level_t height = builder_->getLabels().size();
+	    suffix_len = builder_->getSuffixLen();
+	    std::vector<position_t> num_suffix_bits_per_level;
+	    for (level_t level = 0; level < height; level++)
+		num_suffix_bits_per_level.push_back(builder_->getSuffixCounts()[level] * suffix_len);
+	    suffixes_ = new BitvectorSuffix(builder_->getSuffixType(), suffix_len, builder_->getSuffixes(), num_suffix_bits_per_level, 0, height);
+
+	    testSerialize();
+	    testCheckEquality();
+	    delete builder_;
 	}
     }
 }

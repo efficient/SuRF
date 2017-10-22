@@ -97,6 +97,39 @@ public:
     // kReal suffix type only.
     int compare(const position_t idx, const std::string& key, const level_t level) const;
 
+    void serialize(std::string* dst) const {
+	uint64_t num_bits_size = sizeof(num_bits_);
+	uint64_t bits_size = numWords() * (kWordSize / 8);
+	uint64_t type_size = sizeof(type_);
+	uint64_t suffix_len_size = sizeof(suffix_len_);
+	uint64_t size = num_bits_size + bits_size + type_size + suffix_len_size;
+	dst->resize(size, 0);
+	uint64_t offset = 0;
+	memcpy(&(*dst)[offset], &num_bits_, num_bits_size);
+	offset += num_bits_size;
+	memcpy(&(*dst)[offset], &type_, type_size);
+	offset += type_size;
+	memcpy(&(*dst)[offset], &suffix_len_, suffix_len_size);
+	offset += suffix_len_size;
+	memcpy(&(*dst)[offset], bits_, bits_size);
+    }
+
+    static void deSerialize(const std::string& src, uint64_t& offset, BitvectorSuffix* sv) {
+	uint64_t num_bits_size = sizeof(sv->num_bits_);
+	uint64_t type_size = sizeof(sv->type_);
+	uint64_t suffix_len_size = sizeof(sv->suffix_len_);
+	const char* data = src.data();
+	memcpy(&(sv->num_bits_), &data[offset], num_bits_size);
+	offset += num_bits_size;
+	memcpy(&(sv->type_), &data[offset], type_size);
+	offset += type_size;
+	memcpy(&(sv->suffix_len_), &data[offset], suffix_len_size);
+	offset += suffix_len_size;
+	sv->bits_ = const_cast<word_t*>(reinterpret_cast<const word_t*>(&data[offset]));
+	uint64_t bits_size = sv->numWords() * (kWordSize / 8);
+	offset += bits_size;
+    }
+
 private:
     SuffixType type_;
     level_t suffix_len_; // in bits

@@ -76,6 +76,66 @@ public:
     level_t getStartLevel() const { return start_level_; };
     uint64_t getMemoryUsage() const;
 
+    void serialize(std::string* dst) const {
+	uint64_t height_size = sizeof(height_);
+	uint64_t start_level_size = sizeof(start_level_);
+	uint64_t node_count_dense_size = sizeof(node_count_dense_);
+	uint64_t child_count_dense_size = sizeof(child_count_dense_);
+	uint64_t local_size = height_size + start_level_size
+	    + node_count_dense_size + child_count_dense_size;
+
+	std::string labels_str;
+	labels_->serialize(&labels_str);
+	std::string child_indicator_bits_str;
+	child_indicator_bits_->serialize(&child_indicator_bits_str);
+	std::string louds_bits_str;
+	louds_bits_->serialize(&louds_bits_str);
+	std::string suffixes_str;
+	suffixes_->serialize(&suffixes_str);
+
+	uint64_t size = local_size + labels_str.size() + child_indicator_bits_str.size()
+	    + louds_bits_str.size() + suffixes_str.size();
+	dst->resize(local_size, 0);
+	uint64_t offset = 0;
+	memcpy(&(*dst)[offset], &height_, height_size);
+	offset += height_size;
+	memcpy(&(*dst)[offset], &start_level_, start_level_size);
+	offset += start_level_size;
+	memcpy(&(*dst)[offset], &node_count_dense_, node_count_dense_size);
+	offset += node_count_dense_size;
+	memcpy(&(*dst)[offset], &child_count_dense_, child_count_dense_size);
+
+	(*dst) += labels_str;
+	(*dst) += child_indicator_bits_str;
+	(*dst) += louds_bits_str;
+	(*dst) += suffixes_str;
+    }
+
+    static void deSerialize(const std::string& src, uint64_t& offset, LoudsSparse* louds_sparse) {
+	uint64_t height_size = sizeof(louds_sparse->height_);
+	uint64_t start_level_size = sizeof(louds_sparse->start_level_);
+	uint64_t node_count_dense_size = sizeof(louds_sparse->node_count_dense_);
+	uint64_t child_count_dense_size = sizeof(louds_sparse->child_count_dense_);
+	const char* data = src.data();
+	memcpy(&(louds_sparse->height_), &data[offset], height_size);
+	offset += height_size;
+	memcpy(&(louds_sparse->start_level_), &data[offset], start_level_size);
+	offset += start_level_size;
+	memcpy(&(louds_sparse->node_count_dense_), &data[offset], node_count_dense_size);
+	offset += node_count_dense_size;
+	memcpy(&(louds_sparse->child_count_dense_), &data[offset], child_count_dense_size);
+	offset += child_count_dense_size;
+	
+	louds_sparse->labels_ = new LabelVector();
+	LabelVector::deSerialize(src, offset, louds_sparse->labels_);
+	louds_sparse->child_indicator_bits_ = new BitvectorRank();
+	BitvectorRank::deSerialize(src, offset, louds_sparse->child_indicator_bits_);
+	louds_sparse->louds_bits_ = new BitvectorSelect();
+	BitvectorSelect::deSerialize(src, offset, louds_sparse->louds_bits_);
+	louds_sparse->suffixes_ = new BitvectorSuffix();
+	BitvectorSuffix::deSerialize(src, offset, louds_sparse->suffixes_);
+    }
+
 private:
     inline position_t getChildNodeNum(const position_t pos) const;
     inline position_t getFirstLabelPos(const position_t node_num) const;

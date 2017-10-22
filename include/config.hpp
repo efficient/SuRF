@@ -17,7 +17,8 @@ static const word_t kMsbMask = 0x8000000000000000;
 static const word_t kOneMask = 0xFFFFFFFFFFFFFFFF;
 
 static const bool kIncludeDense = true;
-static const uint32_t kSparseDenseRatio = 64;
+//static const uint32_t kSparseDenseRatio = 64;
+static const uint32_t kSparseDenseRatio = 16;
 static const label_t kTerminator = 255;
 
 static const int kHashShift = 7;
@@ -37,6 +38,12 @@ static uint64_t stringToUint64(const std::string& str_word) {
     uint64_t int_word = 0;
     memcpy(reinterpret_cast<char*>(&int_word), str_word.data(), 8);
     return __builtin_bswap64(int_word);
+}
+    
+static uint64_t extractBlockSize(const std::string& str, uint64_t offset) {
+    uint64_t size = 0;
+    memcpy((&size), &str[offset], sizeof(uint64_t));
+    return size;
 }
 
 } // namespace surf

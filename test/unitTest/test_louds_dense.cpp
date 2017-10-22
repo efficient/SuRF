@@ -30,11 +30,14 @@ public:
 
     void truncateWordSuffixes();
     void fillinInts();
+    void testSerialize();
+    void testLookupWord();
 
     SuRFBuilder* builder_;
     LoudsDense* louds_dense_;
     std::vector<std::string> words_trunc_;
     std::vector<std::string> ints_;
+    std::string dst_;
 };
 
 static int getCommonPrefixLen(const std::string &a, const std::string &b) {
@@ -79,7 +82,33 @@ void DenseUnitTest::fillinInts() {
     }
 }
 
-TEST_F (DenseUnitTest, lookupTest) {
+void DenseUnitTest::testSerialize() {
+    louds_dense_->serialize(&dst_);    
+    uint64_t size = extractBlockSize(dst_, 0);
+    delete louds_dense_;
+    louds_dense_ = new LoudsDense();
+    uint64_t offset = 0;
+    LoudsDense::deSerialize(dst_, offset, louds_dense_);
+}
+
+void DenseUnitTest::testLookupWord() {
+    position_t out_node_num = 0;
+    for (unsigned i = 0; i < words.size(); i++) {
+	bool key_exist = louds_dense_->lookupKey(words[i], out_node_num);
+	ASSERT_TRUE(key_exist);
+    }
+
+    for (unsigned i = 0; i < words.size(); i++) {
+	for (unsigned j = 0; j < words_trunc_[i].size() && j < words[i].size(); j++) {
+	    std::string key = words[i];
+	    key[j] = 'A';
+	    bool key_exist = louds_dense_->lookupKey(key, out_node_num);
+	    ASSERT_FALSE(key_exist);
+	}
+    }
+}
+
+TEST_F (DenseUnitTest, lookupWordTest) {
     bool include_dense = true;
     uint32_t sparse_dense_ratio = 0;
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
@@ -88,23 +117,25 @@ TEST_F (DenseUnitTest, lookupTest) {
 	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
 	builder_->build(words);
 	louds_dense_ = new LoudsDense(builder_);
-	position_t out_node_num = 0;
-
-	for (unsigned i = 0; i < words.size(); i++) {
-	    bool key_exist = louds_dense_->lookupKey(words[i], out_node_num);
-	    ASSERT_TRUE(key_exist);
-	}
-
-	for (unsigned i = 0; i < words.size(); i++) {
-	    for (unsigned j = 0; j < words_trunc_[i].size() && j < words[i].size(); j++) {
-		std::string key = words[i];
-		key[j] = 'A';
-		bool key_exist = louds_dense_->lookupKey(key, out_node_num);
-		ASSERT_FALSE(key_exist);
-	    }
-	}
+	testLookupWord();
 	delete builder_;
 	delete louds_dense_;
+    }
+}
+
+TEST_F (DenseUnitTest, serializeTest) {
+    bool include_dense = true;
+    uint32_t sparse_dense_ratio = 0;
+    level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
+    for (int k = 0; k < 5; k++) {
+	level_t suffix_len = suffix_len_array[k];
+	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+	builder_->build(words);
+	louds_dense_ = new LoudsDense(builder_);
+
+	testSerialize();
+	testLookupWord();
+	delete builder_;
     }
 }
 

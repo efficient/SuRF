@@ -29,18 +29,64 @@ public:
     }
     virtual void TearDown () {
 	delete builder_;
-	if (labels_ != NULL) delete labels_;
     }
 
     void setupWordsTest();
+    void testSerialize();
+    void testSearch();
 
     SuRFBuilder* builder_;
     LabelVector* labels_;
+    std::string dst_;
 };
 
 void LabelVectorUnitTest::setupWordsTest() {
     builder_->build(words);
     labels_ = new LabelVector(builder_->getLabels());
+}
+
+void LabelVectorUnitTest::testSerialize() {
+    labels_->serialize(&dst_);
+    uint64_t size = extractBlockSize(dst_, 0);
+    delete labels_;
+    labels_ = new LabelVector();
+    uint64_t offset = 0;
+    LabelVector::deSerialize(dst_, offset, labels_);
+}
+
+void LabelVectorUnitTest::testSearch() {
+    position_t start_pos = 0;
+    position_t search_len = 0;
+    for (level_t level = 0; level < builder_->getTreeHeight(); level++) {
+	for (position_t pos = 0; pos < builder_->getLabels()[level].size(); pos++) {
+	    bool louds_bit = SuRFBuilder::readBit(builder_->getLoudsBits()[level], pos);
+	    if (louds_bit) {
+		position_t search_pos;
+		bool search_success;
+		for (position_t i = start_pos; i < start_pos + search_len; i++) {
+		    label_t test_label = labels_->read(i);
+		    if (i == start_pos && test_label == kTerminator && search_len > 1)
+			continue;
+		    // search success
+		    search_pos = start_pos;
+		    search_success = labels_->search(test_label, search_pos, search_len);
+		    ASSERT_TRUE(search_success);
+		    ASSERT_EQ(i, search_pos);
+		}
+		// search fail
+		search_pos = start_pos;
+		search_success = labels_->search('\0', search_pos, search_len);
+		ASSERT_FALSE(search_success);
+		search_pos = start_pos;
+		search_success = labels_->search('\255', search_pos, search_len);
+		ASSERT_FALSE(search_success);
+
+		start_pos += search_len;
+		search_len = 0;
+	    }
+	    search_len++;
+	}
+    }
 }
 
 TEST_F (LabelVectorUnitTest, readTest) {
@@ -54,6 +100,7 @@ TEST_F (LabelVectorUnitTest, readTest) {
 	    lv_pos++;
 	}
     }
+    delete labels_;
 }
 
 TEST_F (LabelVectorUnitTest, searchAlgTest) {
@@ -120,42 +167,19 @@ TEST_F (LabelVectorUnitTest, searchAlgTest) {
 		search_len++;
 	}
     }
+    delete labels_;
 }
 
 TEST_F (LabelVectorUnitTest, searchTest) {
     setupWordsTest();
-    position_t start_pos = 0;
-    position_t search_len = 0;
-    for (level_t level = 0; level < builder_->getTreeHeight(); level++) {
-	for (position_t pos = 0; pos < builder_->getLabels()[level].size(); pos++) {
-	    bool louds_bit = SuRFBuilder::readBit(builder_->getLoudsBits()[level], pos);
-	    if (louds_bit) {
-		position_t search_pos;
-		bool search_success;
-		for (position_t i = start_pos; i < start_pos + search_len; i++) {
-		    label_t test_label = labels_->read(i);
-		    if (i == start_pos && test_label == kTerminator && search_len > 1)
-			continue;
-		    // search success
-		    search_pos = start_pos;
-		    search_success = labels_->search(test_label, search_pos, search_len);
-		    ASSERT_TRUE(search_success);
-		    ASSERT_EQ(i, search_pos);
-		}
-		// search fail
-		search_pos = start_pos;
-		search_success = labels_->search('\0', search_pos, search_len);
-		ASSERT_FALSE(search_success);
-		search_pos = start_pos;
-		search_success = labels_->search('\255', search_pos, search_len);
-		ASSERT_FALSE(search_success);
+    testSearch();
+    delete labels_;
+}
 
-		start_pos += search_len;
-		search_len = 0;
-	    }
-	    search_len++;
-	}
-    }
+TEST_F (LabelVectorUnitTest, serializeTest) {
+    setupWordsTest();
+    testSerialize();
+    testSearch();
 }
 
 TEST_F (LabelVectorUnitTest, searchGreaterThanTest) {

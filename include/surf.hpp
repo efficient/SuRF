@@ -72,6 +72,23 @@ public:
     level_t getHeight();
     level_t getSparseStartLevel();
 
+    void serialize(std::string* dst) const {
+	std::string louds_dense_str;
+	louds_dense_->serialize(&louds_dense_str);
+	std::string louds_sparse_str;
+	louds_sparse_->serialize(&louds_sparse_str);
+	(*dst) += louds_dense_str;
+	(*dst) += louds_sparse_str;
+    }
+
+    static void deSerialize(const std::string& src, SuRF* surf) {
+	uint64_t offset = 0;
+	surf->louds_dense_ = new LoudsDense();
+	LoudsDense::deSerialize(src, offset, surf->louds_dense_);
+	surf->louds_sparse_ = new LoudsSparse();
+	LoudsSparse::deSerialize(src, offset, surf->louds_sparse_);
+    }
+
 private:
     LoudsDense* louds_dense_;
     LoudsSparse* louds_sparse_;

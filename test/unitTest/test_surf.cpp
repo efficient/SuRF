@@ -30,10 +30,13 @@ public:
 
     void truncateWordSuffixes();
     void fillinInts();
+    void testSerialize();
+    void testLookupWord();
 
     SuRF* surf_;
     std::vector<std::string> words_trunc_;
     std::vector<std::string> ints_;
+    std::string dst_;
 };
 
 static int getCommonPrefixLen(const std::string &a, const std::string &b) {
@@ -77,6 +80,32 @@ void SuRFUnitTest::fillinInts() {
     }
 }
 
+void SuRFUnitTest::testSerialize() {
+    surf_->serialize(&dst_);    
+    uint64_t size = extractBlockSize(dst_, 0);
+    delete surf_;
+    surf_ = new SuRF();
+    SuRF::deSerialize(dst_, surf_);
+}
+
+void SuRFUnitTest::testLookupWord() {
+    for (unsigned i = 0; i < words.size(); i++) {
+	bool key_exist = surf_->lookupKey(words[i]);
+	ASSERT_TRUE(key_exist);
+    }
+
+    if (kSuffixType == kNone) return;
+
+    for (unsigned i = 0; i < words.size(); i++) {
+	for (unsigned j = 0; j < words_trunc_[i].size() && j < words[i].size(); j++) {
+	    std::string key = words[i];
+	    key[j] = 'A';
+	    bool key_exist = surf_->lookupKey(key);
+	    ASSERT_FALSE(key_exist);
+	}
+    }
+}
+
 TEST_F (SuRFUnitTest, IntStringConvertTest) {
     for (uint64_t i = 0; i < kIntTestBound; i++) {
 	ASSERT_EQ(i, stringToUint64(uint64ToString(i)));
@@ -88,22 +117,18 @@ TEST_F (SuRFUnitTest, lookupWordTest) {
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
 	surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
-	for (unsigned i = 0; i < words.size(); i++) {
-	    bool key_exist = surf_->lookupKey(words[i]);
-	    ASSERT_TRUE(key_exist);
-	}
-
-	if (kSuffixType == kNone) return;
-
-	for (unsigned i = 0; i < words.size(); i++) {
-	    for (unsigned j = 0; j < words_trunc_[i].size() && j < words[i].size(); j++) {
-		std::string key = words[i];
-		key[j] = 'A';
-		bool key_exist = surf_->lookupKey(key);
-		ASSERT_FALSE(key_exist);
-	    }
-	}
+	testLookupWord();
 	delete surf_;
+    }
+}
+
+TEST_F (SuRFUnitTest, serializeTest) {
+    level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
+    for (int k = 0; k < 5; k++) {
+	level_t suffix_len = suffix_len_array[k];
+	surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	testSerialize();
+	testLookupWord();
     }
 }
 

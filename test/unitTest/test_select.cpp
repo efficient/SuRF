@@ -30,10 +30,11 @@ public:
     }
     virtual void TearDown () {
 	delete builder_;
-	if (bv_ != NULL) delete bv_;
     }
 
     void setupWordsTest();
+    void testSerialize();
+    void testSelect();
 
     static const position_t kSelectSampleInterval = 64;
 
@@ -41,6 +42,7 @@ public:
     BitvectorSelect* bv_;
     std::vector<position_t> num_items_per_level_;
     position_t num_items_;
+    std::string dst_;
 };
 
 void SelectUnitTest::setupWordsTest() {
@@ -50,6 +52,26 @@ void SelectUnitTest::setupWordsTest() {
     for (level_t level = 0; level < num_items_per_level_.size(); level++)
 	num_items_ += num_items_per_level_[level];
     bv_ = new BitvectorSelect(kSelectSampleInterval, builder_->getLoudsBits(), num_items_per_level_);
+}
+
+void SelectUnitTest::testSerialize() {
+    bv_->serialize(&dst_);
+    uint64_t size = extractBlockSize(dst_, 0);
+    delete bv_;
+    bv_ = new BitvectorSelect();
+    uint64_t offset = 0;
+    BitvectorSelect::deSerialize(dst_, offset, bv_);
+}
+
+void SelectUnitTest::testSelect() {
+    position_t rank = 1;
+    for (position_t pos = 0; pos < num_items_; pos++) {
+	if (bv_->readBit(pos)) {
+	    position_t select = bv_->select(rank);
+	    ASSERT_EQ(pos, select);
+	    rank++;
+	}
+    }
 }
 
 TEST_F (SelectUnitTest, readBitTest) {
@@ -63,18 +85,18 @@ TEST_F (SelectUnitTest, readBitTest) {
 	    bv_pos++;
 	}
     }
+    delete bv_;
 }
 
 TEST_F (SelectUnitTest, selectTest) {
     setupWordsTest();
-    position_t rank = 1;
-    for (position_t pos = 0; pos < num_items_; pos++) {
-	if (bv_->readBit(pos)) {
-	    position_t select = bv_->select(rank);
-	    ASSERT_EQ(pos, select);
-	    rank++;
-	}
-    }
+    testSelect();
+}
+
+TEST_F (SelectUnitTest, serializeTest) {
+    setupWordsTest();
+    testSerialize();
+    testSelect();
 }
 
 void loadWordList() {

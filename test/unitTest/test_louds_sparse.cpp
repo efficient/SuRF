@@ -30,11 +30,14 @@ public:
 
     void truncateWordSuffixes();
     void fillinInts();
+    void testSerialize();
+    void testLookupWord();
 
     SuRFBuilder* builder_;
     LoudsSparse* louds_sparse_;
     std::vector<std::string> words_trunc_;
     std::vector<std::string> ints_;
+    std::string dst_;
 };
 
 static int getCommonPrefixLen(const std::string &a, const std::string &b) {
@@ -79,6 +82,32 @@ void SparseUnitTest::fillinInts() {
     }
 }
 
+void SparseUnitTest::testSerialize() {
+    louds_sparse_->serialize(&dst_);    
+    uint64_t size = extractBlockSize(dst_, 0);
+    delete louds_sparse_;
+    louds_sparse_ = new LoudsSparse();
+    uint64_t offset = 0;
+    LoudsSparse::deSerialize(dst_, offset, louds_sparse_);
+}
+
+void SparseUnitTest::testLookupWord() {
+    position_t in_node_num = 0;
+    for (unsigned i = 0; i < words.size(); i++) {
+	bool key_exist = louds_sparse_->lookupKey(words[i], in_node_num);
+	ASSERT_TRUE(key_exist);
+    }
+
+    for (unsigned i = 0; i < words.size(); i++) {
+	for (unsigned j = 0; j < words_trunc_[i].size() && j < words[i].size(); j++) {
+	    std::string key = words[i];
+	    key[j] = 'A';
+	    bool key_exist = louds_sparse_->lookupKey(key, in_node_num);
+	    ASSERT_FALSE(key_exist);
+	}
+    }
+}
+    
 TEST_F (SparseUnitTest, lookupWordTest) {
     bool include_dense = false;
     uint32_t sparse_dense_ratio = 0;
@@ -88,23 +117,26 @@ TEST_F (SparseUnitTest, lookupWordTest) {
 	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
 	builder_->build(words);
 	louds_sparse_ = new LoudsSparse(builder_);
-	position_t in_node_num = 0;
 
-	for (unsigned i = 0; i < words.size(); i++) {
-	    bool key_exist = louds_sparse_->lookupKey(words[i], in_node_num);
-	    ASSERT_TRUE(key_exist);
-	}
-
-	for (unsigned i = 0; i < words.size(); i++) {
-	    for (unsigned j = 0; j < words_trunc_[i].size() && j < words[i].size(); j++) {
-		std::string key = words[i];
-		key[j] = 'A';
-		bool key_exist = louds_sparse_->lookupKey(key, in_node_num);
-		ASSERT_FALSE(key_exist);
-	    }
-	}
+	testLookupWord();
 	delete builder_;
 	delete louds_sparse_;
+    }
+}
+
+TEST_F (SparseUnitTest, serializeTest) {
+    bool include_dense = false;
+    uint32_t sparse_dense_ratio = 0;
+    level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
+    for (int k = 0; k < 5; k++) {
+	level_t suffix_len = suffix_len_array[k];
+	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+	builder_->build(words);
+	louds_sparse_ = new LoudsSparse(builder_);
+
+	testSerialize();
+	testLookupWord();
+	delete builder_;
     }
 }
 
