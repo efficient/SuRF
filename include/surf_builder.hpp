@@ -364,7 +364,7 @@ void SuRFBuilder::initDenseVectors(const level_t level) {
     prefixkey_indicator_bits_.push_back(std::vector<word_t>());
 
     for (position_t nc = 0; nc < node_counts_[level]; nc++) {
-	for (int i = 0; i < kFanout; i += kWordSize) {
+	for (int i = 0; i < (int)kFanout; i += kWordSize) {
 	    bitmap_labels_[level].push_back(0);
 	    bitmap_child_indicator_bits_[level].push_back(0);
 	}

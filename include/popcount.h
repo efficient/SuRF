@@ -73,7 +73,7 @@ inline uint64_t popcountLinear(uint64_t *bits, uint64_t x, uint64_t nbits) {
     uint64_t p = 0;
 
     __builtin_prefetch(bits + x + 7, 0); //huanchen
-    for (int i = 0; i < lastword; i++) { /* tested;  manually unrolling doesn't help, at least in C */
+    for (uint64_t i = 0; i < lastword; i++) { /* tested;  manually unrolling doesn't help, at least in C */
         //__builtin_prefetch(bits + x + i + 3, 0);
         p += popcount(bits[x+i]); // note that use binds us to 64 bit popcount impls
     }

@@ -50,7 +50,7 @@ public:
     position_t distanceToNextSetBit(const position_t pos) const;
 
 private:
-    position_t computeTotalNumBits(const std::vector<position_t>& num_bits_per_level, 
+    void computeTotalNumBits(const std::vector<position_t>& num_bits_per_level, 
 				   const level_t start_level, 
 				   const level_t end_level/* non-inclusive */);
 
@@ -100,7 +100,7 @@ position_t Bitvector::distanceToNextSetBit (const position_t pos) const {
     }
 }
 
-position_t Bitvector::computeTotalNumBits(const std::vector<position_t>& num_bits_per_level, 
+void Bitvector::computeTotalNumBits(const std::vector<position_t>& num_bits_per_level, 
 					  const level_t start_level, 
 					  const level_t end_level/* non-inclusive */) {
     num_bits_ = 0;

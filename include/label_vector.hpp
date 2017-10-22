@@ -21,13 +21,13 @@ public:
 	    end_level = labels_per_level.size();
 
 	num_bytes_ = 0;
-	for (int level = start_level; level < end_level; level++)
+	for (level_t level = start_level; level < end_level; level++)
 	    num_bytes_ += labels_per_level[level].size();
 
 	labels_ = new label_t[num_bytes_];
 
 	position_t pos = 0;
-	for (int level = start_level; level < end_level; level++) {
+	for (level_t level = start_level; level < end_level; level++) {
 	    for (position_t idx = 0; idx < labels_per_level[level].size(); idx++) {
 		labels_[pos] = labels_per_level[level][idx];
 		pos++;
