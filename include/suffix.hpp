@@ -111,7 +111,8 @@ public:
 	offset += type_size;
 	memcpy(&(*dst)[offset], &suffix_len_, suffix_len_size);
 	offset += suffix_len_size;
-	memcpy(&(*dst)[offset], bits_, bits_size);
+	if (type_ != kNone)
+	    memcpy(&(*dst)[offset], bits_, bits_size);
     }
 
     static void deSerialize(const std::string& src, uint64_t& offset, BitvectorSuffix* sv) {
@@ -125,9 +126,11 @@ public:
 	offset += type_size;
 	memcpy(&(sv->suffix_len_), &data[offset], suffix_len_size);
 	offset += suffix_len_size;
-	sv->bits_ = const_cast<word_t*>(reinterpret_cast<const word_t*>(&data[offset]));
-	uint64_t bits_size = sv->numWords() * (kWordSize / 8);
-	offset += bits_size;
+	if (sv->type_ != kNone) {
+	    sv->bits_ = const_cast<word_t*>(reinterpret_cast<const word_t*>(&data[offset]));
+	    uint64_t bits_size = sv->numWords() * (kWordSize / 8);
+	    offset += bits_size;
+	}
     }
 
 private:
