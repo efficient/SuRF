@@ -116,9 +116,9 @@ TEST_F (SuRFUnitTest, lookupWordTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	//surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
-	surf_ = new SuRF();
-	surf_->create(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	//surf_ = new SuRF();
+	//surf_->create(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	testLookupWord();
 	delete surf_;
     }
@@ -128,9 +128,9 @@ TEST_F (SuRFUnitTest, serializeTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	//surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
-	surf_ = new SuRF();
-	surf_->create(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	//surf_ = new SuRF();
+	//surf_->create(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	testSerialize();
 	testLookupWord();
     }
@@ -140,9 +140,9 @@ TEST_F (SuRFUnitTest, lookupIntTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	//surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
-	surf_ = new SuRF();
-	surf_->create(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	//surf_ = new SuRF();
+	//surf_->create(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	for (uint64_t i = 0; i < kIntTestBound; i += kIntTestSkip) {
 	    bool key_exist = surf_->lookupKey(surf::uint64ToString(i));
 	    if (i % kIntTestSkip == 0)
@@ -158,9 +158,9 @@ TEST_F (SuRFUnitTest, moveToKeyGreaterThanWordTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	//surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
-	surf_ = new SuRF();
-	surf_->create(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	//surf_ = new SuRF();
+	//surf_->create(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	for (unsigned i = 0; i < words.size(); i++) {
 	    bool inclusive = true;
 	    SuRF::Iter iter = surf_->moveToKeyGreaterThan(words[i], inclusive);
@@ -194,9 +194,9 @@ TEST_F (SuRFUnitTest, moveToKeyGreaterThanIntTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	//surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
-	surf_ = new SuRF();
-	surf_->create(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	//surf_ = new SuRF();
+	//surf_->create(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	for (uint64_t i = 0; i < kIntTestBound; i++) {
 	    bool inclusive = true;
 	    SuRF::Iter iter = surf_->moveToKeyGreaterThan(surf::uint64ToString(i), inclusive);
@@ -236,9 +236,9 @@ TEST_F (SuRFUnitTest, IteratorIncrementWordTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	//surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
-	surf_ = new SuRF();
-	surf_->create(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	//surf_ = new SuRF();
+	//surf_->create(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	bool inclusive = true;
 	SuRF::Iter iter = surf_->moveToKeyGreaterThan(words[0], inclusive);
 	for (unsigned i = 1; i < words.size(); i++) {
@@ -259,9 +259,9 @@ TEST_F (SuRFUnitTest, IteratorIncrementIntTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	//surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
-	surf_ = new SuRF();
-	surf_->create(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	//surf_ = new SuRF();
+	//surf_->create(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	bool inclusive = true;
 	SuRF::Iter iter = surf_->moveToKeyGreaterThan(surf::uint64ToString(0), inclusive);
 	for (uint64_t i = kIntTestSkip; i < kIntTestBound; i += kIntTestSkip) {
@@ -282,9 +282,9 @@ TEST_F (SuRFUnitTest, lookupRangeWordTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	//surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
-	surf_ = new SuRF();
-	surf_->create(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	//surf_ = new SuRF();
+	//surf_->create(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 
 	bool exist = surf_->lookupRange(std::string("\1"), true, words[0], true);
 	ASSERT_TRUE(exist);
@@ -314,9 +314,9 @@ TEST_F (SuRFUnitTest, lookupRangeIntTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	//surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
-	surf_ = new SuRF();
-	surf_->create(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+	//surf_ = new SuRF();
+	//surf_->create(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	for (uint64_t i = 0; i < kIntTestBound; i++) {
 	    bool exist = surf_->lookupRange(surf::uint64ToString(i), true, 
 					    surf::uint64ToString(i), true);
