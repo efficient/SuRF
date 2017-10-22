@@ -59,6 +59,10 @@ public:
 	delete louds_sparse_;
     }
 
+    void create(const std::vector<std::string>& keys, 
+		const bool include_dense, const uint32_t sparse_dense_ratio,
+		const SuffixType suffix_type, const level_t suffix_len);
+
     bool lookupKey(const std::string& key);
     // This function searches in a conservative way: if inclusive is true
     // and the stored key prefix matches key, iter stays at this key prefix.
@@ -95,6 +99,15 @@ private:
     SuRFBuilder* builder;
 };
 
+void SuRF::create(const std::vector<std::string>& keys, 
+		  const bool include_dense, const uint32_t sparse_dense_ratio,
+		  const SuffixType suffix_type, const level_t suffix_len) {
+    builder = new SuRFBuilder(include_dense, sparse_dense_ratio, suffix_type, suffix_len);
+    builder->build(keys);
+    louds_dense_ = new LoudsDense(builder);
+    louds_sparse_ = new LoudsSparse(builder);
+    delete builder;
+}
 
 bool SuRF::lookupKey(const std::string& key) {
     position_t connect_node_num = 0;
