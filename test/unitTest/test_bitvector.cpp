@@ -25,20 +25,15 @@ public:
 	uint32_t sparse_dense_ratio = 0;
 	level_t suffix_len = 8;
 	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
-	bv_ = NULL;
-	bv2_ = NULL;
-	bv3_ = NULL;
-	bv4_ = NULL;
-	bv5_ = NULL;
 	num_items_ = 0;
     }
     virtual void TearDown () {
 	delete builder_;
-	if (bv_ != NULL) delete bv_;
-	if (bv2_ != NULL) delete bv2_;
-	if (bv3_ != NULL) delete bv3_;
-	if (bv4_ != NULL) delete bv4_;
-	if (bv5_ != NULL) delete bv5_;
+	delete bv_;
+	delete bv2_;
+	delete bv3_;
+	delete bv4_;
+	delete bv5_;
     }
 
     void setupWordsTest();

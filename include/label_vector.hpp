@@ -12,7 +12,7 @@ namespace surf {
 
 class LabelVector {
 public:
-    LabelVector() : num_bytes_(0), labels_(NULL) {};
+    LabelVector() : num_bytes_(0), labels_(nullptr) {};
 
     LabelVector(const std::vector<std::vector<label_t> >& labels_per_level,
 		const level_t start_level = 0,
@@ -39,6 +39,16 @@ public:
 	//delete[] labels_;
     }
 
+    position_t getNumBytes() {
+	return num_bytes_;
+    }
+
+    position_t serializedSize() const {
+	position_t size = sizeof(num_bytes_) + num_bytes_;
+	sizeAlign(size);
+	return size;
+    }
+
     position_t size() const {
 	return (sizeof(LabelVector) + num_bytes_);
     }
@@ -61,25 +71,22 @@ public:
     bool binarySearchGreaterThan(const label_t target, position_t& pos, const position_t search_len) const;
     bool linearSearchGreaterThan(const label_t target, position_t& pos, const position_t search_len) const;
 
-    void serialize(std::string* dst) const {
-	uint64_t num_bytes_size = sizeof(num_bytes_);
-	uint64_t labels_size = num_bytes_;
-	uint64_t size = num_bytes_size + labels_size;
-	dst->resize(size, 0);
-	uint64_t offset = 0;
-	memcpy(&(*dst)[offset], &num_bytes_, num_bytes_size);
-	offset += num_bytes_size;
-	memcpy(&(*dst)[offset], labels_, labels_size);
+    void serialize(char*& dst) const {
+	memcpy(dst, &num_bytes_, sizeof(num_bytes_));
+	dst += sizeof(num_bytes_);
+	memcpy(dst, labels_, num_bytes_);
+	dst += num_bytes_;
+	align(dst);
     }
     
-    static void deSerialize(const std::string& src, uint64_t& offset, LabelVector* lv) {
-	uint64_t num_bytes_size = sizeof(lv->num_bytes_);
-	const char* data = src.data();
-	memcpy(&(lv->num_bytes_), &data[offset], num_bytes_size);
-	offset += num_bytes_size;
-	lv->labels_ = const_cast<label_t*>(reinterpret_cast<const label_t*>(&data[offset]));
-	uint64_t labels_size = lv->num_bytes_;
-	offset += labels_size;
+    static LabelVector* deSerialize(char*& src) {
+	LabelVector* lv = new LabelVector();
+	memcpy(&(lv->num_bytes_), src, sizeof(lv->num_bytes_));
+	src += sizeof(lv->num_bytes_);
+	lv->labels_ = const_cast<label_t*>(reinterpret_cast<const label_t*>(src));
+	src += lv->num_bytes_;
+	align(src);
+	return lv;
     }
 
     void destroy() {

@@ -26,6 +26,11 @@ public:
     virtual void SetUp () {
 	truncateWordSuffixes();
 	fillinInts();
+	data_ = nullptr;
+    }
+    virtual void TearDown () {
+	if (data_)
+	    delete[] data_;
     }
 
     void truncateWordSuffixes();
@@ -37,12 +42,12 @@ public:
     LoudsSparse* louds_sparse_;
     std::vector<std::string> words_trunc_;
     std::vector<std::string> ints_;
-    std::string dst_;
+    char* data_;
 };
 
 static int getCommonPrefixLen(const std::string &a, const std::string &b) {
     int len = 0;
-    while ((len < a.length()) && (len < b.length()) && (a[len] == b[len]))
+    while ((len < (int)a.length()) && (len < (int)b.length()) && (a[len] == b[len]))
 	len++;
     return len;
 }
@@ -67,7 +72,7 @@ void SparseUnitTest::truncateWordSuffixes() {
 				     getCommonPrefixLen(words[i], words[i+1]));
 	}
 
-	if (commonPrefixLen < words[i].length()) {
+	if (commonPrefixLen < (int)words[i].length()) {
 	    words_trunc_.push_back(words[i].substr(0, commonPrefixLen + 1));
 	} else {
 	    words_trunc_.push_back(words[i]);
@@ -83,13 +88,19 @@ void SparseUnitTest::fillinInts() {
 }
 
 void SparseUnitTest::testSerialize() {
-    louds_sparse_->serialize(&dst_);    
-    uint64_t size = extractBlockSize(dst_, 0);
-    louds_sparse_->destroy();
-    delete louds_sparse_;
-    louds_sparse_ = new LoudsSparse();
-    uint64_t offset = 0;
-    LoudsSparse::deSerialize(dst_, offset, louds_sparse_);
+    uint64_t size = louds_sparse_->serializedSize();
+    data_ = new char[size];
+    LoudsSparse* ori_louds_sparse = louds_sparse_;
+    char* data = data_;
+    ori_louds_sparse->serialize(data);
+    data = data_;
+    louds_sparse_ = LoudsSparse::deSerialize(data);
+
+    ASSERT_EQ(ori_louds_sparse->getHeight(), louds_sparse_->getHeight());
+    ASSERT_EQ(ori_louds_sparse->getStartLevel(), louds_sparse_->getStartLevel());
+
+    ori_louds_sparse->destroy();
+    delete ori_louds_sparse;
 }
 
 void SparseUnitTest::testLookupWord() {

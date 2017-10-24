@@ -25,10 +25,12 @@ public:
 	uint32_t sparse_dense_ratio = 0;
 	level_t suffix_len = 8;
 	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
-	labels_ = NULL;
+	data_ = nullptr;
     }
     virtual void TearDown () {
 	delete builder_;
+	if (data_)
+	    delete[] data_;
     }
 
     void setupWordsTest();
@@ -37,7 +39,7 @@ public:
 
     SuRFBuilder* builder_;
     LabelVector* labels_;
-    std::string dst_;
+    char* data_;
 };
 
 void LabelVectorUnitTest::setupWordsTest() {
@@ -46,13 +48,24 @@ void LabelVectorUnitTest::setupWordsTest() {
 }
 
 void LabelVectorUnitTest::testSerialize() {
-    labels_->serialize(&dst_);
-    uint64_t size = extractBlockSize(dst_, 0);
-    labels_->destroy();
-    delete labels_;
-    labels_ = new LabelVector();
-    uint64_t offset = 0;
-    LabelVector::deSerialize(dst_, offset, labels_);
+    uint64_t size = labels_->serializedSize();
+    data_ = new char[size];
+    LabelVector* ori_labels = labels_;
+    char* data = data_;
+    ori_labels->serialize(data);
+    data = data_;
+    labels_ = LabelVector::deSerialize(data);
+
+    ASSERT_EQ(ori_labels->getNumBytes(), labels_->getNumBytes());
+
+    for (position_t i = 0; i < ori_labels->getNumBytes(); i++) {
+	label_t ori_label = ori_labels->read(i);
+	label_t label = labels_->read(i);
+	ASSERT_EQ(ori_label, label);
+    }
+    
+    ori_labels->destroy();
+    delete ori_labels;
 }
 
 void LabelVectorUnitTest::testSearch() {

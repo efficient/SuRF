@@ -29,6 +29,18 @@ enum SuffixType {
     kReal = 2
 };
 
+void align(char*& ptr) {
+    ptr = (char*)(((uint64_t)ptr + 7) & ~((uint64_t)7));
+}
+
+void sizeAlign(position_t& size) {
+    size = (size + 7) & ~((position_t)7);
+}
+
+void sizeAlign(uint64_t& size) {
+    size = (size + 7) & ~((uint64_t)7);
+}
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
     

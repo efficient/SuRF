@@ -11,7 +11,7 @@ namespace surf {
 
 class Bitvector {
 public:
-    Bitvector() : num_bits_(0), bits_(NULL) {};
+    Bitvector() : num_bits_(0), bits_(nullptr) {};
 
     Bitvector(const std::vector<std::vector<word_t> >& bitvector_per_level, 
 	      const std::vector<position_t>& num_bits_per_level, 
@@ -21,7 +21,7 @@ public:
 	    end_level = bitvector_per_level.size();
 	computeTotalNumBits(num_bits_per_level, start_level, end_level);
 	bits_ = new word_t[numWords()];
-	memset(bits_, 0, numWords() * (kWordSize / 8));
+	memset(bits_, 0, bitsSize());
 	concatenateBitvectors(bitvector_per_level, num_bits_per_level, start_level, end_level);
     }
 
@@ -40,9 +40,13 @@ public:
 	    return (num_bits_ / kWordSize + 1);
     }
 
+    position_t bitsSize() const {
+	return (numWords() * (kWordSize / 8));
+    }
+
     // in bytes
     position_t size() const {
-        return (sizeof(Bitvector) + numWords() * (kWordSize / 8));
+	return (sizeof(Bitvector) + bitsSize());
     }
 
     inline bool readBit(const position_t pos) const;

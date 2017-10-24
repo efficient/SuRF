@@ -83,47 +83,29 @@ public:
     uint32_t countRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const;
 
     uint64_t getHeight() const { return height_; };
+    uint64_t serializedSize() const;
     uint64_t getMemoryUsage() const;
 
-    void serialize(std::string* dst) const {
-	uint64_t height_size = sizeof(height_);
-	uint64_t local_size = height_size;
-
-	std::string label_bitmaps_str;
-	label_bitmaps_->serialize(&label_bitmaps_str);
-	std::string child_indicator_bitmaps_str;
-	child_indicator_bitmaps_->serialize(&child_indicator_bitmaps_str);
-	std::string prefixkey_indicator_bits_str;
-	prefixkey_indicator_bits_->serialize(&prefixkey_indicator_bits_str);
-	std::string suffixes_str;
-	suffixes_->serialize(&suffixes_str);
-
-	uint64_t size = local_size + label_bitmaps_str.size() + child_indicator_bitmaps_str.size()
-	    + prefixkey_indicator_bits_str.size() + suffixes_str.size();
-	dst->resize(local_size, 0);
-	uint64_t offset = 0;
-	memcpy(&(*dst)[offset], &height_, height_size);
-
-	(*dst) += label_bitmaps_str;
-	(*dst) += child_indicator_bitmaps_str;
-	(*dst) += prefixkey_indicator_bits_str;
-	(*dst) += suffixes_str;
+    void serialize(char*& dst) const {
+	memcpy(dst, &height_, sizeof(height_));
+	dst += sizeof(height_);
+	label_bitmaps_->serialize(dst);
+	child_indicator_bitmaps_->serialize(dst);
+	prefixkey_indicator_bits_->serialize(dst);
+	suffixes_->serialize(dst);
+	align(dst);
     }
 
-    static void deSerialize(const std::string& src, uint64_t& offset, LoudsDense* louds_dense) {
-	uint64_t height_size = sizeof(louds_dense->height_);
-	const char* data = src.data();
-	memcpy(&(louds_dense->height_), &data[offset], height_size);
-	offset += height_size;
-	
-	louds_dense->label_bitmaps_ = new BitvectorRank();
-	BitvectorRank::deSerialize(src, offset, louds_dense->label_bitmaps_);
-	louds_dense->child_indicator_bitmaps_ = new BitvectorRank();
-	BitvectorRank::deSerialize(src, offset, louds_dense->child_indicator_bitmaps_);
-	louds_dense->prefixkey_indicator_bits_ = new BitvectorRank();
-	BitvectorRank::deSerialize(src, offset, louds_dense->prefixkey_indicator_bits_);
-	louds_dense->suffixes_ = new BitvectorSuffix();
-	BitvectorSuffix::deSerialize(src, offset, louds_dense->suffixes_);
+    static LoudsDense* deSerialize(char*& src) {
+	LoudsDense* louds_dense = new LoudsDense();
+	memcpy(&(louds_dense->height_), src, sizeof(louds_dense->height_));
+	src += sizeof(louds_dense->height_);
+	louds_dense->label_bitmaps_ = BitvectorRank::deSerialize(src);
+	louds_dense->child_indicator_bitmaps_ = BitvectorRank::deSerialize(src);
+	louds_dense->prefixkey_indicator_bits_ = BitvectorRank::deSerialize(src);
+	louds_dense->suffixes_ = BitvectorSuffix::deSerialize(src);
+	align(src);
+	return louds_dense;
     }
 
     void destroy() {
@@ -245,8 +227,18 @@ uint32_t LoudsDense::countRange(const std::string& left_key, const std::string& 
     return 0;
 }
 
+uint64_t LoudsDense::serializedSize() const {
+    uint64_t size = sizeof(height_)
+	+ label_bitmaps_->serializedSize()
+	+ child_indicator_bitmaps_->serializedSize()
+	+ prefixkey_indicator_bits_->serializedSize()
+	+ suffixes_->serializedSize();
+    sizeAlign(size);
+    return size;
+}
+
 uint64_t LoudsDense::getMemoryUsage() const {
-    return (sizeof(this)
+    return (sizeof(LoudsDense)
 	    + label_bitmaps_->size()
 	    + child_indicator_bitmaps_->size()
 	    + prefixkey_indicator_bits_->size()

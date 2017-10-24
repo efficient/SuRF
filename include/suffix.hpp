@@ -83,11 +83,14 @@ public:
 	return suffix_len_;
     }
 
+    position_t serializedSize() const {
+	position_t size = sizeof(num_bits_) + sizeof(type_) + sizeof(suffix_len_) + bitsSize();
+	sizeAlign(size);
+	return size;
+    }
+
     position_t size() const {
-        position_t bitvector_mem = (num_bits_ / kWordSize) * (kWordSize / 8);
-	if (num_bits_ % kWordSize == 0)
-	    bitvector_mem += (kWordSize / 8);
-	return (sizeof(BitvectorSuffix) + bitvector_mem);
+	return (sizeof(BitvectorSuffix) + bitsSize());
     }
 
     word_t read(const position_t idx) const;
@@ -97,44 +100,39 @@ public:
     // kReal suffix type only.
     int compare(const position_t idx, const std::string& key, const level_t level) const;
 
-    void serialize(std::string* dst) const {
-	uint64_t num_bits_size = sizeof(num_bits_);
-	uint64_t bits_size = numWords() * (kWordSize / 8);
-	uint64_t type_size = sizeof(type_);
-	uint64_t suffix_len_size = sizeof(suffix_len_);
-	uint64_t size = num_bits_size + bits_size + type_size + suffix_len_size;
-	dst->resize(size, 0);
-	uint64_t offset = 0;
-	memcpy(&(*dst)[offset], &num_bits_, num_bits_size);
-	offset += num_bits_size;
-	memcpy(&(*dst)[offset], &type_, type_size);
-	offset += type_size;
-	memcpy(&(*dst)[offset], &suffix_len_, suffix_len_size);
-	offset += suffix_len_size;
-	if (type_ != kNone)
-	    memcpy(&(*dst)[offset], bits_, bits_size);
+    void serialize(char*& dst) const {
+	memcpy(dst, &num_bits_, sizeof(num_bits_));
+	dst += sizeof(num_bits_);
+	memcpy(dst, &type_, sizeof(type_));
+	dst += sizeof(type_);
+	memcpy(dst, &suffix_len_, sizeof(suffix_len_));
+	dst += sizeof(suffix_len_);
+	if (type_ != kNone) {
+	    memcpy(dst, bits_, bitsSize());
+	    dst += bitsSize();
+	}
+	align(dst);
     }
 
-    static void deSerialize(const std::string& src, uint64_t& offset, BitvectorSuffix* sv) {
-	uint64_t num_bits_size = sizeof(sv->num_bits_);
-	uint64_t type_size = sizeof(sv->type_);
-	uint64_t suffix_len_size = sizeof(sv->suffix_len_);
-	const char* data = src.data();
-	memcpy(&(sv->num_bits_), &data[offset], num_bits_size);
-	offset += num_bits_size;
-	memcpy(&(sv->type_), &data[offset], type_size);
-	offset += type_size;
-	memcpy(&(sv->suffix_len_), &data[offset], suffix_len_size);
-	offset += suffix_len_size;
+    static BitvectorSuffix* deSerialize(char*& src) {
+	BitvectorSuffix* sv = new BitvectorSuffix();
+	memcpy(&(sv->num_bits_), src, sizeof(sv->num_bits_));
+	src += sizeof(sv->num_bits_);
+	memcpy(&(sv->type_), src, sizeof(sv->type_));
+	src += sizeof(sv->type_);
+	memcpy(&(sv->suffix_len_), src, sizeof(sv->suffix_len_));
+	src += sizeof(sv->suffix_len_);
 	if (sv->type_ != kNone) {
-	    sv->bits_ = const_cast<word_t*>(reinterpret_cast<const word_t*>(&data[offset]));
-	    uint64_t bits_size = sv->numWords() * (kWordSize / 8);
-	    offset += bits_size;
+	    sv->bits_ = const_cast<word_t*>(reinterpret_cast<const word_t*>(src));
+	    src += sv->bitsSize();
 	}
+	align(src);
+	return sv;
     }
 
     void destroy() {
-	delete[] bits_;
+	if (type_ != kNone) 
+	    delete[] bits_;
     }
 
 private:

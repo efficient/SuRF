@@ -25,12 +25,16 @@ public:
 	uint32_t sparse_dense_ratio = 0;
 	level_t suffix_len = 8;
 	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
-	bv_ = NULL;
-	bv2_ = NULL;
+	data_ = nullptr;
+	data2_ = nullptr;
 	num_items_ = 0;
     }
     virtual void TearDown () {
 	delete builder_;
+	if (data_)
+	    delete[] data_;
+	if (data2_)
+	    delete[] data2_;
     }
 
     void setupWordsTest();
@@ -44,8 +48,8 @@ public:
     BitvectorRank* bv2_;
     std::vector<position_t> num_items_per_level_;
     position_t num_items_;
-    std::string dst_;
-    std::string dst2_;
+    char* data_;
+    char* data2_;
 };
 
 void RankUnitTest::setupWordsTest() {
@@ -59,21 +63,33 @@ void RankUnitTest::setupWordsTest() {
 }
 
 void RankUnitTest::testSerialize() {
-    bv_->serialize(&dst_);
-    uint64_t size = extractBlockSize(dst_, 0);
-    bv_->destroy();
-    delete bv_;
-    bv_ = new BitvectorRank();
-    uint64_t offset = 0;
-    BitvectorRank::deSerialize(dst_, offset, bv_);
+    uint64_t size = bv_->serializedSize();
+    data_ = new char[size];
+    BitvectorRank* ori_bv = bv_;
+    char* data = data_;
+    ori_bv->serialize(data);
+    data = data_;
+    bv_ = BitvectorRank::deSerialize(data);
 
-    bv2_->serialize(&dst2_);
-    size = extractBlockSize(dst2_, 0);
-    bv2_->destroy();
-    delete bv2_;
-    bv2_ = new BitvectorRank();
-    offset = 0;
-    BitvectorRank::deSerialize(dst2_, offset, bv2_);
+    ASSERT_EQ(ori_bv->bitsSize(), bv_->bitsSize());
+    ASSERT_EQ(ori_bv->rankLutSize(), bv_->rankLutSize());
+    
+    ori_bv->destroy();
+    delete ori_bv;
+
+    size = bv2_->serializedSize();
+    data2_ = new char[size];
+    BitvectorRank* ori_bv2 = bv2_;
+    char* data2 = data2_;
+    ori_bv2->serialize(data2);
+    data2 = data2_;
+    bv2_ = BitvectorRank::deSerialize(data2);
+
+    ASSERT_EQ(ori_bv2->bitsSize(), bv2_->bitsSize());
+    ASSERT_EQ(ori_bv2->rankLutSize(), bv2_->rankLutSize());
+    
+    ori_bv2->destroy();
+    delete ori_bv2;
 }
 
 void RankUnitTest::testRank() {

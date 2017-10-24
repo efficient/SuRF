@@ -16,7 +16,7 @@ public:
     class Iter {
     public:
 	Iter() {};
-	Iter(SuRF* filter) {
+	Iter(const SuRF* filter) {
 	    dense_iter_ = LoudsDense::Iter(filter->louds_dense_);
 	    sparse_iter_ = LoudsSparse::Iter(filter->louds_sparse_);
 	}
@@ -59,34 +59,35 @@ public:
 		const bool include_dense, const uint32_t sparse_dense_ratio,
 		const SuffixType suffix_type, const level_t suffix_len);
 
-    bool lookupKey(const std::string& key);
+    bool lookupKey(const std::string& key) const;
     // This function searches in a conservative way: if inclusive is true
     // and the stored key prefix matches key, iter stays at this key prefix.
-    SuRF::Iter moveToKeyGreaterThan(const std::string& key, const bool inclusive);
+    SuRF::Iter moveToKeyGreaterThan(const std::string& key, const bool inclusive) const;
     bool lookupRange(const std::string& left_key, const bool left_inclusive, 
-		     const std::string& right_key, const bool right_inclusive);
+		     const std::string& right_key, const bool right_inclusive) const;
     uint32_t countRange(const std::string& left_key, const bool left_inclusive, 
-			const std::string& right_key, const bool right_inclusive);
+			const std::string& right_key, const bool right_inclusive) const;
 
-    uint64_t getMemoryUsage();
-    level_t getHeight();
-    level_t getSparseStartLevel();
+    uint64_t serializedSize() const;
+    uint64_t getMemoryUsage() const;
+    level_t getHeight() const;
+    level_t getSparseStartLevel() const;
 
-    void serialize(std::string* dst) const {
-	std::string louds_dense_str;
-	louds_dense_->serialize(&louds_dense_str);
-	std::string louds_sparse_str;
-	louds_sparse_->serialize(&louds_sparse_str);
-	(*dst) += louds_dense_str;
-	(*dst) += louds_sparse_str;
+    char* serialize() const {
+	uint64_t size = serializedSize();
+	char* data = new char[size];
+	char* cur_data = data;
+	louds_dense_->serialize(cur_data);
+	louds_sparse_->serialize(cur_data);
+	assert(cur_data - data == size);
+	return data;
     }
 
-    static void deSerialize(const std::string& src, SuRF* surf) {
-	uint64_t offset = 0;
-	surf->louds_dense_ = new LoudsDense();
-	LoudsDense::deSerialize(src, offset, surf->louds_dense_);
-	surf->louds_sparse_ = new LoudsSparse();
-	LoudsSparse::deSerialize(src, offset, surf->louds_sparse_);
+    static SuRF* deSerialize(char* src) {
+	SuRF* surf = new SuRF();
+	surf->louds_dense_ = LoudsDense::deSerialize(src);
+	surf->louds_sparse_ = LoudsSparse::deSerialize(src);
+	return surf;
     }
 
     void destroy() {
@@ -110,7 +111,7 @@ void SuRF::create(const std::vector<std::string>& keys,
     delete builder;
 }
 
-bool SuRF::lookupKey(const std::string& key) {
+bool SuRF::lookupKey(const std::string& key) const {
     position_t connect_node_num = 0;
     if (!louds_dense_->lookupKey(key, connect_node_num))
 	return false;
@@ -119,7 +120,7 @@ bool SuRF::lookupKey(const std::string& key) {
     return true;
 }
 
-SuRF::Iter SuRF::moveToKeyGreaterThan(const std::string& key, const bool inclusive) {
+SuRF::Iter SuRF::moveToKeyGreaterThan(const std::string& key, const bool inclusive) const {
     SuRF::Iter iter(this);
     louds_dense_->moveToKeyGreaterThan(key, inclusive, iter.dense_iter_);
 
@@ -139,10 +140,11 @@ SuRF::Iter SuRF::moveToKeyGreaterThan(const std::string& key, const bool inclusi
 	return iter;
     }
     assert(false); // shouldn't have reached here
+    return iter;
 }
 
 bool SuRF::lookupRange(const std::string& left_key, const bool left_inclusive, 
-		       const std::string& right_key, const bool right_inclusive) {
+		       const std::string& right_key, const bool right_inclusive) const {
     SuRF::Iter iter = moveToKeyGreaterThan(left_key, left_inclusive);
     if (!iter.isValid()) return false;
     int compare = iter.compare(right_key);
@@ -154,19 +156,24 @@ bool SuRF::lookupRange(const std::string& left_key, const bool left_inclusive,
 
 // TODO
 uint32_t SuRF::countRange(const std::string& left_key, const bool left_inclusive, 
-			  const std::string& right_key, const bool right_inclusive) {
+			  const std::string& right_key, const bool right_inclusive) const {
     return 0;
 }
 
-uint64_t SuRF::getMemoryUsage() {
+uint64_t SuRF::serializedSize() const {
+    return (louds_dense_->serializedSize()
+	    + louds_sparse_->serializedSize());
+}
+
+uint64_t SuRF::getMemoryUsage() const {
     return (sizeof(SuRF) + louds_dense_->getMemoryUsage() + louds_sparse_->getMemoryUsage());
 }
 
-level_t SuRF::getHeight() {
+level_t SuRF::getHeight() const {
     return louds_sparse_->getHeight();
 }
 
-level_t SuRF::getSparseStartLevel() {
+level_t SuRF::getSparseStartLevel() const {
     return louds_sparse_->getStartLevel();
 }
 

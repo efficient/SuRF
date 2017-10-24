@@ -49,7 +49,7 @@ public:
 
 static int getCommonPrefixLen(const std::string &a, const std::string &b) {
     int len = 0;
-    while ((len < a.length()) && (len < b.length()) && (a[len] == b[len]))
+    while ((len < (int)a.length()) && (len < (int)b.length()) && (a[len] == b[len]))
 	len++;
     return len;
 }
@@ -74,7 +74,7 @@ void SuRFBuilderUnitTest::truncateSuffixes(const std::vector<std::string> &keys,
 				     getCommonPrefixLen(keys[i], keys[i+1]));
 	}
 
-	if (commonPrefixLen < keys[i].length()) {
+	if (commonPrefixLen < (int)keys[i].length()) {
 	    keys_trunc.push_back(keys[i].substr(0, commonPrefixLen + 1));
 	} else {
 	    keys_trunc.push_back(keys[i]);
@@ -184,11 +184,11 @@ void SuRFBuilderUnitTest::printSparseNode(level_t level, position_t pos) {
 }
 
 bool SuRFBuilderUnitTest::DoesPrefixMatchInTrunc(const std::vector<std::string> &keys_trunc, int i, int j, int len) {
-    if (i < 0 || i >= keys_trunc.size()) return false;
-    if (j < 0 || j >= keys_trunc.size()) return false;
+    if (i < 0 || i >= (int)keys_trunc.size()) return false;
+    if (j < 0 || j >= (int)keys_trunc.size()) return false;
     if (len <= 0) return true;
-    if (keys_trunc[i].length() < len) return false;
-    if (keys_trunc[j].length() < len) return false;
+    if ((int)keys_trunc[i].length() < len) return false;
+    if ((int)keys_trunc[j].length() < len) return false;
     if (keys_trunc[i].substr(0, len).compare(keys_trunc[j].substr(0, len)) == 0)
 	return true;
     return false;

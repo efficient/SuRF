@@ -74,66 +74,41 @@ public:
 
     level_t getHeight() const { return height_; };
     level_t getStartLevel() const { return start_level_; };
+    uint64_t serializedSize() const;
     uint64_t getMemoryUsage() const;
 
-    void serialize(std::string* dst) const {
-	uint64_t height_size = sizeof(height_);
-	uint64_t start_level_size = sizeof(start_level_);
-	uint64_t node_count_dense_size = sizeof(node_count_dense_);
-	uint64_t child_count_dense_size = sizeof(child_count_dense_);
-	uint64_t local_size = height_size + start_level_size
-	    + node_count_dense_size + child_count_dense_size;
-
-	std::string labels_str;
-	labels_->serialize(&labels_str);
-	std::string child_indicator_bits_str;
-	child_indicator_bits_->serialize(&child_indicator_bits_str);
-	std::string louds_bits_str;
-	louds_bits_->serialize(&louds_bits_str);
-	std::string suffixes_str;
-	suffixes_->serialize(&suffixes_str);
-
-	uint64_t size = local_size + labels_str.size() + child_indicator_bits_str.size()
-	    + louds_bits_str.size() + suffixes_str.size();
-	dst->resize(local_size, 0);
-	uint64_t offset = 0;
-	memcpy(&(*dst)[offset], &height_, height_size);
-	offset += height_size;
-	memcpy(&(*dst)[offset], &start_level_, start_level_size);
-	offset += start_level_size;
-	memcpy(&(*dst)[offset], &node_count_dense_, node_count_dense_size);
-	offset += node_count_dense_size;
-	memcpy(&(*dst)[offset], &child_count_dense_, child_count_dense_size);
-
-	(*dst) += labels_str;
-	(*dst) += child_indicator_bits_str;
-	(*dst) += louds_bits_str;
-	(*dst) += suffixes_str;
+    void serialize(char*& dst) const {
+	memcpy(dst, &height_, sizeof(height_));
+	dst += sizeof(height_);
+	memcpy(dst, &start_level_, sizeof(start_level_));
+	dst += sizeof(start_level_);
+	memcpy(dst, &node_count_dense_, sizeof(node_count_dense_));
+	dst += sizeof(node_count_dense_);
+	memcpy(dst, &child_count_dense_, sizeof(child_count_dense_));
+	dst += sizeof(child_count_dense_);
+	labels_->serialize(dst);
+	child_indicator_bits_->serialize(dst);
+	louds_bits_->serialize(dst);
+	suffixes_->serialize(dst);
+	align(dst);
     }
 
-    static void deSerialize(const std::string& src, uint64_t& offset, LoudsSparse* louds_sparse) {
-	uint64_t height_size = sizeof(louds_sparse->height_);
-	uint64_t start_level_size = sizeof(louds_sparse->start_level_);
-	uint64_t node_count_dense_size = sizeof(louds_sparse->node_count_dense_);
-	uint64_t child_count_dense_size = sizeof(louds_sparse->child_count_dense_);
-	const char* data = src.data();
-	memcpy(&(louds_sparse->height_), &data[offset], height_size);
-	offset += height_size;
-	memcpy(&(louds_sparse->start_level_), &data[offset], start_level_size);
-	offset += start_level_size;
-	memcpy(&(louds_sparse->node_count_dense_), &data[offset], node_count_dense_size);
-	offset += node_count_dense_size;
-	memcpy(&(louds_sparse->child_count_dense_), &data[offset], child_count_dense_size);
-	offset += child_count_dense_size;
-	
-	louds_sparse->labels_ = new LabelVector();
-	LabelVector::deSerialize(src, offset, louds_sparse->labels_);
-	louds_sparse->child_indicator_bits_ = new BitvectorRank();
-	BitvectorRank::deSerialize(src, offset, louds_sparse->child_indicator_bits_);
-	louds_sparse->louds_bits_ = new BitvectorSelect();
-	BitvectorSelect::deSerialize(src, offset, louds_sparse->louds_bits_);
-	louds_sparse->suffixes_ = new BitvectorSuffix();
-	BitvectorSuffix::deSerialize(src, offset, louds_sparse->suffixes_);
+    static LoudsSparse* deSerialize(char*& src) {
+	LoudsSparse* louds_sparse = new LoudsSparse();
+	memcpy(&(louds_sparse->height_), src, sizeof(louds_sparse->height_));
+	src += sizeof(louds_sparse->height_);
+	memcpy(&(louds_sparse->start_level_), src, sizeof(louds_sparse->start_level_));
+	src += sizeof(louds_sparse->start_level_);
+	memcpy(&(louds_sparse->node_count_dense_), src, sizeof(louds_sparse->node_count_dense_));
+	src += sizeof(louds_sparse->node_count_dense_);
+	memcpy(&(louds_sparse->child_count_dense_), src, sizeof(louds_sparse->child_count_dense_));
+	src += sizeof(louds_sparse->child_count_dense_);
+	louds_sparse->labels_ = LabelVector::deSerialize(src);
+	louds_sparse->child_indicator_bits_ = BitvectorRank::deSerialize(src);
+	louds_sparse->louds_bits_ = BitvectorSelect::deSerialize(src);
+	louds_sparse->suffixes_ = BitvectorSuffix::deSerialize(src);
+	align(src);
+	return louds_sparse;
     }
 
     void destroy() {
@@ -261,6 +236,17 @@ void LoudsSparse::moveToKeyGreaterThan(const std::string& key, const bool inclus
     // TODO
 uint32_t LoudsSparse::countRange(const std::string& left_key, const std::string& right_key, const position_t in_left_pos, const position_t in_right_pos) const {
     return 0;
+}
+
+uint64_t LoudsSparse::serializedSize() const {
+    uint64_t size = sizeof(height_) + sizeof(start_level_)
+	+ sizeof(node_count_dense_) + sizeof(child_count_dense_)
+	+ labels_->serializedSize()
+	+ child_indicator_bits_->serializedSize()
+	+ louds_bits_->serializedSize()
+	+ suffixes_->serializedSize();
+    	sizeAlign(size);
+	return size;
 }
 
 uint64_t LoudsSparse::getMemoryUsage() const {

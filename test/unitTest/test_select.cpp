@@ -25,11 +25,13 @@ public:
 	uint32_t sparse_dense_ratio = 0;
 	level_t suffix_len = 8;
 	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
-	bv_ = NULL;
+	data_ = nullptr;
 	num_items_ = 0;
     }
     virtual void TearDown () {
 	delete builder_;
+	if (data_)
+	    delete[] data_;
     }
 
     void setupWordsTest();
@@ -42,7 +44,7 @@ public:
     BitvectorSelect* bv_;
     std::vector<position_t> num_items_per_level_;
     position_t num_items_;
-    std::string dst_;
+    char* data_;
 };
 
 void SelectUnitTest::setupWordsTest() {
@@ -55,13 +57,19 @@ void SelectUnitTest::setupWordsTest() {
 }
 
 void SelectUnitTest::testSerialize() {
-    bv_->serialize(&dst_);
-    uint64_t size = extractBlockSize(dst_, 0);
-    bv_->destroy();
-    delete bv_;
-    bv_ = new BitvectorSelect();
-    uint64_t offset = 0;
-    BitvectorSelect::deSerialize(dst_, offset, bv_);
+    uint64_t size = bv_->serializedSize();
+    data_ = new char[size];
+    BitvectorSelect* ori_bv = bv_;
+    char* data = data_;
+    ori_bv->serialize(data);
+    data = data_;
+    bv_ = BitvectorSelect::deSerialize(data);
+
+    ASSERT_EQ(ori_bv->bitsSize(), bv_->bitsSize());
+    ASSERT_EQ(ori_bv->selectLutSize(), bv_->selectLutSize());
+    
+    ori_bv->destroy();
+    delete ori_bv;
 }
 
 void SelectUnitTest::testSelect() {

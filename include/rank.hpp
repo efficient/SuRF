@@ -13,7 +13,7 @@ namespace surf {
 
 class BitvectorRank : public Bitvector {
 public:
-    BitvectorRank() : basic_block_size_(0), rank_lut_(NULL) {};
+    BitvectorRank() : basic_block_size_(0), rank_lut_(nullptr) {};
 
     BitvectorRank(const position_t basic_block_size, 
 		  const std::vector<std::vector<word_t> >& bitvector_per_level, 
@@ -41,14 +41,20 @@ public:
 		+ popcountLinear(bits_, block_id * word_per_basic_block, offset + 1));
     }
 
+    position_t rankLutSize() const {
+	return ((num_bits_ / basic_block_size_ + 1) * sizeof(uint32_t));
+    }
+
+    position_t serializedSize() const {
+	position_t size = sizeof(num_bits_) + sizeof(basic_block_size_)
+	    + bitsSize() + rankLutSize();
+	sizeAlign(size);
+	return size;
+    }
+
     // in bytes
     position_t size() {
-        //position_t bitvector_mem = (num_bits_ / kWordSize) * (kWordSize / 8);
-	//if (num_bits_ % kWordSize == 0)
-	//bitvector_mem += (kWordSize / 8);
-	position_t bitvector_mem = numWords() * (kWordSize / 8);
-        position_t rank_lut_mem = (num_bits_ / basic_block_size_ + 1) * sizeof(uint32_t);
-        return (sizeof(BitvectorRank) + bitvector_mem + rank_lut_mem);
+	return (sizeof(BitvectorRank) + bitsSize() + rankLutSize());
     }
 
     inline void prefetch(position_t pos) {
@@ -56,38 +62,30 @@ public:
 	__builtin_prefetch(rank_lut_ + (pos / basic_block_size_));
     }
 
-    void serialize(std::string* dst) const {
-	uint64_t num_bits_size = sizeof(num_bits_);
-	uint64_t bits_size = numWords() * (kWordSize / 8);
-	uint64_t basic_block_size_size = sizeof(basic_block_size_);
-	uint64_t rank_lut_size = (num_bits_ / basic_block_size_ + 1) * sizeof(uint32_t);
-	uint64_t size = num_bits_size + bits_size + basic_block_size_size + rank_lut_size;
-	dst->resize(size, 0);
-	uint64_t offset = 0;
-	
-	memcpy(&(*dst)[offset], &num_bits_, num_bits_size);
-	offset += num_bits_size;
-	memcpy(&(*dst)[offset], &basic_block_size_, basic_block_size_size);
-	offset += basic_block_size_size;
-	memcpy(&(*dst)[offset], bits_, bits_size);
-	offset += bits_size;
-	memcpy(&(*dst)[offset], rank_lut_, rank_lut_size);
+    void serialize(char*& dst) const {
+	memcpy(dst, &num_bits_, sizeof(num_bits_));
+	dst += sizeof(num_bits_);
+	memcpy(dst, &basic_block_size_, sizeof(basic_block_size_));
+	dst += sizeof(basic_block_size_);
+	memcpy(dst, bits_, bitsSize());
+	dst += bitsSize();
+	memcpy(dst, rank_lut_, rankLutSize());
+	dst += rankLutSize();
+	align(dst);
     }
 
-    static void deSerialize(const std::string& src, uint64_t& offset, BitvectorRank* bv_rank) {
-	uint64_t num_bits_size = sizeof(bv_rank->num_bits_);
-	uint64_t basic_block_size_size = sizeof(bv_rank->basic_block_size_);
-	const char* data = src.data();
-	memcpy(&(bv_rank->num_bits_), &data[offset], num_bits_size);
-	offset += num_bits_size;
-	memcpy(&(bv_rank->basic_block_size_), &data[offset], basic_block_size_size);
-	offset += basic_block_size_size;
-	uint64_t bits_size = bv_rank->numWords() * (kWordSize / 8);
-	bv_rank->bits_ = const_cast<word_t*>(reinterpret_cast<const word_t*>(&data[offset]));
-	offset += bits_size;
-	bv_rank->rank_lut_ = const_cast<position_t*>(reinterpret_cast<const position_t*>(&data[offset]));
-	uint64_t rank_lut_size = (bv_rank->num_bits_ / bv_rank->basic_block_size_ + 1) * sizeof(uint32_t);
-	offset += rank_lut_size;
+    static BitvectorRank* deSerialize(char*& src) {
+	BitvectorRank* bv_rank = new BitvectorRank();
+	memcpy(&(bv_rank->num_bits_), src, sizeof(bv_rank->num_bits_));
+	src += sizeof(bv_rank->num_bits_);
+	memcpy(&(bv_rank->basic_block_size_), src, sizeof(bv_rank->basic_block_size_));
+	src += sizeof(bv_rank->basic_block_size_);
+	bv_rank->bits_ = const_cast<word_t*>(reinterpret_cast<const word_t*>(src));
+	src += bv_rank->bitsSize();
+	bv_rank->rank_lut_ = const_cast<position_t*>(reinterpret_cast<const position_t*>(src));
+	src += bv_rank->rankLutSize();
+	align(src);
+	return bv_rank;
     }
 
     void destroy() {
@@ -102,10 +100,11 @@ private:
 	rank_lut_ = new position_t[num_blocks];
 
         position_t cumu_rank = 0;
-        for (position_t i = 0; i < num_blocks; i++) {
+        for (position_t i = 0; i < num_blocks - 1; i++) {
             rank_lut_[i] = cumu_rank;
             cumu_rank += popcountLinear(bits_, i * word_per_basic_block, basic_block_size_);
         }
+	rank_lut_[num_blocks - 1] = cumu_rank;
     }
 
     position_t basic_block_size_;
