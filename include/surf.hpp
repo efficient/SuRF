@@ -79,7 +79,7 @@ public:
 	char* cur_data = data;
 	louds_dense_->serialize(cur_data);
 	louds_sparse_->serialize(cur_data);
-	assert(cur_data - data == size);
+	assert(cur_data - data == (int64_t)size);
 	return data;
     }
 
