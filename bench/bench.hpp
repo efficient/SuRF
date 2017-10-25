@@ -23,7 +23,7 @@ static const uint64_t kNumEmailRecords = 25000000;
 static const uint64_t kNumTxns = 10000000;
 
 //static const uint64_t kRandintRangeSize = 328 * 1024 * 1024 * (uint64_t)1024;
-static const char* kWordloadDir = "workloads/";
+//static const char* kWordloadDir = "workloads/";
 
 // for pretty print
 static const char* kGreen ="\033[0;32m";
@@ -52,7 +52,7 @@ void loadKeysFromFile(const std::string& file_name, const bool is_key_int,
 		      std::vector<std::string> &keys) {
     std::ifstream infile(file_name);
     std::string key;
-    int count = 0;
+    uint64_t count = 0;
     if (is_key_int) {
 	while (count < kNumIntRecords && infile.good()) {
 	    uint64_t int_key;
@@ -85,7 +85,7 @@ void selectKeysToInsert(const unsigned percent,
 
 // pos > 0, position counting from the last byte
 void modifyKeyByte(std::vector<std::string> &keys, int pos) {
-    for (int i = 0; i < keys.size(); i++) {
+    for (int i = 0; i < (int)keys.size(); i++) {
 	int keylen = keys[i].length();
 	if (keylen > pos)
 	    keys[i][keylen - 1 - pos] = '+';

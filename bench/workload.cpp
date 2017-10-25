@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
     // compute upperbound keys for range queries =================
     std::vector<std::string> upper_bound_keys;
     if (query_type.compare(std::string("range")) == 0) {
-	for (int i = 0; i < txn_keys.size(); i++)
+	for (int i = 0; i < (int)txn_keys.size(); i++)
 	    upper_bound_keys.push_back(bench::getUpperBoundKey(key_type, txn_keys[i], range_size));
     }
 
@@ -111,10 +111,10 @@ int main(int argc, char *argv[]) {
     int64_t positives = 0;
     double start_time = bench::getNow();
     if (query_type.compare(std::string("point")) == 0) {
-	for (int i = 0; i < txn_keys.size(); i++)
+	for (int i = 0; i < (int)txn_keys.size(); i++)
 	    positives += (int)filter->lookup(txn_keys[i]);
     } else if (query_type.compare(std::string("range")) == 0) {
-	for (int i = 0; i < txn_keys.size(); i++)
+	for (int i = 0; i < (int)txn_keys.size(); i++)
 	//for (int i = 0; i < 5; i++)
 	    positives += (int)filter->lookupRange(txn_keys[i], upper_bound_keys[i]);
     }
@@ -122,18 +122,18 @@ int main(int argc, char *argv[]) {
 
     // compute true positives ======================================
     std::map<std::string, bool> ht;
-    for (int i = 0; i < insert_keys.size(); i++)
+    for (int i = 0; i < (int)insert_keys.size(); i++)
 	ht[insert_keys[i]] = true;
 
     int64_t true_positives = 0;
     std::map<std::string, bool>::iterator ht_iter;
     if (query_type.compare(std::string("point")) == 0) {
-	for (int i = 0; i < txn_keys.size(); i++) {
+	for (int i = 0; i < (int)txn_keys.size(); i++) {
 	    ht_iter = ht.find(txn_keys[i]);
 	    true_positives += (ht_iter != ht.end());
 	}
     } else if (query_type.compare(std::string("range")) == 0) {
-	for (int i = 0; i < txn_keys.size(); i++) {
+	for (int i = 0; i < (int)txn_keys.size(); i++) {
 	    ht_iter = ht.upper_bound(txn_keys[i]);
 	    if (ht_iter != ht.end()) {
 		std::string fetched_key = ht_iter->first;

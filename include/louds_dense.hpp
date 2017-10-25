@@ -89,6 +89,7 @@ public:
     void serialize(char*& dst) const {
 	memcpy(dst, &height_, sizeof(height_));
 	dst += sizeof(height_);
+	align(dst);
 	label_bitmaps_->serialize(dst);
 	child_indicator_bitmaps_->serialize(dst);
 	prefixkey_indicator_bits_->serialize(dst);
@@ -100,6 +101,7 @@ public:
 	LoudsDense* louds_dense = new LoudsDense();
 	memcpy(&(louds_dense->height_), src, sizeof(louds_dense->height_));
 	src += sizeof(louds_dense->height_);
+	align(src);
 	louds_dense->label_bitmaps_ = BitvectorRank::deSerialize(src);
 	louds_dense->child_indicator_bitmaps_ = BitvectorRank::deSerialize(src);
 	louds_dense->prefixkey_indicator_bits_ = BitvectorRank::deSerialize(src);

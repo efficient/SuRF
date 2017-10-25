@@ -86,6 +86,7 @@ public:
 	dst += sizeof(node_count_dense_);
 	memcpy(dst, &child_count_dense_, sizeof(child_count_dense_));
 	dst += sizeof(child_count_dense_);
+	align(dst);
 	labels_->serialize(dst);
 	child_indicator_bits_->serialize(dst);
 	louds_bits_->serialize(dst);
@@ -103,6 +104,7 @@ public:
 	src += sizeof(louds_sparse->node_count_dense_);
 	memcpy(&(louds_sparse->child_count_dense_), src, sizeof(louds_sparse->child_count_dense_));
 	src += sizeof(louds_sparse->child_count_dense_);
+	align(src);
 	louds_sparse->labels_ = LabelVector::deSerialize(src);
 	louds_sparse->child_indicator_bits_ = BitvectorRank::deSerialize(src);
 	louds_sparse->louds_bits_ = BitvectorSelect::deSerialize(src);
