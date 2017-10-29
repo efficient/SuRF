@@ -24,6 +24,7 @@ public:
 	bool isValid() const;
 	int compare(const std::string& key);
 	std::string getKey() const;
+	std::string getKeyWithSuffix() const;
 
 	// Returns true if the status of the iterator after the operation is valid
 	bool operator ++(int);
@@ -198,6 +199,14 @@ std::string SuRF::Iter::getKey() const {
     if (dense_iter_.isComplete())
 	return dense_iter_.getKey();
     return dense_iter_.getKey() + sparse_iter_.getKey();
+}
+
+std::string SuRF::Iter::getKeyWithSuffix() const {
+    if (!isValid())
+	return std::string();
+    if (dense_iter_.isComplete())
+	return dense_iter_.getKeyWithSuffix();
+    return dense_iter_.getKeyWithSuffix() + sparse_iter_.getKeyWithSuffix();
 }
 
 inline void SuRF::Iter::passToSparse() {

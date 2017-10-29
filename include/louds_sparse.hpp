@@ -29,6 +29,7 @@ public:
 	bool isValid() const { return is_valid_; };
 	int compare(const std::string& key);
 	std::string getKey() const;
+	std::string getKeyWithSuffix() const;
 
 	position_t getStartNodeNum() const { return start_node_num_; };
 	void setStartNodeNum(position_t node_num) { start_node_num_ = node_num; };
@@ -321,6 +322,25 @@ std::string LoudsSparse::Iter::getKey() const {
     if (is_at_terminator_)
 	len--;
     return std::string((const char*)key_.data(), (size_t)len);
+}
+
+std::string LoudsSparse::Iter::getKeyWithSuffix() const {
+    std::string iter_key = getKey();
+    if (trie_->suffixes_->getType() == kReal) {
+	position_t suffix_pos = trie_->getSuffixPos(pos_in_trie_[key_len_ - 1]);
+	word_t suffix = trie_->suffixes_->read(suffix_pos);
+	if (suffix > 0) {
+	    level_t suffix_len = trie_->suffixes_->getSuffixLen();
+	    char* suffix_str = reinterpret_cast<char*>(&suffix);
+	    unsigned pos = 0;
+	    while (pos < suffix_len) {
+		iter_key.append(suffix_str, 1);
+		suffix_str++;
+		pos += 8;
+	    }
+	}
+    }
+    return iter_key;
 }
 
 inline void LoudsSparse::Iter::append(const position_t pos) {

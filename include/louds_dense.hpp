@@ -33,6 +33,7 @@ public:
 
 	int compare(const std::string& key);
 	std::string getKey() const;
+	std::string getKeyWithSuffix() const;
 	position_t getSendOutNodeNum() const { return send_out_node_num_; };
 
 	void moveToLeftMostKey();
@@ -302,6 +303,25 @@ std::string LoudsDense::Iter::getKey() const {
     if (is_at_prefix_key_)
 	len--;
     return std::string((const char*)key_.data(), (size_t)len);
+}
+
+std::string LoudsDense::Iter::getKeyWithSuffix() const {
+    std::string iter_key = getKey();
+    if (isComplete() && trie_->suffixes_->getType() == kReal) {
+	position_t suffix_pos = trie_->getSuffixPos(pos_in_trie_[key_len_ - 1], is_at_prefix_key_);
+	word_t suffix = trie_->suffixes_->read(suffix_pos);
+	if (suffix > 0) {
+	    level_t suffix_len = trie_->suffixes_->getSuffixLen();
+	    char* suffix_str = reinterpret_cast<char*>(&suffix);
+	    unsigned pos = 0;
+	    while (pos < suffix_len) {
+		iter_key.append(suffix_str, 1);
+		suffix_str++;
+		pos += 8;
+	    }
+	}
+    }
+    return iter_key;    
 }
 
 inline void LoudsDense::Iter::append(position_t pos) {
