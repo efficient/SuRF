@@ -68,7 +68,7 @@ protected:
 };
 
 bool Bitvector::readBit (const position_t pos) const {
-    assert(pos < num_bits_);
+    //assert(pos < num_bits_);
     position_t word_id = pos / kWordSize;
     position_t offset = pos & (kWordSize - 1);
     return bits_[word_id] & (kMsbMask >> offset);
