@@ -45,7 +45,7 @@ private:
 	word_t suffix = 0;
 	level_t num_complete_bytes = len / 8;
 	if (num_complete_bytes > 0) {
-	    suffix += (word_t)key[level];
+	    suffix += (word_t)(label_t)key[level];
 	    for (position_t i = 1; i < num_complete_bytes; i++) {
 		suffix <<= 8;
 		suffix += (word_t)(uint8_t)key[level + i];
