@@ -24,7 +24,7 @@ public:
 	bool isValid() const;
 	int compare(const std::string& key);
 	std::string getKey() const;
-	word_t getSuffix() const; // TODO: need to add unit test
+	int getSuffix(word_t* suffix) const; // TODO: need to add unit test
 	//std::string getKeyWithSuffix() const;
 
 	// Returns true if the status of the iterator after the operation is valid
@@ -202,12 +202,12 @@ std::string SuRF::Iter::getKey() const {
     return dense_iter_.getKey() + sparse_iter_.getKey();
 }
 
-word_t SuRF::Iter::getSuffix() const {
+int SuRF::Iter::getSuffix(word_t* suffix) const {
     if (!isValid())
 	return 0;
     if (dense_iter_.isComplete())
-	return dense_iter_.getSuffix();
-    return sparse_iter_.getSuffix();
+	return dense_iter_.getSuffix(suffix);
+    return sparse_iter_.getSuffix(suffix);
 }
     /*
 std::string SuRF::Iter::getKeyWithSuffix() const {
