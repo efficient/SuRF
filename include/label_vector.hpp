@@ -20,7 +20,7 @@ public:
 	if (end_level == 0)
 	    end_level = labels_per_level.size();
 
-	num_bytes_ = 0;
+	num_bytes_ = 1;
 	for (level_t level = start_level; level < end_level; level++)
 	    num_bytes_ += labels_per_level[level].size();
 

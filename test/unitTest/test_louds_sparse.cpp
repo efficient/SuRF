@@ -119,7 +119,7 @@ void SparseUnitTest::testLookupWord() {
 	}
     }
 }
-    
+
 TEST_F (SparseUnitTest, lookupWordTest) {
     bool include_dense = false;
     uint32_t sparse_dense_ratio = 0;
