@@ -57,6 +57,20 @@ static int getMax(int a, int b) {
     return a;
 }
 
+static bool isEqual(const std::string& a, const std::string& b, const unsigned bitlen) {
+    if (bitlen == 0) {
+	return (a.compare(b) == 0);
+    } else {
+	std::string a_prefix = a.substr(0, a.length() - 1);
+	std::string b_prefix = b.substr(0, b.length() - 1);
+	if (a_prefix.compare(b_prefix) != 0) return false;
+	char mask = 0xFF << (8 - bitlen);
+	char a_suf = a[a.length() - 1] & mask;
+	char b_suf = b[b.length() - 1] & mask;
+	return (a_suf == b_suf);
+    }
+}
+
 void SuRFUnitTest::truncateWordSuffixes() {
     assert(words.size() > 1);
     int commonPrefixLen = 0;
@@ -116,7 +130,7 @@ TEST_F (SuRFUnitTest, IntStringConvertTest) {
 	ASSERT_EQ(i, stringToUint64(uint64ToString(i)));
     }
 }
-    
+
 TEST_F (SuRFUnitTest, lookupWordTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
@@ -174,12 +188,10 @@ TEST_F (SuRFUnitTest, moveToKeyGreaterThanWordTest) {
 
 	    ASSERT_TRUE(iter.isValid());
 	    std::string iter_key;
-	    //if (suffix_len % 8 == 0)
-	    //iter_key = iter.getKeyWithSuffix();
-	    //else
-	    iter_key = iter.getKey();
+	    unsigned bitlen;
+	    iter_key = iter.getKeyWithSuffix(&bitlen);
 	    std::string word_prefix = words[i].substr(0, iter_key.length());
-	    bool is_prefix = (word_prefix.compare(iter_key) == 0);
+	    bool is_prefix = isEqual(word_prefix, iter_key, bitlen);
 	    ASSERT_TRUE(is_prefix);
 	}
 
@@ -189,12 +201,10 @@ TEST_F (SuRFUnitTest, moveToKeyGreaterThanWordTest) {
 
 	    ASSERT_TRUE(iter.isValid());
 	    std::string iter_key;
-	    //if (suffix_len % 8 == 0)
-	    //iter_key = iter.getKeyWithSuffix();
-	    //else
-	    iter_key = iter.getKey();
+	    unsigned bitlen;
+	    iter_key = iter.getKeyWithSuffix(&bitlen);
 	    std::string word_prefix = words[i+1].substr(0, iter_key.length());
-	    bool is_prefix = (word_prefix.compare(iter_key) == 0);
+	    bool is_prefix = isEqual(word_prefix, iter_key, bitlen);
 	    ASSERT_TRUE(is_prefix);
 	}
 
@@ -219,17 +229,15 @@ TEST_F (SuRFUnitTest, moveToKeyGreaterThanIntTest) {
 
 	    ASSERT_TRUE(iter.isValid());
 	    std::string iter_key;
-	    //if (suffix_len % 8 == 0)
-	    //iter_key = iter.getKeyWithSuffix();
-	    //else
-	    iter_key = iter.getKey();
+	    unsigned bitlen;
+	    iter_key = iter.getKeyWithSuffix(&bitlen);
 	    std::string int_key;
 	    if (i % kIntTestSkip == 0)
 		int_key = surf::uint64ToString(i);
 	    else
 		int_key = surf::uint64ToString(i - (i % kIntTestSkip) + kIntTestSkip);
 	    std::string int_prefix = int_key.substr(0, iter_key.length());
-	    bool is_prefix = (int_prefix.compare(iter_key) == 0);
+	    bool is_prefix = isEqual(int_prefix, iter_key, bitlen);
 	    ASSERT_TRUE(is_prefix);
 	}
 
@@ -239,13 +247,11 @@ TEST_F (SuRFUnitTest, moveToKeyGreaterThanIntTest) {
 
 	    ASSERT_TRUE(iter.isValid());
 	    std::string iter_key;
-	    //if (suffix_len % 8 == 0)
-	    //iter_key = iter.getKeyWithSuffix();
-	    //else
-	    iter_key = iter.getKey();
+	    unsigned bitlen;
+	    iter_key = iter.getKeyWithSuffix(&bitlen);
 	    std::string int_key = surf::uint64ToString(i - (i % kIntTestSkip) + kIntTestSkip);
 	    std::string int_prefix = int_key.substr(0, iter_key.length());
-	    bool is_prefix = (int_prefix.compare(iter_key) == 0);
+	    bool is_prefix = isEqual(int_prefix, iter_key, bitlen);
 	    ASSERT_TRUE(is_prefix);
 	}
 
@@ -270,12 +276,10 @@ TEST_F (SuRFUnitTest, IteratorIncrementWordTest) {
 	    iter++;
 	    ASSERT_TRUE(iter.isValid());
 	    std::string iter_key;
-	    //if (suffix_len % 8 == 0)
-	    //iter_key = iter.getKeyWithSuffix();
-	    //else
-	    iter_key = iter.getKey();
+	    unsigned bitlen;
+	    iter_key = iter.getKeyWithSuffix(&bitlen);
 	    std::string word_prefix = words[i].substr(0, iter_key.length());
-	    bool is_prefix = (word_prefix.compare(iter_key) == 0);
+	    bool is_prefix = isEqual(word_prefix, iter_key, bitlen);
 	    ASSERT_TRUE(is_prefix);
 	}
 	iter++;
@@ -298,12 +302,10 @@ TEST_F (SuRFUnitTest, IteratorIncrementIntTest) {
 	    iter++;
 	    ASSERT_TRUE(iter.isValid());
 	    std::string iter_key;
-	    //if (suffix_len % 8 == 0)
-	    //iter_key = iter.getKeyWithSuffix();
-	    //else
-	    iter_key = iter.getKey();
+	    unsigned bitlen;
+	    iter_key = iter.getKeyWithSuffix(&bitlen);
 	    std::string int_prefix = surf::uint64ToString(i).substr(0, iter_key.length());
-	    bool is_prefix = (int_prefix.compare(iter_key) == 0);
+	    bool is_prefix = isEqual(int_prefix, iter_key, bitlen);
 	    ASSERT_TRUE(is_prefix);
 	}
 	iter++;

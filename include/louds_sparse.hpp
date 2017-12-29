@@ -30,7 +30,7 @@ public:
 	int compare(const std::string& key);
 	std::string getKey() const;
         int getSuffix(word_t* suffix) const;
-	//std::string getKeyWithSuffix() const;
+	std::string getKeyWithSuffix(unsigned* bitlen) const;
 
 	position_t getStartNodeNum() const { return start_node_num_; };
 	void setStartNodeNum(position_t node_num) { start_node_num_ = node_num; };
@@ -334,26 +334,29 @@ int LoudsSparse::Iter::getSuffix(word_t* suffix) const {
     *suffix = 0;
     return 0;
 }
-    /*
-std::string LoudsSparse::Iter::getKeyWithSuffix() const {
+
+std::string LoudsSparse::Iter::getKeyWithSuffix(unsigned* bitlen) const {
     std::string iter_key = getKey();
     if (trie_->suffixes_->getType() == kReal) {
 	position_t suffix_pos = trie_->getSuffixPos(pos_in_trie_[key_len_ - 1]);
 	word_t suffix = trie_->suffixes_->read(suffix_pos);
 	if (suffix > 0) {
 	    level_t suffix_len = trie_->suffixes_->getSuffixLen();
+	    *bitlen = suffix_len % 8;
+	    suffix <<= (64 - suffix_len);
 	    char* suffix_str = reinterpret_cast<char*>(&suffix);
+	    suffix_str += 7;
 	    unsigned pos = 0;
 	    while (pos < suffix_len) {
 		iter_key.append(suffix_str, 1);
-		suffix_str++;
+		suffix_str--;
 		pos += 8;
 	    }
 	}
     }
     return iter_key;
 }
-    */
+
 inline void LoudsSparse::Iter::append(const position_t pos) {
     assert(key_len_ < key_.size());
     key_[key_len_] = trie_->labels_->read(pos);

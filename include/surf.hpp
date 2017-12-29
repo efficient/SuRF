@@ -25,7 +25,7 @@ public:
 	int compare(const std::string& key);
 	std::string getKey() const;
 	int getSuffix(word_t* suffix) const; // TODO: need to add unit test
-	//std::string getKeyWithSuffix() const;
+	std::string getKeyWithSuffix(unsigned* bitlen) const;
 
 	// Returns true if the status of the iterator after the operation is valid
 	bool operator ++(int);
@@ -209,15 +209,16 @@ int SuRF::Iter::getSuffix(word_t* suffix) const {
 	return dense_iter_.getSuffix(suffix);
     return sparse_iter_.getSuffix(suffix);
 }
-    /*
-std::string SuRF::Iter::getKeyWithSuffix() const {
+
+std::string SuRF::Iter::getKeyWithSuffix(unsigned* bitlen) const {
+    *bitlen = 0;
     if (!isValid())
 	return std::string();
     if (dense_iter_.isComplete())
-	return dense_iter_.getKeyWithSuffix();
-    return dense_iter_.getKeyWithSuffix() + sparse_iter_.getKeyWithSuffix();
+	return dense_iter_.getKeyWithSuffix(bitlen);
+    return dense_iter_.getKeyWithSuffix(bitlen) + sparse_iter_.getKeyWithSuffix(bitlen);
 }
-    */
+
 inline void SuRF::Iter::passToSparse() {
     sparse_iter_.setStartNodeNum(dense_iter_.getSendOutNodeNum());
 }
