@@ -268,6 +268,51 @@ TEST_F (DenseUnitTest, moveToKeyGreaterThanIntTest) {
     delete louds_dense_;
 }
 
+TEST_F (DenseUnitTest, moveToKeyLessThanWordTest) {
+    bool include_dense = true;
+    uint32_t sparse_dense_ratio = 0;
+    level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
+    for (int k = 0; k < 5; k++) {
+	level_t suffix_len = suffix_len_array[k];
+	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+	builder_->build(words);
+	louds_dense_ = new LoudsDense(builder_);
+	for (unsigned i = 0; i < words.size() - 1; i++) {
+	    bool inclusive = true;
+	    LoudsDense::Iter iter(louds_dense_);
+	    louds_dense_->moveToKeyLessThan(words[i], inclusive, iter);
+
+	    ASSERT_TRUE(iter.isValid());
+	    ASSERT_TRUE(iter.isComplete());
+	    std::string iter_key = iter.getKey();
+	    std::string word_prefix = words[i].substr(0, iter_key.length());
+	    bool is_prefix = (word_prefix.compare(iter_key) == 0);
+	    ASSERT_TRUE(is_prefix);
+	}
+
+	for (unsigned i = 1; i < words.size() - 1; i++) {
+	    bool inclusive = false;
+	    LoudsDense::Iter iter(louds_dense_);
+	    louds_dense_->moveToKeyLessThan(words[i], inclusive, iter);
+
+	    ASSERT_TRUE(iter.isValid());
+	    ASSERT_TRUE(iter.isComplete());
+	    std::string iter_key = iter.getKey();
+	    std::string word_prefix = words[i-1].substr(0, iter_key.length());
+	    bool is_prefix = (word_prefix.compare(iter_key) == 0);
+	    ASSERT_TRUE(is_prefix);
+	}
+
+	bool inclusive = false;
+	LoudsDense::Iter iter(louds_dense_);
+	louds_dense_->moveToKeyLessThan(words[0], inclusive, iter);
+	ASSERT_FALSE(iter.isValid());
+	delete builder_;
+	louds_dense_->destroy();
+	delete louds_dense_;
+    }
+}
+
 TEST_F (DenseUnitTest, IteratorIncrementWordTest) {
     bool include_dense = true;
     uint32_t sparse_dense_ratio = 0;
@@ -314,6 +359,59 @@ TEST_F (DenseUnitTest, IteratorIncrementIntTest) {
 	ASSERT_TRUE(is_prefix);
     }
     iter++;
+    ASSERT_FALSE(iter.isValid());
+    delete builder_;
+    louds_dense_->destroy();
+    delete louds_dense_;
+}
+
+TEST_F (DenseUnitTest, IteratorDecrementWordTest) {
+    bool include_dense = true;
+    uint32_t sparse_dense_ratio = 0;
+    level_t suffix_len = 8;
+    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+    builder_->build(words);
+    louds_dense_ = new LoudsDense(builder_);
+    bool inclusive = true;
+    LoudsDense::Iter iter(louds_dense_);
+    louds_dense_->moveToKeyGreaterThan(words[words.size() - 1], inclusive, iter);    
+    for (int i = words.size() - 2; i >= 0; i--) {
+	iter--;
+	ASSERT_TRUE(iter.isValid());
+	ASSERT_TRUE(iter.isComplete());
+	std::string iter_key = iter.getKey();
+	std::string word_prefix = words[i].substr(0, iter_key.length());
+	bool is_prefix = (word_prefix.compare(iter_key) == 0);
+	ASSERT_TRUE(is_prefix);
+    }
+    iter--;
+    ASSERT_FALSE(iter.isValid());
+    delete builder_;
+    louds_dense_->destroy();
+    delete louds_dense_;
+}
+
+TEST_F (DenseUnitTest, IteratorDecrementIntTest) {
+    bool include_dense = true;
+    uint32_t sparse_dense_ratio = 0;
+    level_t suffix_len = 8;
+    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+    builder_->build(ints_);
+    louds_dense_ = new LoudsDense(builder_);
+    bool inclusive = true;
+    LoudsDense::Iter iter(louds_dense_);
+    louds_dense_->moveToKeyGreaterThan(surf::uint64ToString(kIntTestBound - kIntTestSkip), inclusive, iter);    
+    for (uint64_t i = kIntTestBound - 1 - kIntTestSkip; i > 0; i -= kIntTestSkip) {
+	iter--;
+	ASSERT_TRUE(iter.isValid());
+	ASSERT_TRUE(iter.isComplete());
+	std::string iter_key = iter.getKey();
+	std::string int_prefix = surf::uint64ToString(i).substr(0, iter_key.length());
+	bool is_prefix = (int_prefix.compare(iter_key) == 0);
+	ASSERT_TRUE(is_prefix);
+    }
+    iter--;
+    iter--;
     ASSERT_FALSE(iter.isValid());
     delete builder_;
     louds_dense_->destroy();

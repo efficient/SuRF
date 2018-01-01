@@ -35,8 +35,12 @@ public:
 	position_t getStartNodeNum() const { return start_node_num_; };
 	void setStartNodeNum(position_t node_num) { start_node_num_ = node_num; };
 
+	void setToFirstLabelInRoot();
+	void setToLastLabelInRoot();
 	void moveToLeftMostKey();
+	void moveToRightMostKey();
 	void operator ++(int);
+	void operator --(int);
 
     private:
 	inline void append(const position_t pos);
@@ -72,6 +76,7 @@ public:
     // in_node_num is provided by louds-dense's lookupKey function
     bool lookupKey(const std::string& key, const position_t in_node_num) const;
     void moveToKeyGreaterThan(const std::string& key, const bool inclusive, LoudsSparse::Iter& iter) const;
+    void moveToKeyLessThan(const std::string& key, const bool inclusive, LoudsSparse::Iter& iter) const;
     uint32_t countRange(const std::string& left_key, const std::string& right_key, const position_t in_left_pos, const position_t in_right_pos) const;
 
     level_t getHeight() const { return height_; };
@@ -125,6 +130,7 @@ public:
 private:
     inline position_t getChildNodeNum(const position_t pos) const;
     inline position_t getFirstLabelPos(const position_t node_num) const;
+    inline position_t getLastLabelPos(const position_t node_num) const;
     inline position_t getSuffixPos(const position_t pos) const;
     inline position_t nodeSize(const position_t pos) const;
 
@@ -238,6 +244,12 @@ void LoudsSparse::moveToKeyGreaterThan(const std::string& key, const bool inclus
     iter.is_valid_ = true;
 }
 
+void LoudsSparse::moveToKeyLessThan(const std::string& key, const bool inclusive, LoudsSparse::Iter& iter) const {
+    moveToKeyGreaterThan(key, !inclusive, iter);
+    if (iter.isValid())
+	iter--;
+}
+
     // TODO
 uint32_t LoudsSparse::countRange(const std::string& left_key, const std::string& right_key, const position_t in_left_pos, const position_t in_right_pos) const {
     return 0;
@@ -268,6 +280,13 @@ inline position_t LoudsSparse::getChildNodeNum(const position_t pos) const {
 
 inline position_t LoudsSparse::getFirstLabelPos(const position_t node_num) const {
     return louds_bits_->select(node_num + 1 - node_count_dense_);
+}
+
+inline position_t LoudsSparse::getLastLabelPos(const position_t node_num) const {
+    position_t next_rank = node_num + 2 - node_count_dense_;
+    if (next_rank > louds_bits_->numOnes())
+	return (louds_bits_->numBits() - 1);
+    return (louds_bits_->select(next_rank) - 1);
 }
 
 inline position_t LoudsSparse::getSuffixPos(const position_t pos) const {
@@ -378,6 +397,18 @@ inline void LoudsSparse::Iter::set(const level_t level, const position_t pos) {
     pos_in_trie_[level] = pos;
 }
 
+void LoudsSparse::Iter::setToFirstLabelInRoot() {
+    assert(start_level_ == 0);
+    pos_in_trie_[0] = 0;
+    key_[0] = trie_->labels_->read(0);
+}
+
+void LoudsSparse::Iter::setToLastLabelInRoot() {
+    assert(start_level_ == 0);
+    pos_in_trie_[0] = trie_->getLastLabelPos(0);
+    key_[0] = trie_->labels_->read(pos_in_trie_[0]);
+}
+
 void LoudsSparse::Iter::moveToLeftMostKey() {
     if (key_len_ == 0) {
 	position_t pos = trie_->getFirstLabelPos(start_node_num_);
@@ -414,6 +445,43 @@ void LoudsSparse::Iter::moveToLeftMostKey() {
     assert(false); // shouldn't have reached here
 }
 
+void LoudsSparse::Iter::moveToRightMostKey() {
+    if (key_len_ == 0) {
+	position_t pos = trie_->getFirstLabelPos(start_node_num_);
+	pos = trie_->getLastLabelPos(start_node_num_);
+	label_t label = trie_->labels_->read(pos);
+	append(label, pos);
+    }
+
+    level_t level = key_len_ - 1;
+    position_t pos = pos_in_trie_[level];
+    label_t label = trie_->labels_->read(pos);
+
+    if (!trie_->child_indicator_bits_->readBit(pos)) {
+	if ((label == kTerminator) && !trie_->louds_bits_->readBit(pos + 1))
+	    is_at_terminator_ = true;
+	is_valid_ = true;
+	return;
+    }
+
+    while (level < trie_->getHeight()) {
+	position_t node_num = trie_->getChildNodeNum(pos);
+	pos = trie_->getLastLabelPos(node_num);
+	label = trie_->labels_->read(pos);
+	// if trie branch terminates
+	if (!trie_->child_indicator_bits_->readBit(pos)) {
+	    append(label, pos);
+	    if ((label == kTerminator) && !trie_->louds_bits_->readBit(pos + 1))
+		is_at_terminator_ = true;
+	    is_valid_ = true;
+	    return;
+	}
+	append(label, pos);
+	level++;
+    }
+    assert(false); // shouldn't have reached here
+}
+
 void LoudsSparse::Iter::operator ++(int) {
     assert(key_len_ > 0);
     is_at_terminator_ = false;
@@ -430,6 +498,27 @@ void LoudsSparse::Iter::operator ++(int) {
     }
     set(key_len_ - 1, pos);
     return moveToLeftMostKey();
+}
+
+void LoudsSparse::Iter::operator --(int) {
+    assert(key_len_ > 0);
+    is_at_terminator_ = false;
+    position_t pos = pos_in_trie_[key_len_ - 1];
+    if (pos == 0) {
+	is_valid_ = false;
+	return;
+    }
+    while (trie_->louds_bits_->readBit(pos)) {
+	key_len_--;
+	if (key_len_ == 0) {
+	    is_valid_ = false;
+	    return;
+	}
+	pos = pos_in_trie_[key_len_ - 1];
+    }
+    pos--;
+    set(key_len_ - 1, pos);
+    return moveToRightMostKey();
 }
 
 } // namespace surf

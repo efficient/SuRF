@@ -154,8 +154,7 @@ TEST_F (BitvectorUnitTest, distanceToNextSetBitTest) {
     std::vector<position_t> distanceVector;
     position_t distance = 1;
     for (position_t pos = 1; pos < num_items_; pos++) {
-	bool is_bit_set = bv2_->readBit(pos);
-	if (is_bit_set) {
+	if (bv2_->readBit(pos)) {
 	    while (distance > 0) {
 		distanceVector.push_back(distance);
 		distance--;
@@ -173,6 +172,38 @@ TEST_F (BitvectorUnitTest, distanceToNextSetBitTest) {
 
     for (position_t pos = 0; pos < num_items_; pos++) {
 	distance = bv2_->distanceToNextSetBit(pos);
+	ASSERT_EQ(distanceVector[pos], distance);
+    }
+}
+
+TEST_F (BitvectorUnitTest, distanceToPrevSetBitTest) {
+    setupWordsTest();
+    std::vector<position_t> distanceVector;
+    for (position_t pos = 0; pos < num_items_; pos++)
+	distanceVector.push_back(0);
+    
+    position_t distance = 1;
+    for (position_t pos = num_items_ - 2; pos > 0; pos--) {
+	if (bv2_->readBit(pos)) {
+	    for (position_t i = 1; i <= distance; i++)
+		distanceVector[pos + i] = i;
+	    distance = 1;
+	}
+	else {
+	    distance++;
+	}
+    }
+    if (bv2_->readBit(0)) {
+	for (position_t i = 1; i <= distance; i++)
+	    distanceVector[i] = i;
+    } else {
+	distance++;
+	for (position_t i = 1; i <= distance; i++)
+	    distanceVector[i - 1] = i;
+    }
+
+    for (position_t pos = 0; pos < num_items_; pos++) {
+	distance = bv2_->distanceToPrevSetBit(pos);
 	ASSERT_EQ(distanceVector[pos], distance);
     }
 }

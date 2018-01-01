@@ -29,11 +29,14 @@ public:
 
 	// Returns true if the status of the iterator after the operation is valid
 	bool operator ++(int);
+	bool operator --(int);
 
     private:
 	void passToSparse();
 	bool incrementDenseIter();
 	bool incrementSparseIter();
+	bool decrementDenseIter();
+	bool decrementSparseIter();
 
     private:
 	// true implies that dense_iter_ is valid
@@ -65,6 +68,9 @@ public:
     // This function searches in a conservative way: if inclusive is true
     // and the stored key prefix matches key, iter stays at this key prefix.
     SuRF::Iter moveToKeyGreaterThan(const std::string& key, const bool inclusive) const;
+    SuRF::Iter moveToKeyLessThan(const std::string& key, const bool inclusive) const;
+    SuRF::Iter moveToFirst() const;
+    SuRF::Iter moveToLast() const;
     bool lookupRange(const std::string& left_key, const bool left_inclusive, 
 		     const std::string& right_key, const bool right_inclusive) const;
     uint32_t countRange(const std::string& left_key, const bool left_inclusive, 
@@ -142,6 +148,47 @@ SuRF::Iter SuRF::moveToKeyGreaterThan(const std::string& key, const bool inclusi
 	return iter;
     }
     assert(false); // shouldn't have reached here
+    return iter;
+}
+
+SuRF::Iter SuRF::moveToKeyLessThan(const std::string& key, const bool inclusive) const {
+    SuRF::Iter iter = moveToKeyGreaterThan(key, !inclusive);
+    if (iter.isValid())
+	iter--;
+    else
+	iter = moveToLast();
+    return iter;
+}
+
+SuRF::Iter SuRF::moveToFirst() const {
+    SuRF::Iter iter(this);
+    if (louds_dense_->getHeight() > 0) {
+	iter.dense_iter_.setToFirstLabelInRoot();
+	iter.dense_iter_.moveToLeftMostKey();
+	if (iter.dense_iter_.isMoveLeftComplete())
+	    return iter;
+	iter.passToSparse();
+	iter.sparse_iter_.moveToLeftMostKey();
+    } else {
+	iter.sparse_iter_.setToFirstLabelInRoot();
+	iter.sparse_iter_.moveToLeftMostKey();
+    }
+    return iter;
+}
+
+SuRF::Iter SuRF::moveToLast() const {
+    SuRF::Iter iter(this);
+    if (louds_dense_->getHeight() > 0) {
+	iter.dense_iter_.setToLastLabelInRoot();
+	iter.dense_iter_.moveToRightMostKey();
+	if (iter.dense_iter_.isMoveRightComplete())
+	    return iter;
+	iter.passToSparse();
+	iter.sparse_iter_.moveToRightMostKey();
+    } else {
+	iter.sparse_iter_.setToLastLabelInRoot();
+	iter.sparse_iter_.moveToRightMostKey();
+    }
     return iter;
 }
 
@@ -245,6 +292,30 @@ bool SuRF::Iter::operator ++(int) {
     if (!isValid()) return false;
     if (incrementSparseIter()) return true;
     return incrementDenseIter();
+}
+
+inline bool SuRF::Iter::decrementDenseIter() {
+    if (!dense_iter_.isValid()) return false;
+
+    dense_iter_--;
+    if (!dense_iter_.isValid()) return false;
+    if (dense_iter_.isMoveRightComplete()) return true;
+
+    passToSparse();
+    sparse_iter_.moveToRightMostKey();
+    return true;
+}
+
+inline bool SuRF::Iter::decrementSparseIter() {
+    if (!sparse_iter_.isValid()) return false;
+    sparse_iter_--;
+    return sparse_iter_.isValid();
+}
+
+bool SuRF::Iter::operator --(int) {
+    if (!isValid()) return false;
+    if (decrementSparseIter()) return true;
+    return decrementDenseIter();
 }
 
 } // namespace surf

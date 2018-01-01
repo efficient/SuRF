@@ -52,6 +52,7 @@ public:
     inline bool readBit(const position_t pos) const;
 
     position_t distanceToNextSetBit(const position_t pos) const;
+    position_t distanceToPrevSetBit(const position_t pos) const;
 
 private:
     void computeTotalNumBits(const std::vector<position_t>& num_bits_per_level, 
@@ -93,15 +94,43 @@ position_t Bitvector::distanceToNextSetBit (const position_t pos) const {
 	distance += (kWordSize - offset);
     }
 
-    while (true) {
+    while (word_id < numWords()) {
 	word_id++;
-	if (word_id >= numWords())
-	    return distance;
 	test_bits = bits_[word_id];
 	if (test_bits > 0)
 	    return (distance + __builtin_clzll(test_bits));
 	distance += kWordSize;
     }
+    return distance;
+}
+
+position_t Bitvector::distanceToPrevSetBit (const position_t pos) const {
+    assert(pos < num_bits_);
+    if (pos == 0) return 0;
+    position_t distance = 1;
+
+    position_t word_id = (pos - 1) / kWordSize;
+    position_t offset = (pos - 1) % kWordSize;
+
+    //first word left-over bits
+    word_t test_bits = bits_[word_id] >> (kWordSize - 1 - offset);
+    if (test_bits > 0) {
+	return (distance + __builtin_ctzll(test_bits));
+    } else {
+	if (word_id == 0)
+	    return (offset + 1);
+	distance += (offset + 1);
+    }
+
+    while (word_id > 0) {
+	word_id--;
+	test_bits = bits_[word_id];
+	if (test_bits > 0)
+	    return (distance + __builtin_ctzll(test_bits));
+	distance += kWordSize;
+    }
+    assert(false);
+    return distance;
 }
 
 void Bitvector::computeTotalNumBits(const std::vector<position_t>& num_bits_per_level, 

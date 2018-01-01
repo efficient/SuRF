@@ -82,6 +82,10 @@ public:
 	return (sizeof(BitvectorSelect) + bitsSize() + selectLutSize());
     }
 
+    position_t numOnes() {
+	return num_ones_;
+    }
+
     void serialize(char*& dst) const {
 	memcpy(dst, &num_bits_, sizeof(num_bits_));
 	dst += sizeof(num_bits_);

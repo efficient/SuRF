@@ -263,6 +263,49 @@ TEST_F (SparseUnitTest, moveToKeyGreaterThanIntTest) {
     delete louds_sparse_;
 }
 
+TEST_F (SparseUnitTest, moveToKeyLessThanWordTest) {
+    bool include_dense = false;
+    uint32_t sparse_dense_ratio = 0;
+    level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
+    for (int i = 0; i < 5; i++) {
+	level_t suffix_len = suffix_len_array[i];
+	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+	builder_->build(words);
+	louds_sparse_ = new LoudsSparse(builder_);
+
+	bool inclusive = true;
+	for (unsigned j = 0; j < words.size() - 1; j++) {
+	    LoudsSparse::Iter iter(louds_sparse_);
+	    louds_sparse_->moveToKeyLessThan(words[j], inclusive, iter);
+
+	    ASSERT_TRUE(iter.isValid());
+	    std::string iter_key = iter.getKey();
+	    std::string word_prefix = words[j].substr(0, iter_key.length());
+	    bool is_prefix = (word_prefix.compare(iter_key) == 0);
+	    ASSERT_TRUE(is_prefix);
+	}
+
+	inclusive = false;
+	for (unsigned j = 1; j < words.size() - 1; j++) {
+	    LoudsSparse::Iter iter(louds_sparse_);
+	    louds_sparse_->moveToKeyLessThan(words[j], inclusive, iter);
+
+	    ASSERT_TRUE(iter.isValid());
+	    std::string iter_key = iter.getKey();
+	    std::string word_prefix = words[j-1].substr(0, iter_key.length());
+	    bool is_prefix = (word_prefix.compare(iter_key) == 0);
+	    ASSERT_TRUE(is_prefix);
+	}
+
+	LoudsSparse::Iter iter(louds_sparse_);
+	louds_sparse_->moveToKeyLessThan(words[0], inclusive, iter);
+	ASSERT_FALSE(iter.isValid());
+	delete builder_;
+	louds_sparse_->destroy();
+	delete louds_sparse_;
+    }
+}
+
 TEST_F (SparseUnitTest, IteratorIncrementWordTest) {
     bool include_dense = false;
     uint32_t sparse_dense_ratio = 0;
@@ -283,6 +326,9 @@ TEST_F (SparseUnitTest, IteratorIncrementWordTest) {
     }
     iter++;
     ASSERT_FALSE(iter.isValid());
+    delete builder_;
+    louds_sparse_->destroy();
+    delete louds_sparse_;
 }
 
 TEST_F (SparseUnitTest, IteratorIncrementIntTest) {
@@ -305,6 +351,60 @@ TEST_F (SparseUnitTest, IteratorIncrementIntTest) {
     }
     iter++;
     ASSERT_FALSE(iter.isValid());
+    delete builder_;
+    louds_sparse_->destroy();
+    delete louds_sparse_;
+}
+
+TEST_F (SparseUnitTest, IteratorDecrementWordTest) {
+    bool include_dense = false;
+    uint32_t sparse_dense_ratio = 0;
+    level_t suffix_len = 8;
+    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+    builder_->build(words);
+    louds_sparse_ = new LoudsSparse(builder_);
+    bool inclusive = true;
+    LoudsSparse::Iter iter(louds_sparse_);
+    louds_sparse_->moveToKeyGreaterThan(words[words.size() - 1], inclusive, iter);    
+    for (int i = words.size() - 2; i >= 0; i--) {
+	iter--;
+	ASSERT_TRUE(iter.isValid());
+	std::string iter_key = iter.getKey();
+	std::string word_prefix = words[i].substr(0, iter_key.length());
+	bool is_prefix = (word_prefix.compare(iter_key) == 0);
+	ASSERT_TRUE(is_prefix);
+    }
+    iter--;
+    ASSERT_FALSE(iter.isValid());
+    delete builder_;
+    louds_sparse_->destroy();
+    delete louds_sparse_;
+}
+
+TEST_F (SparseUnitTest, IteratorDecrementIntTest) {
+    bool include_dense = false;
+    uint32_t sparse_dense_ratio = 0;
+    level_t suffix_len = 8;
+    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+    builder_->build(ints_);
+    louds_sparse_ = new LoudsSparse(builder_);
+    bool inclusive = true;
+    LoudsSparse::Iter iter(louds_sparse_);
+    louds_sparse_->moveToKeyGreaterThan(surf::uint64ToString(kIntTestBound - kIntTestSkip), inclusive, iter);    
+    for (uint64_t i = kIntTestBound - 1 - kIntTestSkip; i > 0; i -= kIntTestSkip) {
+	iter--;
+	ASSERT_TRUE(iter.isValid());
+	std::string iter_key = iter.getKey();
+	std::string int_prefix = surf::uint64ToString(i).substr(0, iter_key.length());
+	bool is_prefix = (int_prefix.compare(iter_key) == 0);
+	ASSERT_TRUE(is_prefix);
+    }
+    iter--;
+    iter--;
+    ASSERT_FALSE(iter.isValid());
+    delete builder_;
+    louds_sparse_->destroy();
+    delete louds_sparse_;
 }
 
 void loadWordList() {

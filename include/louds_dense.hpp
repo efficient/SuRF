@@ -16,7 +16,9 @@ public:
     public:
 	Iter() : is_valid_(false) {};
 	Iter(LoudsDense* trie) : is_valid_(false), is_search_complete_(false), 
-				 is_move_left_complete_(false), trie_(trie), 
+				 is_move_left_complete_(false),
+				 is_move_right_complete_(false),
+				 trie_(trie), 
 				 send_out_node_num_(0), key_len_(0), 
 				 is_at_prefix_key_(false) {
 				 
@@ -29,7 +31,11 @@ public:
 	bool isValid() const { return is_valid_; };
 	bool isSearchComplete() const { return is_search_complete_; };
 	bool isMoveLeftComplete() const { return is_move_left_complete_; };
-	bool isComplete() const { return (is_search_complete_ && is_move_left_complete_); };
+	bool isMoveRightComplete() const { return is_move_right_complete_; };
+	bool isComplete() const {
+	    return (is_search_complete_ &&
+		    (is_move_left_complete_ && is_move_right_complete_));
+	}
 
 	int compare(const std::string& key);
 	std::string getKey() const;
@@ -37,15 +43,20 @@ public:
 	std::string getKeyWithSuffix(unsigned* bitlen) const;
 	position_t getSendOutNodeNum() const { return send_out_node_num_; };
 
+	void setToFirstLabelInRoot();
+	void setToLastLabelInRoot();
 	void moveToLeftMostKey();
+	void moveToRightMostKey();
 	void operator ++(int);
+	void operator --(int);
 
     private:
 	inline void append(position_t pos);
 	inline void set(level_t level, position_t pos);
 	inline void setSendOutNodeNum(position_t node_num) { send_out_node_num_ = node_num; };
 	inline void setFlags(const bool is_valid, const bool is_search_complete, 
-		      const bool is_move_left_complete);
+			     const bool is_move_left_complete,
+			     const bool is_move_right_complete);
 
     private:
 	// True means the iter either points to a valid key 
@@ -54,7 +65,9 @@ public:
 	// If false, call moveToKeyGreaterThan in LoudsSparse to complete
 	bool is_search_complete_; 
 	// If false, call moveToLeftMostKey in LoudsSparse to complete
-	bool is_move_left_complete_; 
+	bool is_move_left_complete_;
+	// If false, call moveToRightMostKey in LoudsSparse to complete
+	bool is_move_right_complete_; 
 	LoudsDense* trie_;
 	position_t send_out_node_num_;
 	level_t key_len_; // Does NOT include suffix
@@ -82,6 +95,7 @@ public:
     bool lookupKey(const std::string& key, position_t& out_node_num) const;
 
     void moveToKeyGreaterThan(const std::string& key, const bool inclusive, LoudsDense::Iter& iter) const;
+    void moveToKeyLessThan(const std::string& key, const bool inclusive, LoudsDense::Iter& iter) const;
     uint32_t countRange(const std::string& left_key, const std::string& right_key, position_t& out_left_pos, position_t& out_right_pos) const;
 
     uint64_t getHeight() const { return height_; };
@@ -123,6 +137,7 @@ private:
     inline position_t getChildNodeNum(const position_t pos) const;
     inline position_t getSuffixPos(const position_t pos, const bool is_prefix_key) const;
     inline position_t getNextPos(const position_t pos) const;
+    inline position_t getPrevPos(const position_t pos, bool* is_out_of_bound) const;
 
     inline void compareSuffixGreaterThan(const position_t pos, const std::string& key, const level_t level, const bool inclusive, LoudsDense::Iter& iter) const;
 
@@ -205,7 +220,7 @@ void LoudsDense::moveToKeyGreaterThan(const std::string& key, const bool inclusi
 	    iter.is_at_prefix_key_ = true;
 	    if (!inclusive)
 		return iter++;
-	    return iter.setFlags(true, true, true); // valid, search complete, moveLeft complete
+	    return iter.setFlags(true, true, true, true); // valid, search complete, moveLeft complete, moveRight complete
 	}
 
 	pos += (label_t)key[level];
@@ -223,7 +238,13 @@ void LoudsDense::moveToKeyGreaterThan(const std::string& key, const bool inclusi
 
     //search will continue in LoudsSparse
     iter.setSendOutNodeNum(node_num);
-    iter.setFlags(true, false, true); // valid, search INCOMPLETE, moveLeft complete
+    iter.setFlags(true, false, true, true); // valid, search INCOMPLETE, moveLeft complete, moveRight complete
+}
+
+void LoudsDense::moveToKeyLessThan(const std::string& key, const bool inclusive, LoudsDense::Iter& iter) const {
+    moveToKeyGreaterThan(key, !inclusive, iter);
+    if (iter.isValid())
+	iter--;
 }
 
 // TODO
@@ -268,6 +289,16 @@ inline position_t LoudsDense::getNextPos(const position_t pos) const {
     return pos + label_bitmaps_->distanceToNextSetBit(pos);
 }
 
+inline position_t LoudsDense::getPrevPos(const position_t pos, bool* is_out_of_bound) const {
+    position_t distance = label_bitmaps_->distanceToPrevSetBit(pos);
+    if (pos <= distance) {
+	*is_out_of_bound = true;
+	return 0;
+    }
+    *is_out_of_bound = false;
+    return (pos - distance);
+}
+
 inline void LoudsDense::compareSuffixGreaterThan(const position_t pos, const std::string& key, const level_t level, const bool inclusive, LoudsDense::Iter& iter) const {
     if (suffixes_->getType() == kReal) {
 	position_t suffix_pos = getSuffixPos(pos, false);
@@ -278,7 +309,7 @@ inline void LoudsDense::compareSuffixGreaterThan(const position_t pos, const std
 	if (!inclusive)
 	    return iter++;
     }
-    iter.setFlags(true, true, true); // valid, search complete, moveLeft complete    
+    iter.setFlags(true, true, true, true); // valid, search complete, moveLeft complete, moveRight complete  
 }
 
 //============================================================================
@@ -351,11 +382,32 @@ inline void LoudsDense::Iter::set(level_t level, position_t pos) {
     pos_in_trie_[level] = pos;
 }
 
-inline void LoudsDense::Iter::setFlags(const bool is_valid, const bool is_search_complete, 
-				const bool is_move_left_complete) {
+inline void LoudsDense::Iter::setFlags(const bool is_valid,
+				       const bool is_search_complete, 
+				       const bool is_move_left_complete,
+				       const bool is_move_right_complete) {
     is_valid_ = is_valid;
     is_search_complete_ = is_search_complete;
     is_move_left_complete_ = is_move_left_complete;
+    is_move_right_complete_ = is_move_right_complete;
+}
+
+void LoudsDense::Iter::setToFirstLabelInRoot() {
+    if (trie_->label_bitmaps_->readBit(0)) {
+	pos_in_trie_[0] = 0;
+	key_[0] = (label_t)0;
+    } else {
+	pos_in_trie_[0] = trie_->getNextPos(0);
+	key_[0] = (label_t)pos_in_trie_[0];
+    }
+    key_len_++;
+}
+
+void LoudsDense::Iter::setToLastLabelInRoot() {
+    bool is_out_of_bound;
+    pos_in_trie_[0] = trie_->getPrevPos(kNodeFanout, &is_out_of_bound);
+    key_[0] = (label_t)pos_in_trie_[0];
+    key_len_++;
 }
 
 void LoudsDense::Iter::moveToLeftMostKey() {
@@ -363,7 +415,7 @@ void LoudsDense::Iter::moveToLeftMostKey() {
     level_t level = key_len_ - 1;
     position_t pos = pos_in_trie_[level];
     if (!trie_->child_indicator_bitmaps_->readBit(pos))
-	return setFlags(true, true, true); // valid, search complete, moveLeft complete
+	return setFlags(true, true, true, true); // valid, search complete, moveLeft complete, moveRight complete
 
     while (level < trie_->getHeight() - 1) {
 	position_t node_num = trie_->getChildNodeNum(pos);
@@ -371,7 +423,7 @@ void LoudsDense::Iter::moveToLeftMostKey() {
 	if (trie_->prefixkey_indicator_bits_->readBit(node_num)) {
 	    append(trie_->getNextPos(node_num * kNodeFanout - 1));
 	    is_at_prefix_key_ = true;
-	    return setFlags(true, true, true); // valid, search complete, moveLeft complete
+	    return setFlags(true, true, true, true); // valid, search complete, moveLeft complete, moveRight complete
 	}
 
 	pos = trie_->getNextPos(node_num * kNodeFanout - 1);
@@ -379,12 +431,39 @@ void LoudsDense::Iter::moveToLeftMostKey() {
 
 	// if trie branch terminates
 	if (!trie_->child_indicator_bitmaps_->readBit(pos))
-	    return setFlags(true, true, true); // valid, search complete, moveLeft complete
+	    return setFlags(true, true, true, true); // valid, search complete, moveLeft complete, moveRight complete
 
 	level++;
     }
     send_out_node_num_ = trie_->getChildNodeNum(pos);
-    setFlags(true, true, false); // valid, search complete, moveLeft INCOMPLETE
+    setFlags(true, true, false, true); // valid, search complete, moveLeft INCOMPLETE, moveRight complete
+}
+
+void LoudsDense::Iter::moveToRightMostKey() {
+    assert(key_len_ > 0);
+    level_t level = key_len_ - 1;
+    position_t pos = pos_in_trie_[level];
+    if (!trie_->child_indicator_bitmaps_->readBit(pos))
+	return setFlags(true, true, true, true); // valid, search complete, moveLeft complete, moveRight complete
+
+    while (level < trie_->getHeight() - 1) {
+	position_t node_num = trie_->getChildNodeNum(pos);
+	bool is_out_of_bound;
+	pos = trie_->getPrevPos((node_num + 1) * kNodeFanout, &is_out_of_bound);
+	if (is_out_of_bound) {
+	    is_valid_ = false;
+	    return;
+	}
+	append(pos);
+
+	// if trie branch terminates
+	if (!trie_->child_indicator_bitmaps_->readBit(pos))
+	    return setFlags(true, true, true, true); // valid, search complete, moveLeft complete, moveRight complete
+
+	level++;
+    }
+    send_out_node_num_ = trie_->getChildNodeNum(pos);
+    setFlags(true, true, true, false); // valid, search complete, moveleft complete, moveRight INCOMPLETE
 }
 
 void LoudsDense::Iter::operator ++(int) {
@@ -407,6 +486,45 @@ void LoudsDense::Iter::operator ++(int) {
     }
     set(key_len_ - 1, next_pos);
     return moveToLeftMostKey();
+}
+
+void LoudsDense::Iter::operator --(int) {
+    assert(key_len_ > 0);
+    if (is_at_prefix_key_) {
+	is_at_prefix_key_ = false;
+	key_len_--;
+    }
+    position_t pos = pos_in_trie_[key_len_ - 1];
+    bool is_out_of_bound;
+    position_t prev_pos = trie_->getPrevPos(pos, &is_out_of_bound);
+    if (is_out_of_bound) {
+	is_valid_ = false;
+	return;
+    }
+    
+    // if crossing node boundary
+    while ((prev_pos / kNodeFanout) < (pos / kNodeFanout)) {
+	//if the current prefix is also a key
+	position_t node_num = pos / kNodeFanout;
+	if (trie_->prefixkey_indicator_bits_->readBit(node_num)) {
+	    is_at_prefix_key_ = true;
+	    return setFlags(true, true, true, true); // valid, search complete, moveLeft complete, moveRight complete
+	}
+	
+	key_len_--;
+	if (key_len_ == 0) {
+	    is_valid_ = false;
+	    return;
+	}
+	pos = pos_in_trie_[key_len_ - 1];
+	prev_pos = trie_->getPrevPos(pos, &is_out_of_bound);
+	if (is_out_of_bound) {
+	    is_valid_ = false;
+	    return;
+	}
+    }
+    set(key_len_ - 1, prev_pos);
+    return moveToRightMostKey();
 }
 
 } //namespace surf
