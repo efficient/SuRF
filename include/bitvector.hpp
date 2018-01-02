@@ -105,7 +105,7 @@ position_t Bitvector::distanceToNextSetBit (const position_t pos) const {
 }
 
 position_t Bitvector::distanceToPrevSetBit (const position_t pos) const {
-    assert(pos < num_bits_);
+    assert(pos <= num_bits_);
     if (pos == 0) return 0;
     position_t distance = 1;
 
