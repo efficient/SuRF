@@ -129,7 +129,7 @@ position_t Bitvector::distanceToPrevSetBit (const position_t pos) const {
 	    return (distance + __builtin_ctzll(test_bits));
 	distance += kWordSize;
     }
-    assert(false);
+    //assert(false);
     return distance;
 }
 
