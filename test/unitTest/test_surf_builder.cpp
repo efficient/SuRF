@@ -85,7 +85,7 @@ void SuRFBuilderUnitTest::truncateSuffixes(const std::vector<std::string> &keys,
 
 void SuRFBuilderUnitTest::fillinInts() {
     for (uint64_t i = 0; i < kIntTestSize; i += 10) {
-	ints_.push_back(surf::uint64ToString(i));
+	ints_.push_back(uint64ToString(i));
     }
 }
 
