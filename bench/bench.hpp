@@ -70,10 +70,35 @@ void loadKeysFromFile(const std::string& file_name, const bool is_key_int,
     }
 }
 
+void loadKeysFromFile(const std::string& file_name, uint64_t num_records,
+		      std::vector<uint64_t> &keys) {
+    std::ifstream infile(file_name);
+    uint64_t count = 0;
+    while (count < num_records && infile.good()) {
+	uint64_t key;
+	infile >> key;
+	keys.push_back(key);
+	count++;
+    }
+}
+
 // 0 < percent <= 100
 void selectKeysToInsert(const unsigned percent, 
 			std::vector<std::string> &insert_keys, 
 			std::vector<std::string> &keys) {
+    random_shuffle(keys.begin(), keys.end());
+    uint64_t num_insert_keys = keys.size() * percent / 100;
+    for (uint64_t i = 0; i < num_insert_keys; i++)
+	insert_keys.push_back(keys[i]);
+
+    keys.clear();
+    sort(insert_keys.begin(), insert_keys.end());
+}
+
+// 0 < percent <= 100
+void selectIntKeysToInsert(const unsigned percent, 
+			   std::vector<uint64_t> &insert_keys, 
+			   std::vector<uint64_t> &keys) {
     random_shuffle(keys.begin(), keys.end());
     uint64_t num_insert_keys = keys.size() * percent / 100;
     for (uint64_t i = 0; i < num_insert_keys; i++)

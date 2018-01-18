@@ -2,7 +2,6 @@
 #define FILTER_FACTORY_H_
 
 #include "filter.hpp"
-#include "filter_arf.hpp"
 #include "filter_bloom.hpp"
 #include "filter_surf.hpp"
 
@@ -21,8 +20,6 @@ public:
 	    return new FilterSuRF(keys, surf::kReal, suffix_len);
 	else if (filter_type.compare(std::string("Bloom")) == 0)
 	    return new FilterBloom(keys);
-	else if (filter_type.compare(std::string("ARF")) == 0)
-	    return new FilterARF(keys);
 	else
 	    return new FilterSuRF(keys, surf::kReal, suffix_len); // default
     }

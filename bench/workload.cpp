@@ -4,7 +4,7 @@
 int main(int argc, char *argv[]) {
     if (argc != 10) {
 	std::cout << "Usage:\n";
-	std::cout << "1. filter type: SuRF, SuRFHash, SuRFReal, Bloom, ARF\n";
+	std::cout << "1. filter type: SuRF, SuRFHash, SuRFReal, Bloom\n";
 	std::cout << "2. suffix length: 0 < len <= 64 (for SuRFHash and SuRFReal only)\n";
 	std::cout << "3. workload type: mixed, alterByte (only for email key)\n";
 	std::cout << "4. percentage of keys inserted: 0 < num <= 100\n";
