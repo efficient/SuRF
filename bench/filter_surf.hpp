@@ -11,11 +11,12 @@ namespace bench {
 class FilterSuRF : public Filter {
 public:
     // Requires that keys are sorted
-    FilterSuRF(const std::vector<std::string>& keys, 
-	       const surf::SuffixType suffix_type, const uint32_t suffix_len) {
+    FilterSuRF(const std::vector<std::string>& keys,
+	       const surf::SuffixType suffix_type,
+               const uint32_t hash_suffix_len, const uint32_t real_suffix_len) {
 	// uses default sparse-dense size ratio
-	filter_ = new surf::SuRF(keys, surf::kIncludeDense, surf::kSparseDenseRatio, 
-				 suffix_type, suffix_len);
+	filter_ = new surf::SuRF(keys, surf::kIncludeDense, surf::kSparseDenseRatio,
+				 suffix_type, hash_suffix_len, real_suffix_len);
     }
 
     ~FilterSuRF() {

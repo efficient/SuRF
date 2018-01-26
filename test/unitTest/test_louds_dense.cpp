@@ -19,6 +19,8 @@ static const int kTestSize = 234369;
 static const uint64_t kIntTestStart = 10;
 static const int kIntTestBound = 1000001;
 static const uint64_t kIntTestSkip = 10;
+static const bool kIncludeDense = true;
+static const uint32_t kSparseDenseRatio = 0;
 static std::vector<std::string> words;
 
 class DenseUnitTest : public ::testing::Test {
@@ -33,6 +35,7 @@ public:
 	    delete[] data_;
     }
 
+    void newBuilder(level_t suffix_len);
     void truncateWordSuffixes();
     void fillinInts();
     void testSerialize();
@@ -58,9 +61,13 @@ static int getMax(int a, int b) {
     return a;
 }
 
+void DenseUnitTest::newBuilder(level_t suffix_len) {
+    builder_ = new SuRFBuilder(kIncludeDense, kSparseDenseRatio, kReal, 0, suffix_len);
+}
+
 void DenseUnitTest::truncateWordSuffixes() {
     assert(words.size() > 1);
-    
+
     int commonPrefixLen = 0;
     for (unsigned i = 0; i < words.size(); i++) {
 	if (i == 0) {
@@ -97,7 +104,7 @@ void DenseUnitTest::testSerialize() {
     louds_dense_ = LoudsDense::deSerialize(data);
 
     ASSERT_EQ(ori_louds_dense->getHeight(), louds_dense_->getHeight());
-    
+
     ori_louds_dense->destroy();
     delete ori_louds_dense;
 }
@@ -120,12 +127,10 @@ void DenseUnitTest::testLookupWord() {
 }
 
 TEST_F (DenseUnitTest, lookupWordTest) {
-    bool include_dense = true;
-    uint32_t sparse_dense_ratio = 0;
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+        newBuilder(suffix_len);
 	builder_->build(words);
 	louds_dense_ = new LoudsDense(builder_);
 	testLookupWord();
@@ -136,12 +141,10 @@ TEST_F (DenseUnitTest, lookupWordTest) {
 }
 
 TEST_F (DenseUnitTest, serializeTest) {
-    bool include_dense = true;
-    uint32_t sparse_dense_ratio = 0;
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+        newBuilder(suffix_len);
 	builder_->build(words);
 	louds_dense_ = new LoudsDense(builder_);
 
@@ -152,10 +155,8 @@ TEST_F (DenseUnitTest, serializeTest) {
 }
 
 TEST_F (DenseUnitTest, lookupIntTest) {
-    bool include_dense = true;
-    uint32_t sparse_dense_ratio = 0;
     level_t suffix_len = 8;
-    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+    newBuilder(suffix_len);
     builder_->build(ints_);
     louds_dense_ = new LoudsDense(builder_);
     position_t out_node_num = 0;
@@ -176,12 +177,10 @@ TEST_F (DenseUnitTest, lookupIntTest) {
 }
 
 TEST_F (DenseUnitTest, moveToKeyGreaterThanWordTest) {
-    bool include_dense = true;
-    uint32_t sparse_dense_ratio = 0;
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+        newBuilder(suffix_len);
 	builder_->build(words);
 	louds_dense_ = new LoudsDense(builder_);
 	for (unsigned i = 0; i < words.size(); i++) {
@@ -221,10 +220,8 @@ TEST_F (DenseUnitTest, moveToKeyGreaterThanWordTest) {
 }
 
 TEST_F (DenseUnitTest, moveToKeyGreaterThanIntTest) {
-    bool include_dense = true;
-    uint32_t sparse_dense_ratio = 0;
     level_t suffix_len = 8;
-    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+    newBuilder(suffix_len);
     builder_->build(ints_);
     louds_dense_ = new LoudsDense(builder_);
     for (uint64_t i = 0; i < kIntTestBound; i++) {
@@ -269,12 +266,10 @@ TEST_F (DenseUnitTest, moveToKeyGreaterThanIntTest) {
 }
 
 TEST_F (DenseUnitTest, moveToKeyLessThanWordTest) {
-    bool include_dense = true;
-    uint32_t sparse_dense_ratio = 0;
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+        newBuilder(suffix_len);
 	builder_->build(words);
 	louds_dense_ = new LoudsDense(builder_);
 	for (unsigned i = 0; i < words.size() - 1; i++) {
@@ -314,10 +309,8 @@ TEST_F (DenseUnitTest, moveToKeyLessThanWordTest) {
 }
 
 TEST_F (DenseUnitTest, IteratorIncrementWordTest) {
-    bool include_dense = true;
-    uint32_t sparse_dense_ratio = 0;
     level_t suffix_len = 8;
-    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+    newBuilder(suffix_len);
     builder_->build(words);
     louds_dense_ = new LoudsDense(builder_);
     bool inclusive = true;
@@ -340,10 +333,8 @@ TEST_F (DenseUnitTest, IteratorIncrementWordTest) {
 }
 
 TEST_F (DenseUnitTest, IteratorIncrementIntTest) {
-    bool include_dense = true;
-    uint32_t sparse_dense_ratio = 0;
     level_t suffix_len = 8;
-    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+    newBuilder(suffix_len);
     builder_->build(ints_);
     louds_dense_ = new LoudsDense(builder_);
     bool inclusive = true;
@@ -366,10 +357,8 @@ TEST_F (DenseUnitTest, IteratorIncrementIntTest) {
 }
 
 TEST_F (DenseUnitTest, IteratorDecrementWordTest) {
-    bool include_dense = true;
-    uint32_t sparse_dense_ratio = 0;
     level_t suffix_len = 8;
-    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+    newBuilder(suffix_len);
     builder_->build(words);
     louds_dense_ = new LoudsDense(builder_);
     bool inclusive = true;
@@ -392,10 +381,8 @@ TEST_F (DenseUnitTest, IteratorDecrementWordTest) {
 }
 
 TEST_F (DenseUnitTest, IteratorDecrementIntTest) {
-    bool include_dense = true;
-    uint32_t sparse_dense_ratio = 0;
     level_t suffix_len = 8;
-    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+    newBuilder(suffix_len);
     builder_->build(ints_);
     louds_dense_ = new LoudsDense(builder_);
     bool inclusive = true;

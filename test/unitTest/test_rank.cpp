@@ -24,7 +24,7 @@ public:
 	bool include_dense = false;
 	uint32_t sparse_dense_ratio = 0;
 	level_t suffix_len = 8;
-	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, suffix_len);
+	builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio, kReal, 0, suffix_len);
 	data_ = nullptr;
 	data2_ = nullptr;
 	num_items_ = 0;

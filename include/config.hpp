@@ -26,7 +26,8 @@ static const int kHashShift = 7;
 enum SuffixType {
     kNone = 0,
     kHash = 1,
-    kReal = 2
+    kReal = 2,
+    kMixed = 3
 };
 
 void align(char*& ptr) {

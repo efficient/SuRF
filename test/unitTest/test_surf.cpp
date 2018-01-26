@@ -33,6 +33,8 @@ public:
 	    delete[] data_;
     }
 
+    void newSuRFWords(level_t suffix_len);
+    void newSuRFInts(level_t suffix_len);
     void truncateWordSuffixes();
     void fillinInts();
     void testSerialize();
@@ -69,6 +71,28 @@ static bool isEqual(const std::string& a, const std::string& b, const unsigned b
 	char b_suf = b[b.length() - 1] & mask;
 	return (a_suf == b_suf);
     }
+}
+
+void SuRFUnitTest::newSuRFWords(level_t suffix_len) {
+    if (kSuffixType == kNone)
+        surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, 0, 0);
+    else if (kSuffixType == kHash)
+        surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len, 0);
+    else if (kSuffixType == kReal)
+        surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, 0, suffix_len);
+    else
+        surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len, suffix_len);
+}
+
+void SuRFUnitTest::newSuRFInts(level_t suffix_len) {
+    if (kSuffixType == kNone)
+        surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, 0, 0);
+    else if (kSuffixType == kHash)
+        surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len, 0);
+    else if (kSuffixType == kReal)
+        surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, 0, suffix_len);
+    else
+        surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len, suffix_len);
 }
 
 void SuRFUnitTest::truncateWordSuffixes() {
@@ -135,7 +159,7 @@ TEST_F (SuRFUnitTest, lookupWordTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+        newSuRFWords(suffix_len);
 	//surf_ = new SuRF();
 	//surf_->create(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	testLookupWord();
@@ -148,7 +172,7 @@ TEST_F (SuRFUnitTest, serializeTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+        newSuRFWords(suffix_len);
 	//surf_ = new SuRF();
 	//surf_->create(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	testSerialize();
@@ -160,7 +184,7 @@ TEST_F (SuRFUnitTest, lookupIntTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+        newSuRFInts(suffix_len);
 	//surf_ = new SuRF();
 	//surf_->create(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	for (uint64_t i = 0; i < kIntTestBound; i += kIntTestSkip) {
@@ -179,7 +203,7 @@ TEST_F (SuRFUnitTest, moveToKeyGreaterThanWordTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+        newSuRFWords(suffix_len);
 	//surf_ = new SuRF();
 	//surf_->create(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	for (int i = -1; i <= (int)words.size(); i++) {
@@ -235,7 +259,7 @@ TEST_F (SuRFUnitTest, moveToKeyGreaterThanIntTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+        newSuRFInts(suffix_len);
 	//surf_ = new SuRF();
 	//surf_->create(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	for (uint64_t i = 0; i < kIntTestBound; i++) {
@@ -282,7 +306,7 @@ TEST_F (SuRFUnitTest, moveToKeyLessThanWordTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+        newSuRFWords(suffix_len);
 	//surf_ = new SuRF();
 	//surf_->create(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	for (int i = 0; i < (int)words.size(); i++) {
@@ -323,7 +347,7 @@ TEST_F (SuRFUnitTest, moveToKeyLessThanIntTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+        newSuRFInts(suffix_len);
 	//surf_ = new SuRF();
 	//surf_->create(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	for (uint64_t i = 0; i < kIntTestBound; i++) {
@@ -374,7 +398,7 @@ TEST_F (SuRFUnitTest, IteratorIncrementWordTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+        newSuRFWords(suffix_len);
 	//surf_ = new SuRF();
 	//surf_->create(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	bool inclusive = true;
@@ -400,7 +424,7 @@ TEST_F (SuRFUnitTest, IteratorIncrementIntTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+        newSuRFInts(suffix_len);
 	//surf_ = new SuRF();
 	//surf_->create(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	bool inclusive = true;
@@ -426,7 +450,7 @@ TEST_F (SuRFUnitTest, IteratorDecrementWordTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+        newSuRFWords(suffix_len);
 	//surf_ = new SuRF();
 	//surf_->create(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	bool inclusive = true;
@@ -452,7 +476,7 @@ TEST_F (SuRFUnitTest, IteratorDecrementIntTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+        newSuRFInts(suffix_len);
 	//surf_ = new SuRF();
 	//surf_->create(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	bool inclusive = true;
@@ -479,7 +503,7 @@ TEST_F (SuRFUnitTest, lookupRangeWordTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	surf_ = new SuRF(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+        newSuRFWords(suffix_len);
 	//surf_ = new SuRF();
 	//surf_->create(words, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 
@@ -504,14 +528,14 @@ TEST_F (SuRFUnitTest, lookupRangeWordTest) {
 	exist = surf_->lookupRange(words[words.size() - 1], false, std::string("zzzzzzzz"), false);
 	ASSERT_FALSE(exist);
 
-    }    
+    }
 }
 
 TEST_F (SuRFUnitTest, lookupRangeIntTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
-	surf_ = new SuRF(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
+        newSuRFInts(suffix_len);
 	//surf_ = new SuRF();
 	//surf_->create(ints_, kIncludeDense, kSparseDenseRatio, kSuffixType, suffix_len);
 	for (uint64_t i = 0; i < kIntTestBound; i++) {

@@ -182,12 +182,15 @@ LoudsSparse::LoudsSparse(const SuRFBuilder* builder) {
     if (builder->getSuffixType() == kNone) {
 	suffixes_ = new BitvectorSuffix();
     } else {
-	level_t suffix_len = builder->getSuffixLen();
+	level_t hash_suffix_len = builder->getHashSuffixLen();
+        level_t real_suffix_len = builder->getRealSuffixLen();
+        level_t suffix_len = hash_suffix_len + real_suffix_len;
 	std::vector<position_t> num_suffix_bits_per_level;
 	for (level_t level = 0; level < height_; level++)
 	    num_suffix_bits_per_level.push_back(builder->getSuffixCounts()[level] * suffix_len);
 
-	suffixes_ = new BitvectorSuffix(builder->getSuffixType(), suffix_len, builder->getSuffixes(), 
+	suffixes_ = new BitvectorSuffix(builder->getSuffixType(), hash_suffix_len, real_suffix_len,
+                                        builder->getSuffixes(),
 					num_suffix_bits_per_level, start_level_, height_);
     }
 }
@@ -310,7 +313,7 @@ inline void LoudsSparse::moveToLeftInNextSubtrie(position_t pos, const position_
 }
 
 inline void LoudsSparse::compareSuffixGreaterThan(const position_t pos, const std::string& key, const level_t level, const bool inclusive, LoudsSparse::Iter& iter) const {
-    if (suffixes_->getType() == kReal) {
+    if ((suffixes_->getType() == kReal) || (suffixes_->getType() == kMixed)) {
 	position_t suffix_pos = getSuffixPos(pos);
 	int compare = suffixes_->compare(suffix_pos, key, level);
 	if ((compare < 0) || (compare == 0 && !inclusive))
@@ -337,7 +340,7 @@ int LoudsSparse::Iter::compare(const std::string& key) {
 }
 
 std::string LoudsSparse::Iter::getKey() const {
-    if (!is_valid_) 
+    if (!is_valid_)
 	return std::string();
     level_t len = key_len_;
     if (is_at_terminator_)
@@ -346,10 +349,10 @@ std::string LoudsSparse::Iter::getKey() const {
 }
 
 int LoudsSparse::Iter::getSuffix(word_t* suffix) const {
-    if (trie_->suffixes_->getType() == kReal) {
+    if ((trie_->suffixes_->getType() == kReal) || (trie_->suffixes_->getType() == kMixed)) {
 	position_t suffix_pos = trie_->getSuffixPos(pos_in_trie_[key_len_ - 1]);
-	*suffix = trie_->suffixes_->read(suffix_pos);
-	return trie_->suffixes_->getSuffixLen();
+	*suffix = trie_->suffixes_->readReal(suffix_pos);
+	return trie_->suffixes_->getRealSuffixLen();
     }
     *suffix = 0;
     return 0;
@@ -357,11 +360,11 @@ int LoudsSparse::Iter::getSuffix(word_t* suffix) const {
 
 std::string LoudsSparse::Iter::getKeyWithSuffix(unsigned* bitlen) const {
     std::string iter_key = getKey();
-    if (trie_->suffixes_->getType() == kReal) {
+    if ((trie_->suffixes_->getType() == kReal) || (trie_->suffixes_->getType() == kMixed)) {
 	position_t suffix_pos = trie_->getSuffixPos(pos_in_trie_[key_len_ - 1]);
-	word_t suffix = trie_->suffixes_->read(suffix_pos);
+	word_t suffix = trie_->suffixes_->readReal(suffix_pos);
 	if (suffix > 0) {
-	    level_t suffix_len = trie_->suffixes_->getSuffixLen();
+	    level_t suffix_len = trie_->suffixes_->getRealSuffixLen();
 	    *bitlen = suffix_len % 8;
 	    suffix <<= (64 - suffix_len);
 	    char* suffix_str = reinterpret_cast<char*>(&suffix);

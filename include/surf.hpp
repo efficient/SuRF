@@ -49,10 +49,10 @@ public:
 public:
     SuRF() {};
 
-    SuRF(const std::vector<std::string>& keys, 
+    SuRF(const std::vector<std::string>& keys,
 	 const bool include_dense, const uint32_t sparse_dense_ratio,
-	 const SuffixType suffix_type, const level_t suffix_len) {
-	create(keys, include_dense, sparse_dense_ratio, suffix_type, suffix_len);
+	 const SuffixType suffix_type, const level_t hash_suffix_len, const level_t real_suffix_len) {
+	create(keys, include_dense, sparse_dense_ratio, suffix_type, hash_suffix_len, real_suffix_len);
     }
 
     ~SuRF() {
@@ -60,9 +60,10 @@ public:
 	//delete louds_sparse_;
     }
 
-    void create(const std::vector<std::string>& keys, 
+    void create(const std::vector<std::string>& keys,
 		const bool include_dense, const uint32_t sparse_dense_ratio,
-		const SuffixType suffix_type, const level_t suffix_len);
+		const SuffixType suffix_type,
+                const level_t hash_suffix_len, const level_t real_suffix_len);
 
     bool lookupKey(const std::string& key) const;
     // This function searches in a conservative way: if inclusive is true
@@ -111,8 +112,10 @@ private:
 
 void SuRF::create(const std::vector<std::string>& keys, 
 		  const bool include_dense, const uint32_t sparse_dense_ratio,
-		  const SuffixType suffix_type, const level_t suffix_len) {
-    builder = new SuRFBuilder(include_dense, sparse_dense_ratio, suffix_type, suffix_len);
+		  const SuffixType suffix_type,
+                  const level_t hash_suffix_len, const level_t real_suffix_len) {
+    builder = new SuRFBuilder(include_dense, sparse_dense_ratio,
+                              suffix_type, hash_suffix_len, real_suffix_len);
     builder->build(keys);
     louds_dense_ = new LoudsDense(builder);
     louds_sparse_ = new LoudsSparse(builder);
