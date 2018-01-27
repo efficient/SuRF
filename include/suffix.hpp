@@ -66,17 +66,11 @@ public:
 
     static inline word_t constructMixedSuffix(const std::string& key, const level_t hash_len,
                                               const level_t real_level, const level_t real_len) {
-        //std::cout << "hash_len = " << hash_len << "\treal_len = " << real_len << std::endl;
         word_t hash_suffix = constructHashSuffix(key, hash_len);
-        //std::cout << "hash_suffix = " << std::hex << hash_suffix << std::dec << std::endl;
         word_t real_suffix = constructRealSuffix(key, real_level, real_len);
-        //std::cout << "real_suffix = " << std::hex << real_suffix << std::dec << std::endl;
         word_t suffix = hash_suffix;
-        //std::cout << "suffix = " << std::hex << suffix << std::dec << std::endl;
         suffix <<= real_len;
-        //std::cout << "suffix = " << std::hex << suffix << std::dec << std::endl;
         suffix |= real_suffix;
-        //std::cout << "suffix = " << std::hex << suffix << std::dec << std::endl;
         return suffix;
     }
 
@@ -103,7 +97,6 @@ public:
         word_t real_suffix_mask = 1;
         real_suffix_mask <<= real_suffix_len;
         real_suffix_mask--;
-        //std::cout << "mask = " << std::hex << real_suffix_mask << std::dec << std::endl;
         return (suffix & real_suffix_mask);
     }
 
@@ -190,21 +183,11 @@ private:
 word_t BitvectorSuffix::read(const position_t idx) const {
     if (type_ == kNone) return 0;
     level_t suffix_len = getSuffixLen();
-
-    //std::cout << "\tidx = " << idx << std::endl;
-    //std::cout << "\tsuffix_len = " << suffix_len << std::endl;
-
     if (idx * suffix_len >= num_bits_) return 0;
     position_t bit_pos = idx * suffix_len;
     position_t word_id = bit_pos / kWordSize;
     position_t offset = bit_pos & (kWordSize - 1);
     word_t ret_word = (bits_[word_id] << offset) >> (kWordSize - suffix_len);
-
-    //std::cout << "\tbit_pos = " << bit_pos << std::endl;
-    //std::cout << "\tword_id = " << word_id << std::endl;
-    //std::cout << "\toffset = " << offset << std::endl;
-    //std::cout << "\tret_word = " << std::hex << ret_word << std::dec << std::endl;
-
     if (offset + suffix_len > kWordSize)
 	ret_word += (bits_[word_id+1] >> (kWordSize - offset - suffix_len));
     return ret_word;
@@ -225,14 +208,6 @@ bool BitvectorSuffix::checkEquality(const position_t idx, const std::string& key
 	if (key.length() < level || ((key.length() - level) * 8) < real_suffix_len_) return false;
     }
     word_t querying_suffix = constructSuffix(type_, key, hash_suffix_len_, level, real_suffix_len_);
-
-    // std::cout << "type = " << type_ << std::endl;
-    // std::cout << "hash len = " << hash_suffix_len_ << std::endl;
-    // std::cout << "real len = " << real_suffix_len_ << std::endl;
-    // std::cout << "hash = " << std::hex << constructHashSuffix(key, hash_suffix_len_) << std::dec << std::endl;
-    // std::cout << "stored_suffix = " << std::hex << stored_suffix << std::dec << std::endl;
-    // std::cout << "querying_suffix = " << std::hex << querying_suffix << std::dec << std::endl;
-
     if (stored_suffix == querying_suffix) return true;
     return false;
 }
