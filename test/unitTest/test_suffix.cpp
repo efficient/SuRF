@@ -136,10 +136,8 @@ TEST_F (SuffixUnitTest, constructMixedSuffixTest) {
     const level_t level = 2;
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int i = 0; i < 5; i++) {
-        //for (int i = 1; i < 2; i++) {
 	level_t suffix_len = suffix_len_array[i];
 	for (unsigned j = 0; j < words.size(); j++) {
-            //for (unsigned j = 2; j < 3; j++) {
 	    word_t suffix = BitvectorSuffix::constructSuffix(kMixed, words[j], suffix_len,
                                                              level, suffix_len);
             word_t hash_suffix = BitvectorSuffix::extractHashSuffix(suffix, suffix_len);
