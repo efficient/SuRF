@@ -10,9 +10,4 @@ python gen_txn.py email uniform
 python gen_txn.py email zipfian
 #python gen_txn.py email latest
 
-#python poisson.py
-#python gen_load.py timestamp uniform
-#python gen_txn.py timestamp uniform
-#python gen_txn.py timestamp zipfian
-#python gen_txn.py timestamp latest
 
