@@ -12,8 +12,17 @@ range counts. This is the source code for our
     cmake ..
     make -j
 
-## Test
+## Run Unit Tests
     make test
+
+## Benchmark
+
+### Step 1: Download YCSB
+    cd bench/workload_gen
+    bash ycsb_download.sh
+
+### Step 2: Generate Workloads
+    bash gen_workload.sh
 
 ## License
     Copyright 2018, Carnegie Mellon University
