@@ -4,6 +4,17 @@ provides exact-match filtering, range filtering, and approximate
 range counts. This is the source code for our
 [SIGMOD paper](http://www.cs.cmu.edu/~huanche1/publications/surf_paper.pdf).
 
+## Build
+    git submodule init
+    git submodule update
+    mkdir build
+    cd build
+    cmake ..
+    make -j
+
+## Test
+    make test
+
 ## License
     Copyright 2018, Carnegie Mellon University
 
