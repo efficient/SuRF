@@ -1,6 +1,8 @@
 #include "bench.hpp"
 #include "filter_factory.hpp"
 
+//#define VERBOSE 1
+
 static std::vector<std::string> txn_keys;
 static std::vector<std::string> upper_bound_keys;
 
@@ -28,8 +30,13 @@ void* execute_workload(void* arg) {
     }
     double end_time = bench::getNow();
     double tput = (thread_arg->end_pos - thread_arg->start_pos) / (end_time - start_time) / 1000000; // Mops/sec
+
+#ifdef VERBOSE
     std::cout << "Thread #" << thread_arg->thread_id << bench::kGreen 
-	      << ": Throughput = " << bench::kNoColor << tput << "\n";
+    	      << ": Throughput = " << bench::kNoColor << tput << "\n";
+#else
+    std::cout << tput << "\n";
+#endif
 
     thread_arg->out_positives = positives;
     thread_arg->tput = tput;
@@ -38,7 +45,7 @@ void* execute_workload(void* arg) {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 11) {
+    if (argc != 10) {
 	std::cout << "Usage:\n";
 	std::cout << "1. filter type: SuRF, SuRFHash, SuRFReal, Bloom\n";
 	std::cout << "2. suffix length: 0 < len <= 64 (for SuRFHash and SuRFReal only)\n";
@@ -47,9 +54,8 @@ int main(int argc, char *argv[]) {
 	std::cout << "5. byte position (conting from last, only for alterByte): num\n";
 	std::cout << "6. key type: randint, timestamp, email\n";
 	std::cout << "7. query type: point, range\n";
-	std::cout << "8. range size: num\n";
-	std::cout << "9. distribution: uniform, zipfian, latest\n";
-	std::cout << "10. number of threads\n";
+	std::cout << "8. distribution: uniform, zipfian, latest\n";
+	std::cout << "9. number of threads\n";
 	return -1;
     }
 
@@ -60,9 +66,8 @@ int main(int argc, char *argv[]) {
     unsigned byte_pos = atoi(argv[5]);
     std::string key_type = argv[6];
     std::string query_type = argv[7];
-    uint64_t range_size = atoi(argv[8]);
-    std::string distribution = argv[9];
-    int num_threads = atoi(argv[10]);
+    std::string distribution = argv[8];
+    int num_threads = atoi(argv[9]);
 
     // check args ====================================================
     if (filter_type.compare(std::string("SuRF")) != 0
@@ -139,12 +144,15 @@ int main(int argc, char *argv[]) {
     //std::vector<std::string> upper_bound_keys;
     if (query_type.compare(std::string("range")) == 0) {
 	for (int i = 0; i < (int)txn_keys.size(); i++)
-	    upper_bound_keys.push_back(bench::getUpperBoundKey(key_type, txn_keys[i], range_size));
+	    upper_bound_keys.push_back(bench::getUpperBoundKey(key_type, txn_keys[i]));
     }
 
     // create filter ==============================================
     bench::Filter* filter = bench::FilterFactory::createFilter(filter_type, suffix_len, insert_keys);
+
+#ifdef VERBOSE
     std::cout << bench::kGreen << "Memory = " << bench::kNoColor << filter->getMemoryUsage() << std::endl;
+#endif
 
     // execute transactions =======================================
     pthread_t* threads = new pthread_t[num_threads];
@@ -193,6 +201,7 @@ int main(int argc, char *argv[]) {
 	tput += thread_args[i].tput;
     }
 
+#ifdef VERBOSE
     std::cout << bench::kGreen << "Throughput = " << bench::kNoColor << tput << "\n";
 
     int positives = 0;
@@ -224,16 +233,19 @@ int main(int argc, char *argv[]) {
     int64_t false_positives = positives - true_positives;
     assert(false_positives >= 0);
     int64_t true_negatives = txn_keys.size() - true_positives;
+    double fp_rate = 0;
+    if (false_positives > 0)
+	fp_rate = false_positives / (true_negatives + false_positives + 0.0);
 
     std::cout << "positives = " << positives << "\n";
     std::cout << "true positives = " << true_positives << "\n";
     std::cout << "false positives = " << false_positives << "\n";
     std::cout << "true negatives = " << true_negatives << "\n";
-
-    double fp_rate = 0;
-    if (false_positives > 0)
-	fp_rate = false_positives / (true_negatives + false_positives + 0.0);
     std::cout << bench::kGreen << "False Positive Rate = " << bench::kNoColor << fp_rate << "\n";
+#else
+    std::cout << tput << "\n";
+    std::cout << bench::kGreen << bench::kNoColor << "\n\n";
+#endif
 
     delete[] threads;
     delete[] thread_args;

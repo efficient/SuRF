@@ -28,6 +28,7 @@ public:
 	    }
 	}
 
+	void clear();
 	bool isValid() const { return is_valid_; };
 	bool isSearchComplete() const { return is_search_complete_; };
 	bool isMoveLeftComplete() const { return is_move_left_complete_; };
@@ -233,9 +234,8 @@ void LoudsDense::moveToKeyGreaterThan(const std::string& key, const bool inclusi
 	if (!label_bitmaps_->readBit(pos))
 	    return iter++;
 	//if trie branch terminates
-	if (!child_indicator_bitmaps_->readBit(pos)) {
+	if (!child_indicator_bitmaps_->readBit(pos))
 	    return compareSuffixGreaterThan(pos, key, level+1, inclusive, iter);
-	}
 	node_num = getChildNodeNum(pos);
     }
 
@@ -316,6 +316,12 @@ inline void LoudsDense::compareSuffixGreaterThan(const position_t pos, const std
 }
 
 //============================================================================
+
+void LoudsDense::Iter::clear() {
+    is_valid_ = false;
+    key_len_ = 0;
+    is_at_prefix_key_ = false;
+}
 
 int LoudsDense::Iter::compare(const std::string& key) {
     if (is_at_prefix_key_ && (key_len_ - 1) < key.length())

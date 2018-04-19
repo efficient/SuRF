@@ -29,7 +29,8 @@ public:
     }
 
     bool lookupRange(const std::string& left_key, const std::string& right_key) {
-	return filter_->lookupRange(left_key, false, right_key, false);
+	//return filter_->lookupRange(left_key, false, right_key, false);
+	return filter_->lookupRange(left_key, true, right_key, true);
     }
 
     uint64_t getMemoryUsage() {

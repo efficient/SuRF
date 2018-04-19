@@ -21,6 +21,7 @@ public:
 	    sparse_iter_ = LoudsSparse::Iter(filter->louds_sparse_);
 	}
 
+	void clear();
 	bool isValid() const;
 	int compare(const std::string& key);
 	std::string getKey() const;
@@ -73,7 +74,7 @@ public:
     SuRF::Iter moveToFirst() const;
     SuRF::Iter moveToLast() const;
     bool lookupRange(const std::string& left_key, const bool left_inclusive, 
-		     const std::string& right_key, const bool right_inclusive) const;
+		     const std::string& right_key, const bool right_inclusive);
     uint32_t countRange(const std::string& left_key, const bool left_inclusive, 
 			const std::string& right_key, const bool right_inclusive) const;
 
@@ -107,19 +108,21 @@ public:
 private:
     LoudsDense* louds_dense_;
     LoudsSparse* louds_sparse_;
-    SuRFBuilder* builder;
+    SuRFBuilder* builder_;
+    SuRF::Iter iter_;
 };
 
 void SuRF::create(const std::vector<std::string>& keys, 
 		  const bool include_dense, const uint32_t sparse_dense_ratio,
 		  const SuffixType suffix_type,
                   const level_t hash_suffix_len, const level_t real_suffix_len) {
-    builder = new SuRFBuilder(include_dense, sparse_dense_ratio,
+    builder_ = new SuRFBuilder(include_dense, sparse_dense_ratio,
                               suffix_type, hash_suffix_len, real_suffix_len);
-    builder->build(keys);
-    louds_dense_ = new LoudsDense(builder);
-    louds_sparse_ = new LoudsSparse(builder);
-    delete builder;
+    builder_->build(keys);
+    louds_dense_ = new LoudsDense(builder_);
+    louds_sparse_ = new LoudsSparse(builder_);
+    iter_ = SuRF::Iter(this);
+    delete builder_;
 }
 
 bool SuRF::lookupKey(const std::string& key) const {
@@ -134,7 +137,6 @@ bool SuRF::lookupKey(const std::string& key) const {
 SuRF::Iter SuRF::moveToKeyGreaterThan(const std::string& key, const bool inclusive) const {
     SuRF::Iter iter(this);
     louds_dense_->moveToKeyGreaterThan(key, inclusive, iter.dense_iter_);
-
     if (!iter.dense_iter_.isValid()) return iter;
     if (iter.dense_iter_.isComplete()) return iter;
 
@@ -150,6 +152,7 @@ SuRF::Iter SuRF::moveToKeyGreaterThan(const std::string& key, const bool inclusi
 	iter.sparse_iter_.moveToLeftMostKey();
 	return iter;
     }
+
     assert(false); // shouldn't have reached here
     return iter;
 }
@@ -196,7 +199,30 @@ SuRF::Iter SuRF::moveToLast() const {
 }
 
 bool SuRF::lookupRange(const std::string& left_key, const bool left_inclusive, 
-		       const std::string& right_key, const bool right_inclusive) const {
+		       const std::string& right_key, const bool right_inclusive) {
+    iter_.clear();
+    louds_dense_->moveToKeyGreaterThan(left_key, left_inclusive, iter_.dense_iter_);
+    if (!iter_.dense_iter_.isValid()) return false;
+    if (!iter_.dense_iter_.isComplete()) {
+	if (!iter_.dense_iter_.isSearchComplete()) {
+	    iter_.passToSparse();
+	    louds_sparse_->moveToKeyGreaterThan(left_key, left_inclusive, iter_.sparse_iter_);
+	    if (!iter_.sparse_iter_.isValid()) {
+		iter_.incrementDenseIter();
+	    }
+	} else if (!iter_.dense_iter_.isMoveLeftComplete()) {
+	    iter_.passToSparse();
+	    iter_.sparse_iter_.moveToLeftMostKey();
+	}
+    }
+    if (!iter_.isValid()) return false;
+    int compare = iter_.compare(right_key);
+    if (right_inclusive)
+	return (compare <= 0);
+    else
+	return (compare < 0);
+
+    /*
     SuRF::Iter iter = moveToKeyGreaterThan(left_key, left_inclusive);
     if (!iter.isValid()) return false;
     int compare = iter.compare(right_key);
@@ -204,6 +230,7 @@ bool SuRF::lookupRange(const std::string& left_key, const bool left_inclusive,
 	return (compare <= 0);
     else
 	return (compare < 0);
+    */
 }
 
 // TODO
@@ -230,6 +257,11 @@ level_t SuRF::getSparseStartLevel() const {
 }
 
 //============================================================================
+
+void SuRF::Iter::clear() {
+    dense_iter_.clear();
+    sparse_iter_.clear();
+}
 
 bool SuRF::Iter::isValid() const {
     return dense_iter_.isValid() 

@@ -2,17 +2,16 @@
 #include "filter_factory.hpp"
 
 int main(int argc, char *argv[]) {
-    if (argc != 10) {
+    if (argc != 9) {
 	std::cout << "Usage:\n";
-	std::cout << "1. filter type: SuRF, SuRFHash, SuRFReal, Bloom\n";
+	std::cout << "1. filter type: SuRF, SuRFHash, SuRFReal, SuRFMixed, Bloom\n";
 	std::cout << "2. suffix length: 0 < len <= 64 (for SuRFHash and SuRFReal only)\n";
 	std::cout << "3. workload type: mixed, alterByte (only for email key)\n";
 	std::cout << "4. percentage of keys inserted: 0 < num <= 100\n";
 	std::cout << "5. byte position (conting from last, only for alterByte): num\n";
 	std::cout << "6. key type: randint, timestamp, email\n";
-	std::cout << "7. query type: point, range\n";
-	std::cout << "8. range size: num\n";
-	std::cout << "9. distribution: uniform, zipfian, latest\n";
+	std::cout << "7. query type: point, range, mix\n";
+	std::cout << "8. distribution: uniform, zipfian, latest\n";
 	return -1;
     }
 
@@ -23,13 +22,13 @@ int main(int argc, char *argv[]) {
     unsigned byte_pos = atoi(argv[5]);
     std::string key_type = argv[6];
     std::string query_type = argv[7];
-    uint64_t range_size = atoi(argv[8]);
-    std::string distribution = argv[9];
+    std::string distribution = argv[8];
 
     // check args ====================================================
     if (filter_type.compare(std::string("SuRF")) != 0
 	&& filter_type.compare(std::string("SuRFHash")) != 0
 	&& filter_type.compare(std::string("SuRFReal")) != 0
+	&& filter_type.compare(std::string("SuRFMixed")) != 0
 	&& filter_type.compare(std::string("Bloom")) != 0
 	&& filter_type.compare(std::string("ARF")) != 0) {
 	std::cout << bench::kRed << "WRONG filter type\n" << bench::kNoColor;
@@ -60,7 +59,8 @@ int main(int argc, char *argv[]) {
     }
 
     if (query_type.compare(std::string("point")) != 0
-	&& query_type.compare(std::string("range")) != 0) {
+	&& query_type.compare(std::string("range")) != 0
+	&& query_type.compare(std::string("mix")) != 0) {
 	std::cout << bench::kRed << "WRONG query type\n" << bench::kNoColor;
 	return -1;
     }
@@ -99,25 +99,55 @@ int main(int argc, char *argv[]) {
 
     // compute upperbound keys for range queries =================
     std::vector<std::string> upper_bound_keys;
-    if (query_type.compare(std::string("range")) == 0) {
-	for (int i = 0; i < (int)txn_keys.size(); i++)
-	    upper_bound_keys.push_back(bench::getUpperBoundKey(key_type, txn_keys[i], range_size));
+    if ((query_type.compare(std::string("range")) == 0)
+	|| (query_type.compare(std::string("mix")) == 0)) {
+	for (int i = 0; i < (int)txn_keys.size(); i++) {
+	    upper_bound_keys.push_back(bench::getUpperBoundKey(key_type, txn_keys[i]));
+	    //txn_keys[i] = bench::getUpperBoundKey(key_type, txn_keys[i]);
+	    //upper_bound_keys.push_back(bench::getUpperBoundKey(key_type, txn_keys[i]));
+	}
     }
 
     // create filter ==============================================
+    double time1 = bench::getNow();
     bench::Filter* filter = bench::FilterFactory::createFilter(filter_type, suffix_len, insert_keys);
+    double time2 = bench::getNow();
+    std::cout << "Build time = " << (time2 - time1) << std::endl;
 
     // execute transactions =======================================
     int64_t positives = 0;
     double start_time = bench::getNow();
+
     if (query_type.compare(std::string("point")) == 0) {
 	for (int i = 0; i < (int)txn_keys.size(); i++)
 	    positives += (int)filter->lookup(txn_keys[i]);
     } else if (query_type.compare(std::string("range")) == 0) {
 	for (int i = 0; i < (int)txn_keys.size(); i++)
-	//for (int i = 0; i < 5; i++)
-	    positives += (int)filter->lookupRange(txn_keys[i], upper_bound_keys[i]);
+	    //positives += (int)filter->lookupRange(txn_keys[i], upper_bound_keys[i]);
+	    if (key_type.compare(std::string("email")) == 0) {
+		std::string ret_str = txn_keys[i];
+		ret_str[ret_str.size() - 1] += (char)bench::kEmailRangeSize;
+		positives += (int)filter->lookupRange(txn_keys[i], ret_str);
+	    } else {
+		positives += (int)filter->lookupRange(txn_keys[i], bench::uint64ToString(bench::stringToUint64(txn_keys[i]) + bench::kIntRangeSize));
+	    }
+    } else if (query_type.compare(std::string("mix")) == 0) {
+	for (int i = 0; i < (int)txn_keys.size(); i++) {
+	    if (i % 2 == 0) {
+		positives += (int)filter->lookup(txn_keys[i]);
+	    } else {
+		//positives += (int)filter->lookupRange(txn_keys[i], upper_bound_keys[i]);
+		if (key_type.compare(std::string("email")) == 0) {
+		    std::string ret_str = txn_keys[i];
+		    ret_str[ret_str.size() - 1] += (char)bench::kEmailRangeSize;
+		    positives += (int)filter->lookupRange(txn_keys[i], ret_str);
+		} else {
+		    positives += (int)filter->lookupRange(txn_keys[i], bench::uint64ToString(bench::stringToUint64(txn_keys[i]) + bench::kIntRangeSize));
+		}
+	    }
+	}
     }
+
     double end_time = bench::getNow();
 
     // compute true positives ======================================
@@ -134,10 +164,25 @@ int main(int argc, char *argv[]) {
 	}
     } else if (query_type.compare(std::string("range")) == 0) {
 	for (int i = 0; i < (int)txn_keys.size(); i++) {
-	    ht_iter = ht.upper_bound(txn_keys[i]);
+	    //ht_iter = ht.upper_bound(txn_keys[i]);
+	    ht_iter = ht.lower_bound(txn_keys[i]);
 	    if (ht_iter != ht.end()) {
 		std::string fetched_key = ht_iter->first;
 		true_positives += (fetched_key.compare(upper_bound_keys[i]) < 0);
+	    }
+	}
+    } else if (query_type.compare(std::string("mix")) == 0) {
+	for (int i = 0; i < (int)txn_keys.size(); i++) {
+	    if (i % 2 == 0) {
+		ht_iter = ht.find(txn_keys[i]);
+		true_positives += (ht_iter != ht.end());
+	    } else {
+		//ht_iter = ht.upper_bound(txn_keys[i]);
+		ht_iter = ht.lower_bound(txn_keys[i]);
+		if (ht_iter != ht.end()) {
+		    std::string fetched_key = ht_iter->first;
+		    true_positives += (fetched_key.compare(upper_bound_keys[i]) < 0);
+		}	
 	    }
 	}
     }

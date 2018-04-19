@@ -26,6 +26,7 @@ public:
 	    }
 	}
 
+	void clear();
 	bool isValid() const { return is_valid_; };
 	int compare(const std::string& key);
 	std::string getKey() const;
@@ -326,6 +327,12 @@ inline void LoudsSparse::compareSuffixGreaterThan(const position_t pos, const st
 }
 
 //============================================================================
+
+void LoudsSparse::Iter::clear() {
+    is_valid_ = false;
+    key_len_ = 0;
+    is_at_terminator_ = false;
+}
 
 int LoudsSparse::Iter::compare(const std::string& key) {
     if (is_at_terminator_ && (key_len_ - 1) < (key.length() - start_level_))
