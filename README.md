@@ -1,5 +1,5 @@
 # SuRF
-The Succinct Range Filter (SuRF) is a fast and compact filter that
+The **Succinct Range Filter (SuRF)** is a fast and compact filter that
 provides exact-match filtering, range filtering, and approximate
 range counts. This is the source code for our
 [SIGMOD paper](http://www.cs.cmu.edu/~huanche1/publications/surf_paper.pdf).
@@ -22,7 +22,16 @@ range counts. This is the source code for our
     bash ycsb_download.sh
 
 ### Step 2: Generate Workloads
+    cd bench/workload_gen
     bash gen_workload.sh
+You must provide your own email list to generate email-key workloads.
+
+### Step 3: Run Workloads
+    cd bench
+    bash run.sh
+Note that `run.sh` only includes several representative runs.
+Refer to `bench/workload.cpp`, `bench/workload_multi_thread.cpp`
+and `bench/workload_arf.cpp` for more experiment configurations.
 
 ## License
     Copyright 2018, Carnegie Mellon University

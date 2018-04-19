@@ -32,7 +32,7 @@ echo 'SuRFMixed, 2-bit hash suffixes and 2-bit real suffixes, random int, point 
 # ../build/bench/workload SuRFMixed 2 mixed 50 0 email mix zipfian
 
 
-echo 'SuRFReal, 4-bit suffixes, random int, point queries'
+echo 'SuRFReal, 4-bit suffixes, random int, range queries'
 ../build/bench/workload SuRFReal 4 mixed 50 0 randint range zipfian
 
 # echo 'SuRFReal, 4-bit suffixes, email, point queries'
