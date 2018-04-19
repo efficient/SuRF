@@ -1,41 +1,40 @@
 #!bin/bash
 
-../build/bench/workload Bloom 1 mixed 50 0 randint point 0 zipfian
+echo 'Bloom Filter, random int, point queries'
+../build/bench/workload Bloom 1 mixed 50 0 randint point zipfian
 
-../build/bench/workload SuRF 1 mixed 50 0 randint point 0 zipfian
+echo 'SuRF, random int, point queries'
+../build/bench/workload SuRF 1 mixed 50 0 randint point zipfian
 
-../build/bench/workload SuRFHash 4 mixed 50 0 randint point 0 zipfian
+echo 'SuRFHash, 4-bit suffixes, random int, point queries'
+../build/bench/workload SuRFHash 4 mixed 50 0 randint point zipfian
 
-../build/bench/workload SuRFReal 4 mixed 50 0 randint point 0 zipfian
+echo 'SuRFReal, 4-bit suffixes, random int, point queries'
+../build/bench/workload SuRFReal 4 mixed 50 0 randint point zipfian
 
-
-#../build/bench/workload Bloom 1 mixed 50 0 timestamp point 0 zipfian
-
-#../build/bench/workload SuRF 1 mixed 50 0 timestamp point 0 zipfian
-
-#../build/bench/workload SuRFHash 4 mixed 50 0 timestamp point 0 zipfian
-
-#../build/bench/workload SuRFReal 4 mixed 50 0 timestamp point 0 zipfian
+echo 'SuRFMixed, 2-bit hash suffixes and 2-bit real suffixes, random int, point queries'
+../build/bench/workload SuRFMixed 2 mixed 50 0 randint mix zipfian
 
 
-../build/bench/workload Bloom 1 mixed 50 0 email point 0 zipfian
+echo 'Bloom Filter, email, point queries'
+../build/bench/workload Bloom 1 mixed 50 0 email point zipfian
 
-../build/bench/workload SuRF 1 mixed 50 0 email point 0 zipfian
+echo 'SuRF, email, point queries'
+../build/bench/workload SuRF 1 mixed 50 0 email point zipfian
 
-../build/bench/workload SuRFHash 4 mixed 50 0 email point 0 zipfian
+echo 'SuRFHash, 4-bit suffixes, email, point queries'
+../build/bench/workload SuRFHash 4 mixed 50 0 email point zipfian
 
-../build/bench/workload SuRFReal 4 mixed 50 0 email point 0 zipfian
+echo 'SuRFReal, 4-bit suffixes, email, point queries'
+../build/bench/workload SuRFReal 4 mixed 50 0 email point zipfian
 
-
-#../build/bench/workload SuRF mixed 50 0 randint range 352187318272 zipfian
-
-#../build/bench/workload SuRFHash mixed 50 0 randint range 352187318272 zipfian
-
-#../build/bench/workload SuRFReal mixed 50 0 randint range 352187318272 zipfian
+echo 'SuRFMixed, 2-bit hash suffixes and 2-bit real suffixes, email, point queries'
+../build/bench/workload SuRFMixed 2 mixed 50 0 email mix zipfian
 
 
-#../build/bench/workload SuRF mixed 50 0 timestamp range 1000000000 zipfian
+echo 'SuRFReal, 4-bit suffixes, random int, point queries'
+../build/bench/workload SuRFReal 4 mixed 50 0 randint range zipfian
 
-#../build/bench/workload SuRFHash mixed 50 0 timestamp range 1000000000 zipfian
+echo 'SuRFReal, 4-bit suffixes, email, point queries'
+../build/bench/workload SuRFReal 4 mixed 50 0 email range zipfian
 
-#../build/bench/workload SuRFReal mixed 50 0 timestamp range 1000000000 zipfian
