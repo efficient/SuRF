@@ -9,7 +9,7 @@ int main(int argc, char *argv[]) {
 	std::cout << "3. workload type: mixed, alterByte (only for email key)\n";
 	std::cout << "4. percentage of keys inserted: 0 < num <= 100\n";
 	std::cout << "5. byte position (conting from last, only for alterByte): num\n";
-	std::cout << "6. key type: randint, timestamp, email\n";
+	std::cout << "6. key type: randint, email\n";
 	std::cout << "7. query type: point, range, mix\n";
 	std::cout << "8. distribution: uniform, zipfian, latest\n";
 	return -1;
