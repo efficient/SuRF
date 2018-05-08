@@ -1,7 +1,6 @@
 #ifndef LABELVECTOR_H_
 #define LABELVECTOR_H_
 
-#include <assert.h>
 #include <emmintrin.h>
 
 #include <vector>
@@ -35,11 +34,9 @@ public:
 	}
     }
 
-    ~LabelVector() {
-	//delete[] labels_;
-    }
+    ~LabelVector() {}
 
-    position_t getNumBytes() {
+    position_t getNumBytes() const {
 	return num_bytes_;
     }
 

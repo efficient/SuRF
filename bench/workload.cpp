@@ -103,8 +103,6 @@ int main(int argc, char *argv[]) {
 	|| (query_type.compare(std::string("mix")) == 0)) {
 	for (int i = 0; i < (int)txn_keys.size(); i++) {
 	    upper_bound_keys.push_back(bench::getUpperBoundKey(key_type, txn_keys[i]));
-	    //txn_keys[i] = bench::getUpperBoundKey(key_type, txn_keys[i]);
-	    //upper_bound_keys.push_back(bench::getUpperBoundKey(key_type, txn_keys[i]));
 	}
     }
 
@@ -123,7 +121,6 @@ int main(int argc, char *argv[]) {
 	    positives += (int)filter->lookup(txn_keys[i]);
     } else if (query_type.compare(std::string("range")) == 0) {
 	for (int i = 0; i < (int)txn_keys.size(); i++)
-	    //positives += (int)filter->lookupRange(txn_keys[i], upper_bound_keys[i]);
 	    if (key_type.compare(std::string("email")) == 0) {
 		std::string ret_str = txn_keys[i];
 		ret_str[ret_str.size() - 1] += (char)bench::kEmailRangeSize;
@@ -136,7 +133,6 @@ int main(int argc, char *argv[]) {
 	    if (i % 2 == 0) {
 		positives += (int)filter->lookup(txn_keys[i]);
 	    } else {
-		//positives += (int)filter->lookupRange(txn_keys[i], upper_bound_keys[i]);
 		if (key_type.compare(std::string("email")) == 0) {
 		    std::string ret_str = txn_keys[i];
 		    ret_str[ret_str.size() - 1] += (char)bench::kEmailRangeSize;
@@ -164,7 +160,6 @@ int main(int argc, char *argv[]) {
 	}
     } else if (query_type.compare(std::string("range")) == 0) {
 	for (int i = 0; i < (int)txn_keys.size(); i++) {
-	    //ht_iter = ht.upper_bound(txn_keys[i]);
 	    ht_iter = ht.lower_bound(txn_keys[i]);
 	    if (ht_iter != ht.end()) {
 		std::string fetched_key = ht_iter->first;
@@ -177,7 +172,6 @@ int main(int argc, char *argv[]) {
 		ht_iter = ht.find(txn_keys[i]);
 		true_positives += (ht_iter != ht.end());
 	    } else {
-		//ht_iter = ht.upper_bound(txn_keys[i]);
 		ht_iter = ht.lower_bound(txn_keys[i]);
 		if (ht_iter != ht.end()) {
 		    std::string fetched_key = ht_iter->first;

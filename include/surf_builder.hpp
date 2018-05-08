@@ -383,7 +383,8 @@ void SuRFBuilder::initDenseVectors(const level_t level) {
     }
 }
 
-void SuRFBuilder::setLabelAndChildIndicatorBitmap(const level_t level, const position_t node_num, const position_t pos) {
+void SuRFBuilder::setLabelAndChildIndicatorBitmap(const level_t level, 
+						  const position_t node_num, const position_t pos) {
     label_t label = labels_[level][pos];
     setBit(bitmap_labels_[level], node_num * kFanout + label);
     if (readBit(child_indicator_bits_[level], pos))

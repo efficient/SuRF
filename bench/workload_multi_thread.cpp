@@ -128,7 +128,7 @@ int main(int argc, char *argv[]) {
     txn_file += key_type;
     txn_file += "_";
     txn_file += distribution;
-    //std::vector<std::string> txn_keys;
+
     if (key_type.compare(std::string("email")) == 0)
 	bench::loadKeysFromFile(txn_file, false, txn_keys);
     else
@@ -141,7 +141,6 @@ int main(int argc, char *argv[]) {
 	bench::modifyKeyByte(txn_keys, byte_pos);
 
     // compute upperbound keys for range queries =================
-    //std::vector<std::string> upper_bound_keys;
     if (query_type.compare(std::string("range")) == 0) {
 	for (int i = 0; i < (int)txn_keys.size(); i++)
 	    upper_bound_keys.push_back(bench::getUpperBoundKey(key_type, txn_keys[i]));

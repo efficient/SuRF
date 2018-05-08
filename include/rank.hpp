@@ -25,15 +25,13 @@ public:
 	initRankLut();
     }
 
-    ~BitvectorRank() {
-	//delete[] rank_lut_;
-    }
+    ~BitvectorRank() {}
 
     // Counts the number of 1's in the bitvector up to position pos.
     // pos is zero-based; count is one-based.
     // E.g., for bitvector: 100101000, rank(3) = 2
-    position_t rank(position_t pos) {
-        //assert(pos < num_bits_);
+    position_t rank(position_t pos) const {
+        assert(pos < num_bits_);
         position_t word_per_basic_block = basic_block_size_ / kWordSize;
         position_t block_id = pos / basic_block_size_;
         position_t offset = pos & (basic_block_size_ - 1);
@@ -42,22 +40,21 @@ public:
     }
 
     position_t rankLutSize() const {
-	return ((num_bits_ / basic_block_size_ + 1) * sizeof(uint32_t));
+	return ((num_bits_ / basic_block_size_ + 1) * sizeof(position_t));
     }
 
     position_t serializedSize() const {
-	position_t size = sizeof(num_bits_) + sizeof(basic_block_size_)
+	position_t size = sizeof(num_bits_) + sizeof(basic_block_size_) 
 	    + bitsSize() + rankLutSize();
 	sizeAlign(size);
 	return size;
     }
 
-    // in bytes
-    position_t size() {
+    position_t size() const {
 	return (sizeof(BitvectorRank) + bitsSize() + rankLutSize());
     }
 
-    inline void prefetch(position_t pos) {
+    void prefetch(position_t pos) const {
 	__builtin_prefetch(bits_ + (pos / kWordSize));
 	__builtin_prefetch(rank_lut_ + (pos / basic_block_size_));
     }

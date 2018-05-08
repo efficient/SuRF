@@ -23,9 +23,9 @@ public:
 
 	void clear();
 	bool isValid() const;
-	int compare(const std::string& key);
+	int compare(const std::string& key) const;
 	std::string getKey() const;
-	int getSuffix(word_t* suffix) const; // TODO: need to add unit test
+	int getSuffix(word_t* suffix) const;
 	std::string getKeyWithSuffix(unsigned* bitlen) const;
 
 	// Returns true if the status of the iterator after the operation is valid
@@ -56,10 +56,7 @@ public:
 	create(keys, include_dense, sparse_dense_ratio, suffix_type, hash_suffix_len, real_suffix_len);
     }
 
-    ~SuRF() {
-	//delete louds_dense_;
-	//delete louds_sparse_;
-    }
+    ~SuRF() {}
 
     void create(const std::vector<std::string>& keys,
 		const bool include_dense, const uint32_t sparse_dense_ratio,
@@ -75,8 +72,6 @@ public:
     SuRF::Iter moveToLast() const;
     bool lookupRange(const std::string& left_key, const bool left_inclusive, 
 		     const std::string& right_key, const bool right_inclusive);
-    uint32_t countRange(const std::string& left_key, const bool left_inclusive, 
-			const std::string& right_key, const bool right_inclusive) const;
 
     uint64_t serializedSize() const;
     uint64_t getMemoryUsage() const;
@@ -137,8 +132,10 @@ bool SuRF::lookupKey(const std::string& key) const {
 SuRF::Iter SuRF::moveToKeyGreaterThan(const std::string& key, const bool inclusive) const {
     SuRF::Iter iter(this);
     louds_dense_->moveToKeyGreaterThan(key, inclusive, iter.dense_iter_);
-    if (!iter.dense_iter_.isValid()) return iter;
-    if (iter.dense_iter_.isComplete()) return iter;
+    if (!iter.dense_iter_.isValid()) 
+	return iter;
+    if (iter.dense_iter_.isComplete()) 
+	return iter;
 
     if (!iter.dense_iter_.isSearchComplete()) {
 	iter.passToSparse();
@@ -153,7 +150,7 @@ SuRF::Iter SuRF::moveToKeyGreaterThan(const std::string& key, const bool inclusi
 	return iter;
     }
 
-    assert(false); // shouldn't have reached here
+    assert(false); // shouldn't reach here
     return iter;
 }
 
@@ -221,22 +218,6 @@ bool SuRF::lookupRange(const std::string& left_key, const bool left_inclusive,
 	return (compare <= 0);
     else
 	return (compare < 0);
-
-    /*
-    SuRF::Iter iter = moveToKeyGreaterThan(left_key, left_inclusive);
-    if (!iter.isValid()) return false;
-    int compare = iter.compare(right_key);
-    if (right_inclusive)
-	return (compare <= 0);
-    else
-	return (compare < 0);
-    */
-}
-
-// TODO
-uint32_t SuRF::countRange(const std::string& left_key, const bool left_inclusive, 
-			  const std::string& right_key, const bool right_inclusive) const {
-    return 0;
 }
 
 uint64_t SuRF::serializedSize() const {
@@ -268,7 +249,7 @@ bool SuRF::Iter::isValid() const {
 	&& (dense_iter_.isComplete() || sparse_iter_.isValid());
 }
 
-int SuRF::Iter::compare(const std::string& key) {
+int SuRF::Iter::compare(const std::string& key) const {
     assert(isValid());
     int dense_compare = dense_iter_.compare(key);
     if (dense_iter_.isComplete() || dense_compare != 0) 
@@ -301,55 +282,67 @@ std::string SuRF::Iter::getKeyWithSuffix(unsigned* bitlen) const {
     return dense_iter_.getKeyWithSuffix(bitlen) + sparse_iter_.getKeyWithSuffix(bitlen);
 }
 
-inline void SuRF::Iter::passToSparse() {
+void SuRF::Iter::passToSparse() {
     sparse_iter_.setStartNodeNum(dense_iter_.getSendOutNodeNum());
 }
 
-inline bool SuRF::Iter::incrementDenseIter() {
-    if (!dense_iter_.isValid()) return false;
+bool SuRF::Iter::incrementDenseIter() {
+    if (!dense_iter_.isValid()) 
+	return false;
 
     dense_iter_++;
-    if (!dense_iter_.isValid()) return false;
-    if (dense_iter_.isMoveLeftComplete()) return true;
+    if (!dense_iter_.isValid()) 
+	return false;
+    if (dense_iter_.isMoveLeftComplete()) 
+	return true;
 
     passToSparse();
     sparse_iter_.moveToLeftMostKey();
     return true;
 }
 
-inline bool SuRF::Iter::incrementSparseIter() {
-    if (!sparse_iter_.isValid()) return false;
+bool SuRF::Iter::incrementSparseIter() {
+    if (!sparse_iter_.isValid()) 
+	return false;
     sparse_iter_++;
     return sparse_iter_.isValid();
 }
 
 bool SuRF::Iter::operator ++(int) {
-    if (!isValid()) return false;
-    if (incrementSparseIter()) return true;
+    if (!isValid()) 
+	return false;
+    if (incrementSparseIter()) 
+	return true;
     return incrementDenseIter();
 }
 
-inline bool SuRF::Iter::decrementDenseIter() {
-    if (!dense_iter_.isValid()) return false;
+bool SuRF::Iter::decrementDenseIter() {
+    if (!dense_iter_.isValid()) 
+	return false;
 
     dense_iter_--;
-    if (!dense_iter_.isValid()) return false;
-    if (dense_iter_.isMoveRightComplete()) return true;
+    if (!dense_iter_.isValid()) 
+	return false;
+    if (dense_iter_.isMoveRightComplete()) 
+	return true;
 
     passToSparse();
     sparse_iter_.moveToRightMostKey();
     return true;
 }
 
-inline bool SuRF::Iter::decrementSparseIter() {
-    if (!sparse_iter_.isValid()) return false;
+bool SuRF::Iter::decrementSparseIter() {
+    if (!sparse_iter_.isValid()) 
+	return false;
     sparse_iter_--;
     return sparse_iter_.isValid();
 }
 
 bool SuRF::Iter::operator --(int) {
-    if (!isValid()) return false;
-    if (decrementSparseIter()) return true;
+    if (!isValid()) 
+	return false;
+    if (decrementSparseIter()) 
+	return true;
     return decrementDenseIter();
 }
 

@@ -19,15 +19,13 @@ public:
 	      level_t end_level = 0/* non-inclusive */) {
 	if (end_level == 0)
 	    end_level = bitvector_per_level.size();
-	computeTotalNumBits(num_bits_per_level, start_level, end_level);
+	num_bits_ = totalNumBits(num_bits_per_level, start_level, end_level);
 	bits_ = new word_t[numWords()];
 	memset(bits_, 0, bitsSize());
 	concatenateBitvectors(bitvector_per_level, num_bits_per_level, start_level, end_level);
     }
 
-    ~Bitvector() {
-	//delete[] bits_;
-    }
+    ~Bitvector() {}
 
     position_t numBits() const {
 	return num_bits_;
@@ -40,6 +38,7 @@ public:
 	    return (num_bits_ / kWordSize + 1);
     }
 
+    // in bytes
     position_t bitsSize() const {
 	return (numWords() * (kWordSize / 8));
     }
@@ -49,15 +48,15 @@ public:
 	return (sizeof(Bitvector) + bitsSize());
     }
 
-    inline bool readBit(const position_t pos) const;
+    bool readBit(const position_t pos) const;
 
     position_t distanceToNextSetBit(const position_t pos) const;
     position_t distanceToPrevSetBit(const position_t pos) const;
 
 private:
-    void computeTotalNumBits(const std::vector<position_t>& num_bits_per_level, 
-				   const level_t start_level, 
-				   const level_t end_level/* non-inclusive */);
+    position_t totalNumBits(const std::vector<position_t>& num_bits_per_level, 
+			    const level_t start_level, 
+			    const level_t end_level/* non-inclusive */);
 
     void concatenateBitvectors(const std::vector<std::vector<word_t> >& bitvector_per_level, 
 			       const std::vector<position_t>& num_bits_per_level, 
@@ -69,7 +68,7 @@ protected:
 };
 
 bool Bitvector::readBit (const position_t pos) const {
-    //assert(pos < num_bits_);
+    assert(pos < num_bits_);
     position_t word_id = pos / kWordSize;
     position_t offset = pos & (kWordSize - 1);
     return bits_[word_id] & (kMsbMask >> offset);
@@ -129,22 +128,23 @@ position_t Bitvector::distanceToPrevSetBit (const position_t pos) const {
 	    return (distance + __builtin_ctzll(test_bits));
 	distance += kWordSize;
     }
-    //assert(false);
+    assert(false);
     return distance;
 }
 
-void Bitvector::computeTotalNumBits(const std::vector<position_t>& num_bits_per_level, 
-					  const level_t start_level, 
-					  const level_t end_level/* non-inclusive */) {
-    num_bits_ = 0;
+position_t Bitvector::totalNumBits(const std::vector<position_t>& num_bits_per_level, 
+			     const level_t start_level, 
+			     const level_t end_level/* non-inclusive */) {
+    position_t num_bits = 0;
     for (level_t level = start_level; level < end_level; level++)
-	num_bits_ += num_bits_per_level[level];
+	num_bits += num_bits_per_level[level];
+    return num_bits;
 }
 
 void Bitvector::concatenateBitvectors(const std::vector<std::vector<word_t> >& bitvector_per_level, 
-			   const std::vector<position_t>& num_bits_per_level, 
-			   const level_t start_level, 
-			   const level_t end_level/* non-inclusive */) {
+				      const std::vector<position_t>& num_bits_per_level, 
+				      const level_t start_level, 
+				      const level_t end_level/* non-inclusive */) {
     position_t bit_shift = 0;
     position_t word_id = 0;
     for (level_t level = start_level; level < end_level; level++) {

@@ -26,14 +26,12 @@ public:
 	initSelectLut();
     }
 
-    ~BitvectorSelect() {
-	//delete[] select_lut_;
-    }
+    ~BitvectorSelect() {}
 
     // Returns the postion of the rank-th 1 bit.
     // posistion is zero-based; rank is one-based.
     // E.g., for bitvector: 100101000, select(3) = 5
-    position_t select(position_t rank) {
+    position_t select(position_t rank) const {
 	assert(rank > 0);
 	assert(rank <= num_ones_);
 	position_t lut_idx = rank / sample_interval_;
@@ -68,7 +66,7 @@ public:
     }
 
     position_t selectLutSize() const {
-	return ((num_ones_ / sample_interval_ + 1) * sizeof(uint32_t));
+	return ((num_ones_ / sample_interval_ + 1) * sizeof(position_t));
     }
 
     position_t serializedSize() const {
@@ -78,11 +76,11 @@ public:
 	return size;
     }
 
-    position_t size() {
+    position_t size() const {
 	return (sizeof(BitvectorSelect) + bitsSize() + selectLutSize());
     }
 
-    position_t numOnes() {
+    position_t numOnes() const {
 	return num_ones_;
     }
 
