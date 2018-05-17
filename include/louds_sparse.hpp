@@ -71,10 +71,9 @@ public:
     // point query: trie walk starts at node "in_node_num" instead of root
     // in_node_num is provided by louds-dense's lookupKey function
     bool lookupKey(const std::string& key, const position_t in_node_num) const;
-    void moveToKeyGreaterThan(const std::string& key, 
+    // return value indicates potential false positive
+    bool moveToKeyGreaterThan(const std::string& key, 
 			      const bool inclusive, LoudsSparse::Iter& iter) const;
-    void moveToKeyLessThan(const std::string& key, 
-			   const bool inclusive, LoudsSparse::Iter& iter) const;
 
     level_t getHeight() const { return height_; };
     level_t getStartLevel() const { return start_level_; };
@@ -133,7 +132,8 @@ private:
 
     void moveToLeftInNextSubtrie(position_t pos, const position_t node_size, 
 				 const label_t label, LoudsSparse::Iter& iter) const;
-    void compareSuffixGreaterThan(const position_t pos, const std::string& key, 
+    // return value indicates potential false positive
+    bool compareSuffixGreaterThan(const position_t pos, const std::string& key, 
 				  const level_t level, const bool inclusive, 
 				  LoudsSparse::Iter& iter) const;
 
@@ -217,7 +217,7 @@ bool LoudsSparse::lookupKey(const std::string& key, const position_t in_node_num
     return false;
 }
 
-void LoudsSparse::moveToKeyGreaterThan(const std::string& key, 
+bool LoudsSparse::moveToKeyGreaterThan(const std::string& key, 
 				       const bool inclusive, LoudsSparse::Iter& iter) const {
     position_t node_num = iter.getStartNodeNum();
     position_t pos = getFirstLabelPos(node_num);
@@ -225,8 +225,10 @@ void LoudsSparse::moveToKeyGreaterThan(const std::string& key,
     for (level = start_level_; level < key.length(); level++) {
 	position_t node_size = nodeSize(pos);
 	// if no exact match
-	if (!labels_->search((label_t)key[level], pos, node_size))
-	    return moveToLeftInNextSubtrie(pos, node_size, key[level], iter);
+	if (!labels_->search((label_t)key[level], pos, node_size)) {
+	    moveToLeftInNextSubtrie(pos, node_size, key[level], iter);
+	    return false;
+	}
 
 	iter.append(key[level], pos);
 
@@ -242,16 +244,13 @@ void LoudsSparse::moveToKeyGreaterThan(const std::string& key,
 	&& !louds_bits_->readBit(pos + 1)) {
 	iter.append(kTerminator, pos);
 	iter.is_at_terminator_ = true;
+	if (!inclusive)
+	    iter++;
+	iter.is_valid_ = true;
+	return false;
     }
-    if (!inclusive)
-	return iter++;
     iter.is_valid_ = true;
-}
-
-void LoudsSparse::moveToKeyLessThan(const std::string& key, const bool inclusive, LoudsSparse::Iter& iter) const {
-    moveToKeyGreaterThan(key, !inclusive, iter);
-    if (iter.isValid())
-	iter--;
+    return true;
 }
 
 uint64_t LoudsSparse::serializedSize() const {
@@ -298,7 +297,7 @@ position_t LoudsSparse::nodeSize(const position_t pos) const {
 }
 
 void LoudsSparse::moveToLeftInNextSubtrie(position_t pos, const position_t node_size, 
-						 const label_t label, LoudsSparse::Iter& iter) const {
+					  const label_t label, LoudsSparse::Iter& iter) const {
     // if no label is greater than key[level] in this node
     if (!labels_->searchGreaterThan(label, pos, node_size)) {
 	iter.append(pos + node_size - 1);
@@ -309,19 +308,17 @@ void LoudsSparse::moveToLeftInNextSubtrie(position_t pos, const position_t node_
     }
 }
 
-void LoudsSparse::compareSuffixGreaterThan(const position_t pos, const std::string& key, 
-						  const level_t level, const bool inclusive, 
-						  LoudsSparse::Iter& iter) const {
-    if ((suffixes_->getType() == kReal) || (suffixes_->getType() == kMixed)) {
-	position_t suffix_pos = getSuffixPos(pos);
-	int compare = suffixes_->compare(suffix_pos, key, level);
-	if ((compare < 0) || (compare == 0 && !inclusive))
-	    return iter++;
-    } else {
-	if (!inclusive)
-	    return iter++;
+bool LoudsSparse::compareSuffixGreaterThan(const position_t pos, const std::string& key, 
+					   const level_t level, const bool inclusive, 
+					   LoudsSparse::Iter& iter) const {
+    position_t suffix_pos = getSuffixPos(pos);
+    int compare = suffixes_->compare(suffix_pos, key, level);
+    if ((compare != kCouldBePositive) && (compare < 0)) {
+	iter++;
+	return false;
     }
     iter.is_valid_ = true;
+    return true;
 }
 
 //============================================================================

@@ -223,21 +223,41 @@ bool BitvectorSuffix::checkEquality(const position_t idx,
 }
 
 // If no real suffix is stored for the key, compare returns 0.
+// int BitvectorSuffix::compare(const position_t idx, 
+// 			     const std::string& key, const level_t level) const {
+//     if ((type_ == kNone) || (type_ == kHash) || (idx * getSuffixLen() >= num_bits_))
+// 	return 0;
+//     word_t stored_suffix = read(idx);
+//     word_t querying_suffix = constructRealSuffix(key, level, real_suffix_len_);
+//     if (type_ == kMixed)
+//         stored_suffix = extractRealSuffix(stored_suffix, real_suffix_len_);
+
+//     if (stored_suffix == 0) 
+// 	return 0;
+//     if (stored_suffix < querying_suffix) 
+// 	return -1;
+//     else if (stored_suffix == querying_suffix) 
+// 	return 0;
+//     else 
+// 	return 1;
+// }
+
 int BitvectorSuffix::compare(const position_t idx, 
 			     const std::string& key, const level_t level) const {
-    if ((type_ == kNone) || (type_ == kHash) || (idx * getSuffixLen() >= num_bits_))
-	return 0;
+    if ((idx * getSuffixLen() >= num_bits_) || (type_ == kNone) || (type_ == kHash))
+	return kCouldBePositive;
+
     word_t stored_suffix = read(idx);
     word_t querying_suffix = constructRealSuffix(key, level, real_suffix_len_);
     if (type_ == kMixed)
         stored_suffix = extractRealSuffix(stored_suffix, real_suffix_len_);
 
-    if (stored_suffix == 0) 
-	return 0;
-    if (stored_suffix < querying_suffix) 
+    if ((stored_suffix == 0) && (querying_suffix == 0))
+	return kCouldBePositive;
+    else if ((stored_suffix == 0) || (stored_suffix < querying_suffix))
 	return -1;
     else if (stored_suffix == querying_suffix) 
-	return 0;
+	return kCouldBePositive;
     else 
 	return 1;
 }

@@ -198,95 +198,106 @@ TEST_F (SuRFUnitTest, moveToKeyGreaterThanWordTest) {
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
         newSuRFWords(suffix_len);
-	for (int i = -1; i <= (int)words.size(); i++) {
-	    bool inclusive = true;
-	    SuRF::Iter iter;
-	    if (i < 0) {
-		iter = surf_->moveToFirst();
-	    } else if (i >= (int)words.size()) {
-		iter = surf_->moveToLast();
-	    }
-	    else {
-		iter = surf_->moveToKeyGreaterThan(words[i], inclusive);
-	    }
 
-	    ASSERT_TRUE(iter.isValid());
-	    std::string iter_key;
-	    unsigned bitlen;
-	    iter_key = iter.getKeyWithSuffix(&bitlen);
-	    std::string word_prefix;
-	    if (i < 0) {
-		word_prefix = words[0].substr(0, iter_key.length());
-	    } else if (i >= (int)words.size()) {
-		word_prefix = words[words.size() - 1].substr(0, iter_key.length());
-	    } else {
-		word_prefix = words[i].substr(0, iter_key.length());
+	bool inclusive = true;
+	for (int i = 0; i < 2; i++) {
+	    if (i == 1)
+		inclusive = false;
+	    for (int j = -1; j <= (int)words.size(); j++) {
+		SuRF::Iter iter;
+		if (j < 0)
+		    iter = surf_->moveToFirst();
+		else if (j >= (int)words.size())
+		    iter = surf_->moveToLast();
+		else
+		    iter = surf_->moveToKeyGreaterThan(words[j], inclusive);
+
+		unsigned bitlen;
+		bool is_prefix = false;
+		if (j < 0) {
+		    ASSERT_TRUE(iter.isValid());
+		    std::string iter_key = iter.getKeyWithSuffix(&bitlen);
+		    std::string word_prefix = words[0].substr(0, iter_key.length());
+		    is_prefix = isEqual(word_prefix, iter_key, bitlen);
+		    ASSERT_TRUE(is_prefix);
+		} else if (j >= (int)words.size()) {
+		    ASSERT_TRUE(iter.isValid());
+		    std::string iter_key = iter.getKeyWithSuffix(&bitlen);
+		    std::string word_prefix = words[words.size() - 1].substr(0, iter_key.length());
+		    is_prefix = isEqual(word_prefix, iter_key, bitlen);
+		    ASSERT_TRUE(is_prefix);
+		} else if (j == (int)words.size() - 1) {
+		    if (iter.getFpFlag()) {
+		        ASSERT_TRUE(iter.isValid());
+			std::string iter_key = iter.getKeyWithSuffix(&bitlen);
+			std::string word_prefix = words[words.size() - 1].substr(0, iter_key.length());
+			is_prefix = isEqual(word_prefix, iter_key, bitlen);
+			ASSERT_TRUE(is_prefix);
+		    } else {
+			ASSERT_FALSE(iter.isValid());
+		    }
+		} else {
+		    ASSERT_TRUE(iter.isValid());
+		    std::string iter_key = iter.getKeyWithSuffix(&bitlen);
+		    std::string word_prefix_fp = words[j].substr(0, iter_key.length());
+		    std::string word_prefix_true = words[j+1].substr(0, iter_key.length());
+		    if (iter.getFpFlag())
+			is_prefix = isEqual(word_prefix_fp, iter_key, bitlen);
+		    else
+			is_prefix = isEqual(word_prefix_true, iter_key, bitlen);
+		    ASSERT_TRUE(is_prefix);
+		}
 	    }
-	    bool is_prefix = isEqual(word_prefix, iter_key, bitlen);
-	    ASSERT_TRUE(is_prefix);
 	}
 
-	for (unsigned i = 0; i < words.size() - 1; i++) {
-	    bool inclusive = false;
-	    SuRF::Iter iter = surf_->moveToKeyGreaterThan(words[i], inclusive);
-
-	    ASSERT_TRUE(iter.isValid());
-	    std::string iter_key;
-	    unsigned bitlen;
-	    iter_key = iter.getKeyWithSuffix(&bitlen);
-	    std::string word_prefix = words[i+1].substr(0, iter_key.length());
-	    bool is_prefix = isEqual(word_prefix, iter_key, bitlen);
-	    ASSERT_TRUE(is_prefix);
-	}
-
-	bool inclusive = false;
-	SuRF::Iter iter = surf_->moveToKeyGreaterThan(words[words.size() - 1], inclusive);
-	ASSERT_FALSE(iter.isValid());
 	surf_->destroy();
 	delete surf_;
     }
 }
+
 
 TEST_F (SuRFUnitTest, moveToKeyGreaterThanIntTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
         newSuRFInts(suffix_len);
-	for (uint64_t i = 0; i < kIntTestBound; i++) {
-	    bool inclusive = true;
-	    SuRF::Iter iter = surf_->moveToKeyGreaterThan(uint64ToString(i), inclusive);
 
-	    ASSERT_TRUE(iter.isValid());
-	    std::string iter_key;
-	    unsigned bitlen;
-	    iter_key = iter.getKeyWithSuffix(&bitlen);
-	    std::string int_key;
-	    if (i % kIntTestSkip == 0)
-		int_key = uint64ToString(i);
-	    else
-		int_key = uint64ToString(i - (i % kIntTestSkip) + kIntTestSkip);
-	    std::string int_prefix = int_key.substr(0, iter_key.length());
-	    bool is_prefix = isEqual(int_prefix, iter_key, bitlen);
-	    ASSERT_TRUE(is_prefix);
+	bool inclusive = true;
+	for (int i = 0; i < 2; i++) {
+	    if (i == 1)
+		inclusive = false;
+	    for (uint64_t j = 0; j < kIntTestBound - 1; j++) {
+		SuRF::Iter iter = surf_->moveToKeyGreaterThan(uint64ToString(j), inclusive);
+
+		ASSERT_TRUE(iter.isValid());
+		unsigned bitlen;
+		std::string iter_key = iter.getKeyWithSuffix(&bitlen);
+		std::string int_key_fp = uint64ToString(j - (j % kIntTestSkip));
+		std::string int_key_true = uint64ToString(j - (j % kIntTestSkip) + kIntTestSkip);
+		std::string int_prefix_fp = int_key_fp.substr(0, iter_key.length());
+		std::string int_prefix_true = int_key_true.substr(0, iter_key.length());
+		bool is_prefix = false;
+		if (iter.getFpFlag())
+		    is_prefix = isEqual(int_prefix_fp, iter_key, bitlen);
+		else
+		    is_prefix = isEqual(int_prefix_true, iter_key, bitlen);
+		ASSERT_TRUE(is_prefix);
+	    }
+
+	    SuRF::Iter iter = surf_->moveToKeyGreaterThan(uint64ToString(kIntTestBound - 1), inclusive);
+	    if (iter.getFpFlag()) {
+	        ASSERT_TRUE(iter.isValid());
+		unsigned bitlen;
+		std::string iter_key = iter.getKeyWithSuffix(&bitlen);
+		std::string int_key_fp = uint64ToString(kIntTestBound - 1);
+		std::string int_prefix_fp = int_key_fp.substr(0, iter_key.length());
+		bool is_prefix = isEqual(int_prefix_fp, iter_key, bitlen);
+		ASSERT_TRUE(is_prefix);
+	    } else {
+		ASSERT_FALSE(iter.isValid());
+	    }
 	}
 
-	for (uint64_t i = 0; i < kIntTestBound - 1; i++) {
-	    bool inclusive = false;
-	    SuRF::Iter iter = surf_->moveToKeyGreaterThan(uint64ToString(i), inclusive);
-
-	    ASSERT_TRUE(iter.isValid());
-	    std::string iter_key;
-	    unsigned bitlen;
-	    iter_key = iter.getKeyWithSuffix(&bitlen);
-	    std::string int_key = uint64ToString(i - (i % kIntTestSkip) + kIntTestSkip);
-	    std::string int_prefix = int_key.substr(0, iter_key.length());
-	    bool is_prefix = isEqual(int_prefix, iter_key, bitlen);
-	    ASSERT_TRUE(is_prefix);
-	}
-
-	bool inclusive = false;
-	SuRF::Iter iter = surf_->moveToKeyGreaterThan(uint64ToString(kIntTestBound - 1), inclusive);
-	ASSERT_FALSE(iter.isValid());
 	surf_->destroy();
 	delete surf_;
     }
@@ -297,35 +308,40 @@ TEST_F (SuRFUnitTest, moveToKeyLessThanWordTest) {
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
         newSuRFWords(suffix_len);
-	for (int i = 0; i < (int)words.size(); i++) {
-	    bool inclusive = true;
-	    SuRF::Iter iter = surf_->moveToKeyLessThan(words[i], inclusive);
 
-	    ASSERT_TRUE(iter.isValid());
-	    std::string iter_key;
-	    unsigned bitlen;
-	    iter_key = iter.getKeyWithSuffix(&bitlen);
-	    std::string word_prefix = words[i].substr(0, iter_key.length());
-	    bool is_prefix = isEqual(word_prefix, iter_key, bitlen);
-	    ASSERT_TRUE(is_prefix);
+	bool inclusive = true;
+	for (int i = 0; i < 2; i++) {
+	    if (i == 1)
+		inclusive = false;
+	    for (unsigned j = 1; j < words.size(); j++) {
+		SuRF::Iter iter = surf_->moveToKeyLessThan(words[j], inclusive);
+
+		ASSERT_TRUE(iter.isValid());
+		unsigned bitlen;
+		std::string iter_key = iter.getKeyWithSuffix(&bitlen);
+		std::string word_prefix_fp = words[j].substr(0, iter_key.length());
+		std::string word_prefix_true = words[j-1].substr(0, iter_key.length());
+		bool is_prefix = false;
+		if (iter.getFpFlag())
+		    is_prefix = isEqual(word_prefix_fp, iter_key, bitlen);
+		else
+		    is_prefix = isEqual(word_prefix_true, iter_key, bitlen);
+		ASSERT_TRUE(is_prefix);
+	    }
+
+	    SuRF::Iter iter = surf_->moveToKeyLessThan(words[0], inclusive);
+	    if (iter.getFpFlag()) {
+		ASSERT_TRUE(iter.isValid());
+		unsigned bitlen;
+		std::string iter_key = iter.getKeyWithSuffix(&bitlen);
+		std::string word_prefix_fp = words[0].substr(0, iter_key.length());
+		bool is_prefix = isEqual(word_prefix_fp, iter_key, bitlen);
+		ASSERT_TRUE(is_prefix);
+	    } else {
+		ASSERT_FALSE(iter.isValid());
+	    }
 	}
 
-	for (unsigned i = 1; i < words.size(); i++) {
-	    bool inclusive = false;
-	    SuRF::Iter iter = surf_->moveToKeyLessThan(words[i], inclusive);
-
-	    ASSERT_TRUE(iter.isValid());
-	    std::string iter_key;
-	    unsigned bitlen;
-	    iter_key = iter.getKeyWithSuffix(&bitlen);
-	    std::string word_prefix = words[i-1].substr(0, iter_key.length());
-	    bool is_prefix = isEqual(word_prefix, iter_key, bitlen);
-	    ASSERT_TRUE(is_prefix);
-	}
-
-	bool inclusive = false;
-	SuRF::Iter iter = surf_->moveToKeyLessThan(words[0], inclusive);
-	ASSERT_FALSE(iter.isValid());
 	surf_->destroy();
 	delete surf_;
     }
@@ -336,49 +352,40 @@ TEST_F (SuRFUnitTest, moveToKeyLessThanIntTest) {
     for (int k = 0; k < 5; k++) {
 	level_t suffix_len = suffix_len_array[k];
         newSuRFInts(suffix_len);
-	for (uint64_t i = 0; i < kIntTestBound; i++) {
-	    bool inclusive = true;
-	    SuRF::Iter iter = surf_->moveToKeyLessThan(uint64ToString(i), inclusive);
 
-	    ASSERT_TRUE(iter.isValid());
-	    std::string iter_key;
-	    unsigned bitlen;
-	    iter_key = iter.getKeyWithSuffix(&bitlen);
-	    std::string int_key;
-	    if (i % kIntTestSkip == 0)
-		int_key = uint64ToString(i);
-	    else
-		int_key = uint64ToString(i - (i % kIntTestSkip));
-	    std::string int_prefix = int_key.substr(0, iter_key.length());
-	    bool is_prefix = isEqual(int_prefix, iter_key, bitlen);
-	    ASSERT_TRUE(is_prefix);
+	bool inclusive = true;
+	for (int i = 0; i < 2; i++) {
+	    if (i == 1)
+		inclusive = false;
+	    for (uint64_t j = kIntTestSkip; j < kIntTestBound; j++) {
+		SuRF::Iter iter = surf_->moveToKeyLessThan(uint64ToString(j), inclusive);
+
+		ASSERT_TRUE(iter.isValid());
+		unsigned bitlen;
+		std::string iter_key = iter.getKeyWithSuffix(&bitlen);
+		std::string int_key = uint64ToString(j - (j % kIntTestSkip));
+		std::string int_prefix = int_key.substr(0, iter_key.length());
+		bool is_prefix = isEqual(int_prefix, iter_key, bitlen);
+		ASSERT_TRUE(is_prefix);
+	    }
+	    SuRF::Iter iter = surf_->moveToKeyLessThan(uint64ToString(0), inclusive);
+	    if (iter.getFpFlag()) {
+		ASSERT_TRUE(iter.isValid());
+		unsigned bitlen;
+		std::string iter_key = iter.getKeyWithSuffix(&bitlen);
+		std::string int_key = uint64ToString(0);
+		std::string int_prefix = int_key.substr(0, iter_key.length());
+		bool is_prefix = isEqual(int_prefix, iter_key, bitlen);
+		ASSERT_TRUE(is_prefix);
+	    } else {
+		ASSERT_FALSE(iter.isValid());
+	    }
 	}
-
-	for (uint64_t i = kIntTestSkip; i < kIntTestBound - 1; i++) {
-	    bool inclusive = false;
-	    SuRF::Iter iter = surf_->moveToKeyLessThan(uint64ToString(i), inclusive);
-
-	    ASSERT_TRUE(iter.isValid());
-	    std::string iter_key;
-	    unsigned bitlen;
-	    iter_key = iter.getKeyWithSuffix(&bitlen);
-	    std::string int_key;
-	    if (i % kIntTestSkip == 0)
-		int_key = uint64ToString(i - kIntTestSkip);
-	    else
-		int_key = uint64ToString(i - (i % kIntTestSkip));
-	    std::string int_prefix = int_key.substr(0, iter_key.length());
-	    bool is_prefix = isEqual(int_prefix, iter_key, bitlen);
-	    ASSERT_TRUE(is_prefix);
-	}
-
-	bool inclusive = false;
-	SuRF::Iter iter = surf_->moveToKeyLessThan(uint64ToString(0), inclusive);
-	ASSERT_FALSE(iter.isValid());
 	surf_->destroy();
 	delete surf_;
     }
 }
+
 
 TEST_F (SuRFUnitTest, IteratorIncrementWordTest) {
     level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
@@ -490,7 +497,7 @@ TEST_F (SuRFUnitTest, lookupRangeWordTest) {
 	bool exist = surf_->lookupRange(std::string("\1"), true, words[0], true);
 	ASSERT_TRUE(exist);
 	exist = surf_->lookupRange(std::string("\1"), true, words[0], false);
-	ASSERT_FALSE(exist);
+	ASSERT_TRUE(exist);
 
 	for (unsigned i = 0; i < words.size() - 1; i++) {
 	    exist = surf_->lookupRange(words[i], true, words[i+1], true);
@@ -500,13 +507,13 @@ TEST_F (SuRFUnitTest, lookupRangeWordTest) {
 	    exist = surf_->lookupRange(words[i], false, words[i+1], true);
 	    ASSERT_TRUE(exist);
 	    exist = surf_->lookupRange(words[i], false, words[i+1], false);
-	    ASSERT_FALSE(exist);
+	    ASSERT_TRUE(exist);
 	}
 
 	exist = surf_->lookupRange(words[words.size() - 1], true, std::string("zzzzzzzz"), false);
 	ASSERT_TRUE(exist);
 	exist = surf_->lookupRange(words[words.size() - 1], false, std::string("zzzzzzzz"), false);
-	ASSERT_FALSE(exist);
+	ASSERT_TRUE(exist);
 
     }
 }
@@ -529,8 +536,10 @@ TEST_F (SuRFUnitTest, lookupRangeIntTest) {
 					   uint64ToString(i + j), true);
 		uint64_t left_bound_interval_id = i / kIntTestSkip;
 		uint64_t right_bound_interval_id = (i + j) / kIntTestSkip;
-		if ((i < kIntTestBound - 1) && ((left_bound_interval_id < right_bound_interval_id)
-						|| ((i + j) % kIntTestSkip == 0)))
+		if ((i % kIntTestSkip == 0) 
+		    || ((i < kIntTestBound - 1) 
+			&& ((left_bound_interval_id < right_bound_interval_id)
+			    || ((i + j) % kIntTestSkip == 0))))
 		    ASSERT_TRUE(exist);
 		else
 		    ASSERT_FALSE(exist);
@@ -538,6 +547,7 @@ TEST_F (SuRFUnitTest, lookupRangeIntTest) {
 	}
     }
 }
+
 
 void loadWordList() {
     std::ifstream infile(kFilePath);

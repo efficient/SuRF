@@ -18,4 +18,5 @@ add_unit_test(test_select)
 add_unit_test(test_suffix)
 add_unit_test(test_surf)
 add_unit_test(test_surf_builder)
+add_unit_test(test_surf_small)
 

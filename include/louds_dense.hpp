@@ -88,11 +88,9 @@ public:
     // Returns whether key exists in the trie so far
     // out_node_num == 0 means search terminates in louds-dense.
     bool lookupKey(const std::string& key, position_t& out_node_num) const;
-
-    void moveToKeyGreaterThan(const std::string& key, 
+    // return value indicates potential false positive
+    bool moveToKeyGreaterThan(const std::string& key, 
 			      const bool inclusive, LoudsDense::Iter& iter) const;
-    void moveToKeyLessThan(const std::string& key, 
-			   const bool inclusive, LoudsDense::Iter& iter) const;
 
     uint64_t getHeight() const { return height_; };
     uint64_t serializedSize() const;
@@ -135,7 +133,7 @@ private:
     position_t getNextPos(const position_t pos) const;
     position_t getPrevPos(const position_t pos, bool* is_out_of_bound) const;
 
-    void compareSuffixGreaterThan(const position_t pos, const std::string& key, 
+    bool compareSuffixGreaterThan(const position_t pos, const std::string& key, 
 				  const level_t level, const bool inclusive, 
 				  LoudsDense::Iter& iter) const;
 
@@ -211,7 +209,7 @@ bool LoudsDense::lookupKey(const std::string& key, position_t& out_node_num) con
     return true;
 }
 
-void LoudsDense::moveToKeyGreaterThan(const std::string& key, 
+bool LoudsDense::moveToKeyGreaterThan(const std::string& key, 
 				      const bool inclusive, LoudsDense::Iter& iter) const {
     position_t node_num = 0;
     position_t pos = 0;
@@ -221,18 +219,19 @@ void LoudsDense::moveToKeyGreaterThan(const std::string& key,
 	if (level >= key.length()) { // if run out of searchKey bytes
 	    iter.append(getNextPos(pos - 1));
 	    iter.is_at_prefix_key_ = true;
-	    if (!inclusive)
-		return iter++;
 	    // valid, search complete, moveLeft complete, moveRight complete
-	    return iter.setFlags(true, true, true, true); 
+	    iter.setFlags(true, true, true, true); 
+	    return true;
 	}
 
 	pos += (label_t)key[level];
 	iter.append(pos);
 
 	// if no exact match
-	if (!label_bitmaps_->readBit(pos))
-	    return iter++;
+	if (!label_bitmaps_->readBit(pos)) {
+	    iter++;
+	    return false;
+	}
 	//if trie branch terminates
 	if (!child_indicator_bitmaps_->readBit(pos))
 	    return compareSuffixGreaterThan(pos, key, level+1, inclusive, iter);
@@ -243,13 +242,7 @@ void LoudsDense::moveToKeyGreaterThan(const std::string& key,
     iter.setSendOutNodeNum(node_num);
     // valid, search INCOMPLETE, moveLeft complete, moveRight complete
     iter.setFlags(true, false, true, true);
-}
-
-void LoudsDense::moveToKeyLessThan(const std::string& key, 
-				   const bool inclusive, LoudsDense::Iter& iter) const {
-    moveToKeyGreaterThan(key, !inclusive, iter);
-    if (iter.isValid())
-	iter--;
+    return true;
 }
 
 uint64_t LoudsDense::serializedSize() const {
@@ -299,20 +292,18 @@ position_t LoudsDense::getPrevPos(const position_t pos, bool* is_out_of_bound) c
     return (pos - distance);
 }
 
-void LoudsDense::compareSuffixGreaterThan(const position_t pos, const std::string& key, 
+bool LoudsDense::compareSuffixGreaterThan(const position_t pos, const std::string& key, 
 					  const level_t level, const bool inclusive, 
 					  LoudsDense::Iter& iter) const {
-    if ((suffixes_->getType() == kReal) || (suffixes_->getType() == kMixed)) {
-	position_t suffix_pos = getSuffixPos(pos, false);
-	int compare = suffixes_->compare(suffix_pos, key, level);
-	if ((compare < 0) || (compare == 0 && !inclusive))
-	    return iter++;
-    } else {
-	if (!inclusive)
-	    return iter++;
+    position_t suffix_pos = getSuffixPos(pos, false);
+    int compare = suffixes_->compare(suffix_pos, key, level);
+    if ((compare != kCouldBePositive) && (compare < 0)) {
+	iter++;
+	return false;
     }
     // valid, search complete, moveLeft complete, moveRight complete
     iter.setFlags(true, true, true, true);
+    return true;
 }
 
 //============================================================================
