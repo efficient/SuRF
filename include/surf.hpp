@@ -9,8 +9,6 @@
 #include "louds_sparse.hpp"
 #include "surf_builder.hpp"
 
-#include <iostream>
-
 namespace surf {
 
 class SuRF {
@@ -137,6 +135,7 @@ bool SuRF::lookupKey(const std::string& key) const {
 SuRF::Iter SuRF::moveToKeyGreaterThan(const std::string& key, const bool inclusive) const {
     SuRF::Iter iter(this);
     iter.could_be_fp_ = louds_dense_->moveToKeyGreaterThan(key, inclusive, iter.dense_iter_);
+
     if (!iter.dense_iter_.isValid())
 	return iter;
     if (iter.dense_iter_.isComplete())
@@ -145,9 +144,8 @@ SuRF::Iter SuRF::moveToKeyGreaterThan(const std::string& key, const bool inclusi
     if (!iter.dense_iter_.isSearchComplete()) {
 	iter.passToSparse();
 	iter.could_be_fp_ = louds_sparse_->moveToKeyGreaterThan(key, inclusive, iter.sparse_iter_);
-	if (!iter.sparse_iter_.isValid()) {
+	if (!iter.sparse_iter_.isValid())
 	    iter.incrementDenseIter();
-	}
 	return iter;
     } else if (!iter.dense_iter_.isMoveLeftComplete()) {
 	iter.passToSparse();

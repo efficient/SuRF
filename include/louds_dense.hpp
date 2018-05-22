@@ -218,7 +218,10 @@ bool LoudsDense::moveToKeyGreaterThan(const std::string& key,
 	pos = node_num * kNodeFanout;
 	if (level >= key.length()) { // if run out of searchKey bytes
 	    iter.append(getNextPos(pos - 1));
-	    iter.is_at_prefix_key_ = true;
+	    if (prefixkey_indicator_bits_->readBit(node_num)) //if the prefix is also a key
+		iter.is_at_prefix_key_ = true;
+	    else
+		iter.moveToLeftMostKey();
 	    // valid, search complete, moveLeft complete, moveRight complete
 	    iter.setFlags(true, true, true, true); 
 	    return true;

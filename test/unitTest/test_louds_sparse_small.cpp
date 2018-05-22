@@ -12,6 +12,8 @@ namespace surf {
 
 namespace surftest {
 
+static const bool kIncludeDense = false;
+static const uint32_t kSparseDenseRatio = 0;
 static const SuffixType kSuffixType = kReal;
 static const level_t kSuffixLen = 8;
 
@@ -36,18 +38,16 @@ TEST_F (SuRFSmallTest, ExampleInPaperTest) {
     keys.push_back(std::string("trip"));
     keys.push_back(std::string("try"));
 
-    SuRF* surf = new SuRF(keys, kIncludeDense, kSparseDenseRatio, kSuffixType, 0, kSuffixLen);
-    bool exist = surf->lookupRange(std::string("top"), false, std::string("toyy"), false);
-    ASSERT_TRUE(exist);
-    exist = surf->lookupRange(std::string("toq"), false, std::string("toyy"), false);
-    ASSERT_TRUE(exist);
-    exist = surf->lookupRange(std::string("trie"), false, std::string("tripp"), false);
-    ASSERT_TRUE(exist);
-
-    SuRF::Iter iter = surf->moveToKeyGreaterThan(std::string("t"), true);
+    SuRFBuilder* builder = new SuRFBuilder(kIncludeDense, kSparseDenseRatio, kSuffixType, 0, kSuffixLen);
+    builder->build(keys);
+    LoudsSparse* louds_sparse = new LoudsSparse(builder);
+    LoudsSparse::Iter iter(louds_sparse);
+    
+    louds_sparse->moveToKeyGreaterThan(std::string("to"), true, iter);
     ASSERT_TRUE(iter.isValid());
+    ASSERT_EQ(0, iter.getKey().compare("top"));
     iter++;
-    ASSERT_TRUE(iter.isValid());
+    ASSERT_EQ(0, iter.getKey().compare("toy"));
 }
 
 } // namespace surftest

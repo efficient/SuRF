@@ -221,6 +221,7 @@ bool LoudsSparse::moveToKeyGreaterThan(const std::string& key,
 				       const bool inclusive, LoudsSparse::Iter& iter) const {
     position_t node_num = iter.getStartNodeNum();
     position_t pos = getFirstLabelPos(node_num);
+
     level_t level;
     for (level = start_level_; level < key.length(); level++) {
 	position_t node_size = nodeSize(pos);
@@ -240,6 +241,7 @@ bool LoudsSparse::moveToKeyGreaterThan(const std::string& key,
 	node_num = getChildNodeNum(pos);
 	pos = getFirstLabelPos(node_num);
     }
+
     if ((labels_->read(pos) == kTerminator) && (!child_indicator_bits_->readBit(pos))
 	&& !louds_bits_->readBit(pos + 1)) {
 	iter.append(kTerminator, pos);
@@ -249,6 +251,12 @@ bool LoudsSparse::moveToKeyGreaterThan(const std::string& key,
 	iter.is_valid_ = true;
 	return false;
     }
+
+    if (key.length() <= level) {
+	iter.moveToLeftMostKey();
+	return false;
+    }
+
     iter.is_valid_ = true;
     return true;
 }
