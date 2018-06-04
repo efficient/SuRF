@@ -49,6 +49,7 @@ void LabelVectorUnitTest::setupWordsTest() {
 
 void LabelVectorUnitTest::testSerialize() {
     uint64_t size = labels_->serializedSize();
+    ASSERT_TRUE((labels_->size() - size) >= 0);
     data_ = new char[size];
     LabelVector* ori_labels = labels_;
     char* data = data_;

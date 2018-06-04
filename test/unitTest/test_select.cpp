@@ -58,6 +58,7 @@ void SelectUnitTest::setupWordsTest() {
 
 void SelectUnitTest::testSerialize() {
     uint64_t size = bv_->serializedSize();
+    ASSERT_TRUE((bv_->size() - size) >= 0);
     data_ = new char[size];
     BitvectorSelect* ori_bv = bv_;
     char* data = data_;

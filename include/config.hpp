@@ -55,12 +55,6 @@ uint64_t stringToUint64(const std::string& str_word) {
     return __builtin_bswap64(int_word);
 }
 
-uint64_t extractBlockSize(const std::string& str, uint64_t offset) {
-    uint64_t size = 0;
-    memcpy((&size), &str[offset], sizeof(uint64_t));
-    return size;
-}
-
 } // namespace surf
 
 #endif // CONFIG_H_

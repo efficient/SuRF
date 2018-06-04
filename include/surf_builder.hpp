@@ -183,15 +183,16 @@ void SuRFBuilder::build(const std::vector<std::string>& keys) {
 }
 
 void SuRFBuilder::buildSparse(const std::vector<std::string>& keys) {
-    for (uint32_t i = 0; i < keys.size(); i++) {
-	if (i > 0 && isSameKey(keys[i], keys[i-1]))
-	    continue;
-	level_t level = skipCommonPrefix(keys[i]);
+    for (position_t i = 0; i < keys.size(); i++) {
+	level_t level = skipCommonPrefix(keys[i]);	
+	position_t curpos = i;
+	while ((i + 1 < keys.size()) && isSameKey(keys[curpos], keys[i+1]))
+	    i++;
 	if (i < keys.size() - 1)
-	    level = insertKeyBytesToTrieUntilUnique(keys[i], keys[i+1], level);
+	    level = insertKeyBytesToTrieUntilUnique(keys[curpos], keys[i+1], level);
 	else // for last key, there is no successor key in the list
-	    level = insertKeyBytesToTrieUntilUnique(keys[i], std::string(), level);
-	insertSuffix(keys[i], level);
+	    level = insertKeyBytesToTrieUntilUnique(keys[curpos], std::string(), level);
+	insertSuffix(keys[curpos], level);
     }
 }
 

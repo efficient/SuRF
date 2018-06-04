@@ -27,7 +27,7 @@ public:
                     const level_t start_level = 0,
                     level_t end_level = 0/* non-inclusive */)
 	: Bitvector(bitvector_per_level, num_bits_per_level, start_level, end_level) {
-	assert(suffix_len <= kWordSize);
+	assert((hash_suffix_len + real_suffix_len) <= kWordSize);
 	type_ = type;
 	hash_suffix_len_ = hash_suffix_len;
         real_suffix_len_ = real_suffix_len;

@@ -64,6 +64,7 @@ void RankUnitTest::setupWordsTest() {
 
 void RankUnitTest::testSerialize() {
     uint64_t size = bv_->serializedSize();
+    ASSERT_TRUE((bv_->size() - size) >= 0);
     data_ = new char[size];
     BitvectorRank* ori_bv = bv_;
     char* data = data_;

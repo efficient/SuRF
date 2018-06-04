@@ -79,8 +79,6 @@ position_t Bitvector::distanceToNextSetBit (const position_t pos) const {
     position_t distance = 1;
 
     position_t word_id = (pos + 1) / kWordSize;
-    if (word_id >= numWords())
-	return distance;
     position_t offset = (pos + 1) % kWordSize;
 
     //first word left-over bits
@@ -116,8 +114,8 @@ position_t Bitvector::distanceToPrevSetBit (const position_t pos) const {
     if (test_bits > 0) {
 	return (distance + __builtin_ctzll(test_bits));
     } else {
-	if (word_id == 0)
-	    return (offset + 1);
+	//if (word_id == 0)
+	//return (offset + 1);
 	distance += (offset + 1);
     }
 
@@ -128,7 +126,6 @@ position_t Bitvector::distanceToPrevSetBit (const position_t pos) const {
 	    return (distance + __builtin_ctzll(test_bits));
 	distance += kWordSize;
     }
-    assert(false);
     return distance;
 }
 
