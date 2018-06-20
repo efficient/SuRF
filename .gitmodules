@@ -1,4 +1,4 @@
 [submodule "ARF"]
 	path = ARF
-	url = git@github.com:efficient/ARF.git
+	url = https://github.com/efficient/ARF.git
 	branch = master
