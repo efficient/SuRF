@@ -6,8 +6,6 @@ compiler: gcc
 install:
 - sudo apt-get install build-essential
 - sudo apt-get install cmake
-- sudo unlink /usr/bin/gcc && sudo ln -s /usr/bin/gcc-5 /usr/bin/gcc
-- gcc --version
 - sudo apt-get install libgtest.dev
 - cd /usr/src/gtest
 - sudo cmake CMakeLists.txt
