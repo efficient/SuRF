@@ -14,6 +14,8 @@ packages:
 install:
 - sudo apt-get install build-essential
 - sudo apt-get install cmake
+- sudo unlink /usr/bin/gcc && sudo ln -s /usr/bin/gcc-5 /usr/bin/gcc
+- gcc --version
 - sudo apt-get install libgtest.dev
 - cd /usr/src/gtest
 - sudo cmake CMakeLists.txt
@@ -22,6 +24,9 @@ install:
 - sudo apt-get install lcov
 - sudo apt-get install python-pip
 - pip install --user cpp-coveralls
+
+env:
+- COVERALLS_REPO_TOKEN=8egNx7uP66rbO3ujaoxWwJL7Iient78vm
 
 script:
 - cd $TRAVIS_BUILD_DIR
@@ -32,4 +37,4 @@ script:
 - make coverage
 
 after_success:
-- coveralls --exclude lib --exclude tests --gcov-options '\-lp'
+- coveralls -e ARF -e bench -e /usr/include/gtest -e /usr/lib/gcc/x86_64-linux-gnu/5 -e 5
