@@ -3,6 +3,14 @@ language: cpp
 compiler: gcc
 sudo: required
 
+addons:
+apt:
+sources:
+- ubuntu-toolchain-r-test
+packages:
+- gcc-5
+- g++-5
+
 install:
 - sudo apt-get install build-essential
 - sudo apt-get install cmake
@@ -16,6 +24,7 @@ install:
 - pip install --user cpp-coveralls
 
 script:
+- cd $TRAVIS_BUILD_DIR
 - mkdir build
 - cd build
 - cmake -DCMAKE_BUILD_TYPE=Debug -DCOVERALLS=ON ..
