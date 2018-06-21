@@ -38,4 +38,5 @@ and `bench/workload_arf.cpp` for more experiment configurations.
 
 ## License
 Copyright 2018, Carnegie Mellon University
+
 Licensed under the [Apache License](https://github.com/efficient/SuRF/blob/master/LICENSE).
