@@ -1,6 +1,5 @@
 # SuRF
 [![Build Status](https://travis-ci.org/efficient/SuRF.svg?branch=master)](https://travis-ci.org/efficient/SuRF)
-
 [![Coverage Status](https://coveralls.io/repos/github/efficient/SuRF/badge.svg?branch=master)](https://coveralls.io/github/efficient/SuRF?branch=master)
 
 The **Succinct Range Filter (SuRF)** is a fast and compact filter that
