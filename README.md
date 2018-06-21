@@ -4,7 +4,7 @@
 
 **SuRF** is a fast and compact filter that provides exact-match filtering,
 range filtering, and approximate range counts. This is the source code for our
-[SIGMOD best paper](http://www.cs.cmu.edu/~huanche1/publications/surf_paper.pdf)
+[SIGMOD best paper](http://www.cs.cmu.edu/~huanche1/publications/surf_paper.pdf).
 We also host a [demo website](https://www.rangefilter.io/).
 
 ## Build
@@ -37,6 +37,6 @@ Refer to `bench/workload.cpp`, `bench/workload_multi_thread.cpp`
 and `bench/workload_arf.cpp` for more experiment configurations.
 
 ## License
-    Copyright 2018, Carnegie Mellon University
+Copyright 2018, Carnegie Mellon University
 
-    Licensed under the [Apache License](https://github.com/efficient/SuRF/blob/master/LICENSE)
+Licensed under the [Apache License](https://github.com/efficient/SuRF/blob/master/LICENSE).
