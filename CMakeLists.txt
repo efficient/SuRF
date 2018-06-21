@@ -13,7 +13,7 @@ if (COVERALLS)
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -Wall -mpopcnt -pthread -std=c++11")
   include("${CMAKE_CURRENT_SOURCE_DIR}/CodeCoverage.cmake")
   append_coverage_compiler_flags()
-  set(COVERAGE_EXCLUDES 'ARF/*' 'bench/*' '/usr/include/gtest/*' '/usr/lib/gcc/x86_64-linux-gnu/5/*' '5/*')
+  set(COVERAGE_EXCLUDES 'ARF/*' 'bench/*' 'test/*' '/usr/*' '/lib/*')
   setup_target_for_coverage(
     NAME coverage
     EXECUTABLE make test

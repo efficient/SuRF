@@ -12,11 +12,8 @@ install:
 - sudo make
 - sudo cp *.a /usr/lib
 - sudo apt-get install lcov
-- sudo apt-get install python-pip
-- pip install --user cpp-coveralls
-
-env:
-- COVERALLS_REPO_TOKEN=8egNx7uP66rbO3ujaoxWwJL7Iient78vm
+- sudo apt-get install ruby
+- sudo gem install coveralls-lcov
 
 script:
 - cd $TRAVIS_BUILD_DIR
@@ -27,4 +24,6 @@ script:
 - make coverage
 
 after_success:
-- coveralls -e ARF -e bench -e /usr/include/gtest -e /usr/lib/gcc/x86_64-linux-gnu/5 -e 5
+- lcov --remove coverage.info 'test/*' '/usr/*' '/lib/*' --output-file coverage.info
+- lcov --list coverage.info
+- coveralls-lcov --repo-token=${COVERALLS_TOKEN} coverage.info
