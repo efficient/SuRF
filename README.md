@@ -15,6 +15,11 @@ We also host a [demo website](https://www.rangefilter.io/).
     cmake ..
     make -j
 
+## Simple Example
+A simple example can be found [here](https://github.com/efficient/SuRF/blob/master/simple_example.cpp). To run the example:
+    g++ -mpopcnt -std=c++11 simple_example.cpp
+    ./a.out
+
 ## Run Unit Tests
     make test
 

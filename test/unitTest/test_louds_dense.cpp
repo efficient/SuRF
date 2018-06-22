@@ -21,6 +21,10 @@ static const int kIntTestBound = 1000001;
 static const uint64_t kIntTestSkip = 10;
 static const bool kIncludeDense = true;
 static const uint32_t kSparseDenseRatio = 0;
+static const int kNumSuffixType = 4;
+static const SuffixType kSuffixTypeList[kNumSuffixType] = {kNone, kHash, kReal, kMixed};
+static const int kNumSuffixLen = 6;
+static const level_t kSuffixLenList[kNumSuffixLen] = {1, 3, 7, 8, 13, 26};
 static std::vector<std::string> words;
 
 class DenseUnitTest : public ::testing::Test {
@@ -35,7 +39,7 @@ public:
 	    delete[] data_;
     }
 
-    void newBuilder(level_t suffix_len);
+    void newBuilder(SuffixType suffix_type, level_t suffix_len);
     void truncateWordSuffixes();
     void fillinInts();
     void testSerialize();
@@ -61,8 +65,17 @@ static int getMax(int a, int b) {
     return a;
 }
 
-void DenseUnitTest::newBuilder(level_t suffix_len) {
-    builder_ = new SuRFBuilder(kIncludeDense, kSparseDenseRatio, kReal, 0, suffix_len);
+void DenseUnitTest::newBuilder(SuffixType suffix_type, level_t suffix_len) {
+    if (suffix_type == kNone)
+	builder_ = new SuRFBuilder(kIncludeDense, kSparseDenseRatio, kNone, 0, 0);
+    else if (suffix_type == kHash)
+	builder_ = new SuRFBuilder(kIncludeDense, kSparseDenseRatio, kHash, suffix_len, 0);
+    else if (suffix_type == kReal)
+	builder_ = new SuRFBuilder(kIncludeDense, kSparseDenseRatio, kReal, 0, suffix_len);
+    else if (suffix_type == kMixed)
+	builder_ = new SuRFBuilder(kIncludeDense, kSparseDenseRatio, kMixed, suffix_len, suffix_len);
+    else
+	builder_ = new SuRFBuilder(kIncludeDense, kSparseDenseRatio, kNone, 0, 0);
 }
 
 void DenseUnitTest::truncateWordSuffixes() {
@@ -127,36 +140,34 @@ void DenseUnitTest::testLookupWord() {
 }
 
 TEST_F (DenseUnitTest, lookupWordTest) {
-    level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
-    for (int k = 0; k < 5; k++) {
-	level_t suffix_len = suffix_len_array[k];
-        newBuilder(suffix_len);
-	builder_->build(words);
-	louds_dense_ = new LoudsDense(builder_);
-	testLookupWord();
-	delete builder_;
-	louds_dense_->destroy();
-	delete louds_dense_;
+    for (int t = 0; t < kNumSuffixType; t++) {
+	for (int k = 0; k < kNumSuffixLen; k++) {
+	    newBuilder(kSuffixTypeList[t], kSuffixLenList[k]);
+	    builder_->build(words);
+	    louds_dense_ = new LoudsDense(builder_);
+	    testLookupWord();
+	    delete builder_;
+	    louds_dense_->destroy();
+	    delete louds_dense_;
+	}
     }
 }
 
 TEST_F (DenseUnitTest, serializeTest) {
-    level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
-    for (int k = 0; k < 5; k++) {
-	level_t suffix_len = suffix_len_array[k];
-        newBuilder(suffix_len);
-	builder_->build(words);
-	louds_dense_ = new LoudsDense(builder_);
-
-	testSerialize();
-	testLookupWord();
-	delete builder_;
+    for (int t = 0; t < kNumSuffixType; t++) {
+	for (int k = 0; k < kNumSuffixLen; k++) {
+	    newBuilder(kSuffixTypeList[t], kSuffixLenList[k]);
+	    builder_->build(words);
+	    louds_dense_ = new LoudsDense(builder_);
+	    testSerialize();
+	    testLookupWord();
+	    delete builder_;
+	}
     }
 }
 
 TEST_F (DenseUnitTest, lookupIntTest) {
-    level_t suffix_len = 8;
-    newBuilder(suffix_len);
+    newBuilder(kReal, 8);
     builder_->build(ints_);
     louds_dense_ = new LoudsDense(builder_);
     position_t out_node_num = 0;
@@ -177,55 +188,54 @@ TEST_F (DenseUnitTest, lookupIntTest) {
 }
 
 TEST_F (DenseUnitTest, moveToKeyGreaterThanWordTest) {
-    level_t suffix_len_array[5] = {1, 3, 7, 8, 13};
-    for (int k = 0; k < 5; k++) {
-	level_t suffix_len = suffix_len_array[k];
-        newBuilder(suffix_len);
-	builder_->build(words);
-	louds_dense_ = new LoudsDense(builder_);
+    for (int t = 0; t < kNumSuffixType; t++) {
+	for (int k = 0; k < kNumSuffixLen; k++) {
+	    newBuilder(kSuffixTypeList[t], kSuffixLenList[k]);
+	    builder_->build(words);
+	    louds_dense_ = new LoudsDense(builder_);
 
-	bool inclusive = true;
-	for (int i = 0; i < 2; i++) {
-	    if (i == 1)
-		inclusive = false;
-	    for (unsigned j = 0; j < words.size() - 1; j++) {
+	    bool inclusive = true;
+	    for (int i = 0; i < 2; i++) {
+		if (i == 1)
+		    inclusive = false;
+		for (unsigned j = 0; j < words.size() - 1; j++) {
+		    LoudsDense::Iter iter(louds_dense_);
+		    bool could_be_fp = louds_dense_->moveToKeyGreaterThan(words[j], inclusive, iter);
+
+		    ASSERT_TRUE(iter.isValid());
+		    ASSERT_TRUE(iter.isComplete());
+		    std::string iter_key = iter.getKey();
+		    std::string word_prefix_fp = words[j].substr(0, iter_key.length());
+		    std::string word_prefix_true = words[j+1].substr(0, iter_key.length());
+		    bool is_prefix = false;
+		    if (could_be_fp)
+			is_prefix = (word_prefix_fp.compare(iter_key) == 0);
+		    else
+			is_prefix = (word_prefix_true.compare(iter_key) == 0);
+		    ASSERT_TRUE(is_prefix);
+		}
+
 		LoudsDense::Iter iter(louds_dense_);
-		bool could_be_fp = louds_dense_->moveToKeyGreaterThan(words[j], inclusive, iter);
-
-		ASSERT_TRUE(iter.isValid());
-		ASSERT_TRUE(iter.isComplete());
-		std::string iter_key = iter.getKey();
-		std::string word_prefix_fp = words[j].substr(0, iter_key.length());
-		std::string word_prefix_true = words[j+1].substr(0, iter_key.length());
-		bool is_prefix = false;
-		if (could_be_fp)
-		    is_prefix = (word_prefix_fp.compare(iter_key) == 0);
-		else
-		    is_prefix = (word_prefix_true.compare(iter_key) == 0);
-		ASSERT_TRUE(is_prefix);
+		bool could_be_fp = louds_dense_->moveToKeyGreaterThan(words[words.size() - 1], inclusive, iter);
+		if (could_be_fp) {
+		    std::string iter_key = iter.getKey();
+		    std::string word_prefix_fp = words[words.size() - 1].substr(0, iter_key.length());
+		    bool is_prefix = (word_prefix_fp.compare(iter_key) == 0);
+		    ASSERT_TRUE(is_prefix);
+		} else {
+		    ASSERT_FALSE(iter.isValid());
+		}
 	    }
 
-	    LoudsDense::Iter iter(louds_dense_);
-	    bool could_be_fp = louds_dense_->moveToKeyGreaterThan(words[words.size() - 1], inclusive, iter);
-	    if (could_be_fp) {
-		std::string iter_key = iter.getKey();
-		std::string word_prefix_fp = words[words.size() - 1].substr(0, iter_key.length());
-		bool is_prefix = (word_prefix_fp.compare(iter_key) == 0);
-		ASSERT_TRUE(is_prefix);
-	    } else {
-		ASSERT_FALSE(iter.isValid());
-	    }
+	    delete builder_;
+	    louds_dense_->destroy();
+	    delete louds_dense_;
 	}
-
-	delete builder_;
-	louds_dense_->destroy();
-	delete louds_dense_;
     }
 }
 
 TEST_F (DenseUnitTest, moveToKeyGreaterThanIntTest) {
-    level_t suffix_len = 8;
-    newBuilder(suffix_len);
+    newBuilder(kReal, 8);
     builder_->build(ints_);
     louds_dense_ = new LoudsDense(builder_);
 
@@ -271,8 +281,7 @@ TEST_F (DenseUnitTest, moveToKeyGreaterThanIntTest) {
 }
 
 TEST_F (DenseUnitTest, IteratorIncrementWordTest) {
-    level_t suffix_len = 8;
-    newBuilder(suffix_len);
+    newBuilder(kReal, 8);
     builder_->build(words);
     louds_dense_ = new LoudsDense(builder_);
     bool inclusive = true;
@@ -295,8 +304,7 @@ TEST_F (DenseUnitTest, IteratorIncrementWordTest) {
 }
 
 TEST_F (DenseUnitTest, IteratorIncrementIntTest) {
-    level_t suffix_len = 8;
-    newBuilder(suffix_len);
+    newBuilder(kReal, 8);
     builder_->build(ints_);
     louds_dense_ = new LoudsDense(builder_);
     bool inclusive = true;
@@ -319,8 +327,7 @@ TEST_F (DenseUnitTest, IteratorIncrementIntTest) {
 }
 
 TEST_F (DenseUnitTest, IteratorDecrementWordTest) {
-    level_t suffix_len = 8;
-    newBuilder(suffix_len);
+    newBuilder(kReal, 8);
     builder_->build(words);
     louds_dense_ = new LoudsDense(builder_);
     bool inclusive = true;
@@ -343,8 +350,7 @@ TEST_F (DenseUnitTest, IteratorDecrementWordTest) {
 }
 
 TEST_F (DenseUnitTest, IteratorDecrementIntTest) {
-    level_t suffix_len = 8;
-    newBuilder(suffix_len);
+    newBuilder(kReal, 8);
     builder_->build(ints_);
     louds_dense_ = new LoudsDense(builder_);
     bool inclusive = true;

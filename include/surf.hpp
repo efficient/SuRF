@@ -53,6 +53,15 @@ public:
 public:
     SuRF() {};
 
+    SuRF(const std::vector<std::string>& keys) {
+	create(keys, kIncludeDense, kSparseDenseRatio, kNone, 0, 0);
+    }
+
+    SuRF(const std::vector<std::string>& keys, const SuffixType suffix_type,
+	 const level_t hash_suffix_len, const level_t real_suffix_len) {
+	create(keys, kIncludeDense, kSparseDenseRatio, suffix_type, hash_suffix_len, real_suffix_len);
+    }
+    
     SuRF(const std::vector<std::string>& keys,
 	 const bool include_dense, const uint32_t sparse_dense_ratio,
 	 const SuffixType suffix_type, const level_t hash_suffix_len, const level_t real_suffix_len) {

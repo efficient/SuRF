@@ -7,10 +7,12 @@ if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release")
 endif()
 
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -g -Wall -mpopcnt -pthread -std=c++11")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -Wall -Werror -mpopcnt -pthread -std=c++11")
+
 option(COVERALLS "Generate coveralls data" OFF)
 
 if (COVERALLS)
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -Wall -mpopcnt -pthread -std=c++11")
   include("${CMAKE_CURRENT_SOURCE_DIR}/CodeCoverage.cmake")
   append_coverage_compiler_flags()
   set(COVERAGE_EXCLUDES 'ARF/*' 'bench/*' 'test/*' '/usr/*' '/lib/*')
@@ -19,7 +21,6 @@ if (COVERALLS)
     EXECUTABLE make test
     )
 else()
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -Wall -Werror -mpopcnt -pthread -std=c++11")
   add_definitions(-DNDEBUG)
 endif()
 

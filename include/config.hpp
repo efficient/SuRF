@@ -2,6 +2,7 @@
 #define CONFIG_H_
 
 #include <stdint.h>
+#include <string.h>
 
 namespace surf {
 
