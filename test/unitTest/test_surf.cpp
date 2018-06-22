@@ -539,30 +539,28 @@ TEST_F (SuRFUnitTest, lookupRangeWordTest) {
 }
 
 TEST_F (SuRFUnitTest, lookupRangeIntTest) {
-    for (int t = 0; t < kNumSuffixType; t++) {
-	for (int k = 0; k < kNumSuffixLen; k++) {
-	    newSuRFInts(kSuffixTypeList[t], kSuffixLenList[k]);
-	    for (uint64_t i = 0; i < kIntTestBound; i++) {
-		bool exist = surf_->lookupRange(uint64ToString(i), true, 
-						uint64ToString(i), true);
-		if (i % kIntTestSkip == 0)
+    for (int k = 0; k < kNumSuffixLen; k++) {
+	newSuRFInts(kMixed, kSuffixLenList[k]);
+	for (uint64_t i = 0; i < kIntTestBound; i++) {
+	    bool exist = surf_->lookupRange(uint64ToString(i), true, 
+					    uint64ToString(i), true);
+	    if (i % kIntTestSkip == 0)
+		ASSERT_TRUE(exist);
+	    else
+		ASSERT_FALSE(exist);
+
+	    for (unsigned j = 1; j < kIntTestSkip + 2; j++) {
+		exist = surf_->lookupRange(uint64ToString(i), false, 
+					   uint64ToString(i + j), true);
+		uint64_t left_bound_interval_id = i / kIntTestSkip;
+		uint64_t right_bound_interval_id = (i + j) / kIntTestSkip;
+		if ((i % kIntTestSkip == 0) 
+		    || ((i < kIntTestBound - 1) 
+			&& ((left_bound_interval_id < right_bound_interval_id)
+			    || ((i + j) % kIntTestSkip == 0))))
 		    ASSERT_TRUE(exist);
 		else
 		    ASSERT_FALSE(exist);
-
-		for (unsigned j = 1; j < kIntTestSkip + 2; j++) {
-		    exist = surf_->lookupRange(uint64ToString(i), false, 
-					       uint64ToString(i + j), true);
-		    uint64_t left_bound_interval_id = i / kIntTestSkip;
-		    uint64_t right_bound_interval_id = (i + j) / kIntTestSkip;
-		    if ((i % kIntTestSkip == 0) 
-			|| ((i < kIntTestBound - 1) 
-			    && ((left_bound_interval_id < right_bound_interval_id)
-				|| ((i + j) % kIntTestSkip == 0))))
-			ASSERT_TRUE(exist);
-		    else
-			ASSERT_FALSE(exist);
-		}
 	    }
 	}
     }
