@@ -121,7 +121,7 @@ private:
     inline bool isCharCommonPrefix(const label_t c, const level_t level) const;
     inline bool isLevelEmpty(const level_t level) const;
     inline void moveToNextItemSlot(const level_t level);
-    void insertKeyByte(const char c, const level_t level, const bool is_start_of_node);
+    void insertKeyByte(const char c, const level_t level, const bool is_start_of_node, const bool is_term);
     inline void storeSuffix(const level_t level, const word_t suffix);
 
     // Compute sparse_start_level_ according to the pre-defined
@@ -210,13 +210,14 @@ level_t SuRFBuilder::insertKeyBytesToTrieUntilUnique(const std::string& key, con
 
     level_t level = start_level;
     bool is_start_of_node = false;
+    bool is_term = false;
     // If it is the start of level, the louds bit needs to be set.
     if (isLevelEmpty(level))
 	is_start_of_node = true;
 
     // After skipping the common prefix, the first following byte
     // shoud be in an the node as the previous key.
-    insertKeyByte(key[level], level, is_start_of_node);
+    insertKeyByte(key[level], level, is_start_of_node, is_term);
     level++;
     if (level > next_key.length()
 	|| !isSameKey(key.substr(0, level), next_key.substr(0, level)))
@@ -226,15 +227,17 @@ level_t SuRFBuilder::insertKeyBytesToTrieUntilUnique(const std::string& key, con
     // new node.
     is_start_of_node = true;
     while (level < key.length() && level < next_key.length() && key[level] == next_key[level]) {
-	insertKeyByte(key[level], level, is_start_of_node);
+	insertKeyByte(key[level], level, is_start_of_node, is_term);
 	level++;
     }
 
     // The last byte inserted makes key unique in the trie.
-    if (level < key.length())
-	insertKeyByte(key[level], level, is_start_of_node);
-    else
-	insertKeyByte(kTerminator, level, is_start_of_node);
+    if (level < key.length()) {
+	insertKeyByte(key[level], level, is_start_of_node, is_term);
+    } else {
+	is_term = true;
+	insertKeyByte(kTerminator, level, is_start_of_node, is_term);
+    }
     level++;
 
     return level;
@@ -268,7 +271,7 @@ inline void SuRFBuilder::moveToNextItemSlot(const level_t level) {
     }
 }
 
-void SuRFBuilder::insertKeyByte(const char c, const level_t level, const bool is_start_of_node) {
+void SuRFBuilder::insertKeyByte(const char c, const level_t level, const bool is_start_of_node, const bool is_term) {
     // level should be at most equal to tree height
     if (level >= getTreeHeight())
 	addLevel();
@@ -284,6 +287,7 @@ void SuRFBuilder::insertKeyByte(const char c, const level_t level, const bool is
 	setBit(louds_bits_[level], getNumItems(level) - 1);
 	node_counts_[level]++;
     }
+    is_last_item_terminator_[level] = is_term;
 
     moveToNextItemSlot(level);
 }
