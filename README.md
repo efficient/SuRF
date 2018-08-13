@@ -7,6 +7,13 @@ range filtering, and approximate range counts. This is the source code for our
 [SIGMOD best paper](http://www.cs.cmu.edu/~huanche1/publications/surf_paper.pdf).
 We also host a [demo website](https://www.rangefilter.io/).
 
+## Install Dependencies
+    sudo apt-get install build-essential cmake libgtest.dev
+    cd /usr/src/gtest
+    sudo cmake CMakeLists.txt
+    sudo make
+    sudo cp *.a /usr/lib
+
 ## Build
     git submodule init
     git submodule update
