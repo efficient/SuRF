@@ -6,6 +6,7 @@
 range filtering, and approximate range counts. This is the source code for our
 [SIGMOD best paper](http://www.cs.cmu.edu/~huanche1/publications/surf_paper.pdf).
 We also host a [demo website](https://www.rangefilter.io/).
+The RocksDB experiments with SuRF can be found [here](https://github.com/efficient/rocksdb).
 
 ## Install Dependencies
     sudo apt-get install build-essential cmake libgtest.dev
