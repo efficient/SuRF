@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
     }
     int64_t false_positives = positives - true_positives;
     assert(false_positives >= 0);
-    int64_t true_negatives = txn_keys.size() - true_positives;
+    int64_t true_negatives = txn_keys.size() - positives;
 
     // print
     double tput = txn_keys.size() / (end_time - start_time) / 1000000; // Mops/sec
