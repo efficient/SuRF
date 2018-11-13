@@ -29,6 +29,7 @@ A simple example can be found [here](https://github.com/efficient/SuRF/blob/mast
 g++ -mpopcnt -std=c++11 simple_example.cpp
 ./a.out
 ```
+Note that the key list passed to the SuRF constructor must be SORTED.
 
 ## Run Unit Tests
     make test

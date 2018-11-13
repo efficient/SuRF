@@ -53,6 +53,9 @@ public:
 public:
     SuRF() {};
 
+    //------------------------------------------------------------------
+    // Input keys must be SORTED
+    //------------------------------------------------------------------
     SuRF(const std::vector<std::string>& keys) {
 	create(keys, kIncludeDense, kSparseDenseRatio, kNone, 0, 0);
     }
