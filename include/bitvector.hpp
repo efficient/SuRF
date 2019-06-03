@@ -91,7 +91,7 @@ position_t Bitvector::distanceToNextSetBit (const position_t pos) const {
 	distance += (kWordSize - offset);
     }
 
-    while (word_id < numWords()) {
+    while (word_id < numWords() - 1) {
 	word_id++;
 	test_bits = bits_[word_id];
 	if (test_bits > 0)

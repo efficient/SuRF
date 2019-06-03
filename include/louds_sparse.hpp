@@ -129,6 +129,7 @@ private:
     position_t getLastLabelPos(const position_t node_num) const;
     position_t getSuffixPos(const position_t pos) const;
     position_t nodeSize(const position_t pos) const;
+    bool isEndofNode(const position_t pos) const;
 
     void moveToLeftInNextSubtrie(position_t pos, const position_t node_size, 
 				 const label_t label, LoudsSparse::Iter& iter) const;
@@ -242,8 +243,9 @@ bool LoudsSparse::moveToKeyGreaterThan(const std::string& key,
 	pos = getFirstLabelPos(node_num);
     }
 
-    if ((labels_->read(pos) == kTerminator) && (!child_indicator_bits_->readBit(pos))
-	&& !louds_bits_->readBit(pos + 1)) {
+    if ((labels_->read(pos) == kTerminator)
+	&& (!child_indicator_bits_->readBit(pos))
+	&& !isEndofNode(pos)) {
 	iter.append(kTerminator, pos);
 	iter.is_at_terminator_ = true;
 	if (!inclusive)
@@ -302,6 +304,11 @@ position_t LoudsSparse::getSuffixPos(const position_t pos) const {
 position_t LoudsSparse::nodeSize(const position_t pos) const {
     assert(louds_bits_->readBit(pos));
     return louds_bits_->distanceToNextSetBit(pos);
+}
+
+bool LoudsSparse::isEndofNode(const position_t pos) const {
+    return ((pos == louds_bits_->numBits() - 1)
+	    || louds_bits_->readBit(pos + 1));
 }
 
 void LoudsSparse::moveToLeftInNextSubtrie(position_t pos, const position_t node_size, 
@@ -435,7 +442,8 @@ void LoudsSparse::Iter::moveToLeftMostKey() {
     label_t label = trie_->labels_->read(pos);
 
     if (!trie_->child_indicator_bits_->readBit(pos)) {
-	if ((label == kTerminator) && !trie_->louds_bits_->readBit(pos + 1))
+	if ((label == kTerminator)
+	    && !trie_->isEndofNode(pos))
 	    is_at_terminator_ = true;
 	is_valid_ = true;
 	return;
@@ -448,7 +456,8 @@ void LoudsSparse::Iter::moveToLeftMostKey() {
 	// if trie branch terminates
 	if (!trie_->child_indicator_bits_->readBit(pos)) {
 	    append(label, pos);
-	    if ((label == kTerminator) && !trie_->louds_bits_->readBit(pos + 1))
+	    if ((label == kTerminator)
+		&& !trie_->isEndofNode(pos))
 		is_at_terminator_ = true;
 	    is_valid_ = true;
 	    return;
@@ -472,7 +481,8 @@ void LoudsSparse::Iter::moveToRightMostKey() {
     label_t label = trie_->labels_->read(pos);
 
     if (!trie_->child_indicator_bits_->readBit(pos)) {
-	if ((label == kTerminator) && !trie_->louds_bits_->readBit(pos + 1))
+	if ((label == kTerminator)
+	    && !trie_->isEndofNode(pos))
 	    is_at_terminator_ = true;
 	is_valid_ = true;
 	return;
@@ -485,7 +495,8 @@ void LoudsSparse::Iter::moveToRightMostKey() {
 	// if trie branch terminates
 	if (!trie_->child_indicator_bits_->readBit(pos)) {
 	    append(label, pos);
-	    if ((label == kTerminator) && !trie_->louds_bits_->readBit(pos + 1))
+	    if ((label == kTerminator)
+		&& !trie_->isEndofNode(pos))
 		is_at_terminator_ = true;
 	    is_valid_ = true;
 	    return;
