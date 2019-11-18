@@ -107,6 +107,7 @@ public:
 	SuRF* surf = new SuRF();
 	surf->louds_dense_ = LoudsDense::deSerialize(src);
 	surf->louds_sparse_ = LoudsSparse::deSerialize(src);
+	surf->iter_ = SuRF::Iter(surf);
 	return surf;
     }
 
