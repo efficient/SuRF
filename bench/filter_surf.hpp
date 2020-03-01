@@ -33,6 +33,10 @@ public:
 	return filter_->lookupRange(left_key, true, right_key, true);
     }
 
+    bool approxCount(const std::string& left_key, const std::string& right_key) {
+	return filter_->approxCount(left_key, right_key);
+    }
+
     uint64_t getMemoryUsage() {
 	return filter_->getMemoryUsage();
     }

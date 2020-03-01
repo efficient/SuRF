@@ -74,6 +74,10 @@ public:
     // return value indicates potential false positive
     bool moveToKeyGreaterThan(const std::string& key, 
 			      const bool inclusive, LoudsSparse::Iter& iter) const;
+    uint64_t approxCount(const LoudsSparse::Iter* iter_left,
+			 const LoudsSparse::Iter* iter_right,
+			 const position_t in_node_num_left,
+			 const position_t in_node_num_right) const;
 
     level_t getHeight() const { return height_; };
     level_t getStartLevel() const { return start_level_; };
@@ -89,6 +93,8 @@ public:
 	dst += sizeof(node_count_dense_);
 	memcpy(dst, &child_count_dense_, sizeof(child_count_dense_));
 	dst += sizeof(child_count_dense_);
+	memcpy(dst, level_cuts_, sizeof(position_t) * height_);
+	dst += (sizeof(position_t) * height_);
 	align(dst);
 	labels_->serialize(dst);
 	child_indicator_bits_->serialize(dst);
@@ -107,6 +113,10 @@ public:
 	src += sizeof(louds_sparse->node_count_dense_);
 	memcpy(&(louds_sparse->child_count_dense_), src, sizeof(louds_sparse->child_count_dense_));
 	src += sizeof(louds_sparse->child_count_dense_);
+	louds_sparse->level_cuts_ = new position_t[louds_sparse->height_];
+	memcpy(louds_sparse->level_cuts_, src,
+	       sizeof(position_t) * (louds_sparse->height_));
+	src += (sizeof(position_t) * (louds_sparse->height_));
 	align(src);
 	louds_sparse->labels_ = LabelVector::deSerialize(src);
 	louds_sparse->child_indicator_bits_ = BitvectorRank::deSerialize(src);
@@ -117,6 +127,7 @@ public:
     }
 
     void destroy() {
+	delete[] level_cuts_;
 	labels_->destroy();
 	child_indicator_bits_->destroy();
 	louds_bits_->destroy();
@@ -138,6 +149,14 @@ private:
 				  const level_t level, const bool inclusive, 
 				  LoudsSparse::Iter& iter) const;
 
+    position_t appendToPosList(std::vector<position_t>& pos_list,
+			       const position_t node_num, const level_t level,
+			       const bool isLeft, bool& done) const;
+    void extendPosList(std::vector<position_t>& left_pos_list,
+		       std::vector<position_t>& right_pos_list,
+		       const position_t left_in_node_num,
+		       const position_t right_in_node_num) const;
+
 private:
     static const position_t kRankBasicBlockSize = 512;
     static const position_t kSelectSampleInterval = 64;
@@ -148,6 +167,7 @@ private:
     position_t node_count_dense_;
     // number of children(1's in child indicator bitmap) in louds-dense encoding
     position_t child_count_dense_;
+    position_t* level_cuts_; // position of the last bit at each level
 
     LabelVector* labels_;
     BitvectorRank* child_indicator_bits_;
@@ -174,6 +194,16 @@ LoudsSparse::LoudsSparse(const SuRFBuilder* builder) {
     std::vector<position_t> num_items_per_level;
     for (level_t level = 0; level < height_; level++)
 	num_items_per_level.push_back(builder->getLabels()[level].size());
+
+    level_cuts_ = new position_t[height_];
+    for (level_t level = 0; level < start_level_; level++) {
+	level_cuts_[level] = 0;
+    }
+    position_t bit_count = 0;
+    for (level_t level = start_level_; level < height_; level++) {
+	bit_count += num_items_per_level[level];
+	level_cuts_[level] = bit_count - 1;
+    }
 
     child_indicator_bits_ = new BitvectorRank(kRankBasicBlockSize, builder->getChildIndicatorBits(), 
 					      num_items_per_level, start_level_, height_);
@@ -263,15 +293,121 @@ bool LoudsSparse::moveToKeyGreaterThan(const std::string& key,
     return true;
 }
 
+position_t LoudsSparse::appendToPosList(std::vector<position_t>& pos_list,
+					const position_t node_num,
+					const level_t level,
+					const bool isLeft, bool& done) const {
+    position_t pos = getFirstLabelPos(node_num);
+    if (pos > level_cuts_[start_level_ + level]) {
+	pos = kMaxPos;
+	if (isLeft) {
+	    pos_list.push_back(pos);
+	} else {
+	    for (level_t j = 0; j < (height_ - level) - 1; j++)
+		pos_list.push_back(pos);
+	}
+	done = true;
+    }
+    pos_list.push_back(pos);
+    return pos;
+}
+
+void LoudsSparse::extendPosList(std::vector<position_t>& left_pos_list,
+				std::vector<position_t>& right_pos_list,
+				const position_t left_in_node_num,
+				const position_t right_in_node_num) const {
+    position_t left_node_num = 0, right_node_num = 0, left_pos = 0, right_pos = 0;
+    bool left_done = false, right_done = false;
+    level_t start_depth = left_pos_list.size();
+    if (start_depth > right_pos_list.size())
+	start_depth = right_pos_list.size();
+    if (start_depth == 0) {
+	if (left_pos_list.size() == 0)
+	    left_pos = appendToPosList(left_pos_list, left_in_node_num,
+				       0, true, left_done);
+	if (right_pos_list.size() == 0)
+	    right_pos = appendToPosList(right_pos_list, right_in_node_num,
+					0, false, right_done);
+	start_depth++;
+    }
+
+    left_pos = left_pos_list[left_pos_list.size() - 1];
+    right_pos = right_pos_list[right_pos_list.size() - 1];
+    for (level_t i = start_depth; i < (height_ - start_level_); i++) {
+	if (left_pos == right_pos) break;
+	if (!left_done && left_pos_list.size() <= i) {
+	    left_node_num = getChildNodeNum(left_pos);
+	    if (!child_indicator_bits_->readBit(left_pos))
+		left_node_num++;
+	    left_pos = appendToPosList(left_pos_list, left_node_num,
+				       i, true, left_done);
+	}
+	if (!right_done && right_pos_list.size() <= i) {
+	    right_node_num = getChildNodeNum(right_pos);
+	    if (!child_indicator_bits_->readBit(right_pos))
+		right_node_num++;
+	    right_pos = appendToPosList(right_pos_list, right_node_num,
+					i, false, right_done);
+	}
+    }
+}
+
+uint64_t LoudsSparse::approxCount(const LoudsSparse::Iter* iter_left,
+				  const LoudsSparse::Iter* iter_right,
+				  const position_t in_node_num_left,
+				  const position_t in_node_num_right) const {
+    if (in_node_num_left == kMaxPos) return 0;
+    std::vector<position_t> left_pos_list, right_pos_list;
+    for (level_t i = 0; i < iter_left->key_len_; i++)
+	left_pos_list.push_back(iter_left->pos_in_trie_[i]);
+    level_t ori_left_len = left_pos_list.size();
+    if (in_node_num_right == kMaxPos) {
+	for (level_t i = 0; i < (height_ - start_level_); i++)
+	    right_pos_list.push_back(kMaxPos);
+    } else {
+	for (level_t i = 0; i < iter_right->key_len_; i++)
+	    right_pos_list.push_back(iter_right->pos_in_trie_[i]);
+    }
+    extendPosList(left_pos_list, right_pos_list, in_node_num_left, in_node_num_right);
+
+    uint64_t count = 0;
+    level_t search_depth = left_pos_list.size();
+    if (search_depth > right_pos_list.size())
+	search_depth = right_pos_list.size();
+    for (level_t i = 0; i < search_depth; i++) {
+	position_t left_pos = left_pos_list[i];
+	if (left_pos == kMaxPos) break;
+	position_t right_pos = right_pos_list[i];
+	if (right_pos == kMaxPos)
+	    right_pos = level_cuts_[start_level_ + i] + 1;
+	//assert(left_pos <= right_pos);
+	if (left_pos < right_pos) {
+	    position_t rank_left = child_indicator_bits_->rank(left_pos);
+	    position_t rank_right = child_indicator_bits_->rank(right_pos);
+	    position_t num_leafs = (right_pos - left_pos) - (rank_right - rank_left);
+	    if (child_indicator_bits_->readBit(right_pos))
+		num_leafs++;
+	    if (child_indicator_bits_->readBit(left_pos))
+		num_leafs--;
+	    if (i == ori_left_len - 1)
+		num_leafs--;
+	    count += num_leafs;
+	}
+    }
+    return count;
+}
+
 uint64_t LoudsSparse::serializedSize() const {
     uint64_t size = sizeof(height_) + sizeof(start_level_)
 	+ sizeof(node_count_dense_) + sizeof(child_count_dense_)
-	+ labels_->serializedSize()
-	+ child_indicator_bits_->serializedSize()
-	+ louds_bits_->serializedSize()
-	+ suffixes_->serializedSize();
-    	sizeAlign(size);
-	return size;
+	+ (sizeof(position_t) * height_);
+    sizeAlign(size);
+    size += (labels_->serializedSize()
+	     + child_indicator_bits_->serializedSize()
+	     + louds_bits_->serializedSize()
+	     + suffixes_->serializedSize());
+    sizeAlign(size);
+    return size;
 }
 
 uint64_t LoudsSparse::getMemoryUsage() const {

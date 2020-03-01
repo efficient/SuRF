@@ -87,6 +87,9 @@ public:
     SuRF::Iter moveToLast() const;
     bool lookupRange(const std::string& left_key, const bool left_inclusive, 
 		     const std::string& right_key, const bool right_inclusive);
+    // Accurate except at the boundaries --> undercount by at most 2
+    uint64_t approxCount(const std::string& left_key, const std::string& right_key);
+    uint64_t approxCount(const SuRF::Iter* iter, const SuRF::Iter* iter2);
 
     uint64_t serializedSize() const;
     uint64_t getMemoryUsage() const;
@@ -121,6 +124,7 @@ private:
     LoudsSparse* louds_sparse_;
     SuRFBuilder* builder_;
     SuRF::Iter iter_;
+    SuRF::Iter iter2_;
 };
 
 void SuRF::create(const std::vector<std::string>& keys, 
@@ -241,6 +245,32 @@ bool SuRF::lookupRange(const std::string& left_key, const bool left_inclusive,
 	return (compare <= 0);
     else
 	return (compare < 0);
+}
+
+uint64_t SuRF::approxCount(const SuRF::Iter* iter, const SuRF::Iter* iter2) {
+    if (!iter->isValid() || !iter2->isValid()) return 0;
+    position_t out_node_num_left = 0, out_node_num_right = 0;
+    uint64_t count = louds_dense_->approxCount(&(iter->dense_iter_),
+					       &(iter2->dense_iter_),
+					       out_node_num_left,
+					       out_node_num_right);
+    count += louds_sparse_->approxCount(&(iter->sparse_iter_),
+					&(iter2->sparse_iter_),
+					out_node_num_left,
+					out_node_num_right);
+    return count;
+}
+
+uint64_t SuRF::approxCount(const std::string& left_key,
+			   const std::string& right_key) {
+    iter_.clear(); iter2_.clear();
+    iter_ = moveToKeyGreaterThan(left_key, true);
+    if (!iter_.isValid()) return 0;
+    iter2_ = moveToKeyGreaterThan(right_key, true);
+    if (!iter2_.isValid())
+	iter2_ = moveToLast();
+
+    return approxCount(&iter_, &iter2_);
 }
 
 uint64_t SuRF::serializedSize() const {

@@ -29,6 +29,11 @@ public:
 	return false;
     }
 
+    bool approxCount(const std::string& left_key, const std::string& right_key) {
+	std::cout << kRed << "A Bloom filter does not support approximate count queries\n" << kNoColor;
+	return false;
+    }
+
     uint64_t getMemoryUsage() {
 	return filter_data_.size();
     }

@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
 	std::cout << "4. percentage of keys inserted: 0 < num <= 100\n";
 	std::cout << "5. byte position (conting from last, only for alterByte): num\n";
 	std::cout << "6. key type: randint, email\n";
-	std::cout << "7. query type: point, range, mix\n";
+	std::cout << "7. query type: point, range, mix, count-long, count-short\n";
 	std::cout << "8. distribution: uniform, zipfian, latest\n";
 	return -1;
     }
@@ -60,7 +60,9 @@ int main(int argc, char *argv[]) {
 
     if (query_type.compare(std::string("point")) != 0
 	&& query_type.compare(std::string("range")) != 0
-	&& query_type.compare(std::string("mix")) != 0) {
+	&& query_type.compare(std::string("mix")) != 0
+	&& query_type.compare(std::string("count-long")) != 0
+	&& query_type.compare(std::string("count-short")) != 0) {
 	std::cout << bench::kRed << "WRONG query type\n" << bench::kNoColor;
 	return -1;
     }
@@ -97,15 +99,20 @@ int main(int argc, char *argv[]) {
     if (workload_type.compare(std::string("alterByte")) == 0)
 	bench::modifyKeyByte(txn_keys, byte_pos);
 
-    // compute upperbound keys for range queries =================
-    std::vector<std::string> upper_bound_keys;
-    if ((query_type.compare(std::string("range")) == 0)
-	|| (query_type.compare(std::string("mix")) == 0)) {
-	for (int i = 0; i < (int)txn_keys.size(); i++) {
-	    upper_bound_keys.push_back(bench::getUpperBoundKey(key_type, txn_keys[i]));
-	}
+    //compute keys for approximate count-long queries =================
+    std::vector<std::string> left_keys, right_keys;
+    if (query_type.compare(std::string("count-long")) == 0) {
+    	for (int i = 0; i < (int)txn_keys.size() - 1; i++) {
+    	    if (txn_keys[i].compare(txn_keys[i + 1]) < 0) {
+    		left_keys.push_back(txn_keys[i]);
+    		right_keys.push_back(txn_keys[i + 1]);
+    	    } else {
+    		left_keys.push_back(txn_keys[i + 1]);
+    		right_keys.push_back(txn_keys[i]);
+    	    }
+    	}
     }
-
+    
     // create filter ==============================================
     double time1 = bench::getNow();
     bench::Filter* filter = bench::FilterFactory::createFilter(filter_type, suffix_len, insert_keys);
@@ -114,6 +121,7 @@ int main(int argc, char *argv[]) {
 
     // execute transactions =======================================
     int64_t positives = 0;
+    uint64_t count = 0;
     double start_time = bench::getNow();
 
     if (query_type.compare(std::string("point")) == 0) {
@@ -142,6 +150,18 @@ int main(int argc, char *argv[]) {
 		}
 	    }
 	}
+    } else if (query_type.compare(std::string("count-long")) == 0) {
+	for (int i = 0; i < (int)txn_keys.size() - 1; i++)
+	    count += filter->approxCount(left_keys[i], right_keys[i]);
+    } else if (query_type.compare(std::string("count-short")) == 0) {
+	for (int i = 0; i < (int)txn_keys.size(); i++)
+	    if (key_type.compare(std::string("email")) == 0) {
+		std::string ret_str = txn_keys[i];
+		ret_str[ret_str.size() - 1] += (char)bench::kEmailRangeSize;
+		count += filter->approxCount(txn_keys[i], ret_str);
+	    } else {
+		count += filter->approxCount(txn_keys[i], bench::uint64ToString(bench::stringToUint64(txn_keys[i]) + bench::kIntRangeSize));
+	    }
     }
 
     double end_time = bench::getNow();
@@ -163,7 +183,13 @@ int main(int argc, char *argv[]) {
 	    ht_iter = ht.lower_bound(txn_keys[i]);
 	    if (ht_iter != ht.end()) {
 		std::string fetched_key = ht_iter->first;
-		true_positives += (fetched_key.compare(upper_bound_keys[i]) < 0);
+		if (key_type.compare(std::string("email")) == 0) {
+		    std::string ret_str = txn_keys[i];
+		    ret_str[ret_str.size() - 1] += (char)bench::kEmailRangeSize;
+		    true_positives += (fetched_key.compare(ret_str) < 0);
+		} else {
+		    true_positives += (fetched_key.compare(bench::uint64ToString(bench::stringToUint64(txn_keys[i]) + bench::kIntRangeSize)) < 0);
+		}
 	    }
 	}
     } else if (query_type.compare(std::string("mix")) == 0) {
@@ -175,7 +201,13 @@ int main(int argc, char *argv[]) {
 		ht_iter = ht.lower_bound(txn_keys[i]);
 		if (ht_iter != ht.end()) {
 		    std::string fetched_key = ht_iter->first;
-		    true_positives += (fetched_key.compare(upper_bound_keys[i]) < 0);
+		    if (key_type.compare(std::string("email")) == 0) {
+			std::string ret_str = txn_keys[i];
+			ret_str[ret_str.size() - 1] += (char)bench::kEmailRangeSize;
+			true_positives += (fetched_key.compare(ret_str) < 0);
+		    } else {
+			true_positives += (fetched_key.compare(bench::uint64ToString(bench::stringToUint64(txn_keys[i]) + bench::kIntRangeSize)) < 0);
+		    }
 		}	
 	    }
 	}
@@ -192,6 +224,7 @@ int main(int argc, char *argv[]) {
     std::cout << "true positives = " << true_positives << "\n";
     std::cout << "false positives = " << false_positives << "\n";
     std::cout << "true negatives = " << true_negatives << "\n";
+    std::cout << "count = " << count << "\n";
 
     double fp_rate = 0;
     if (false_positives > 0)

@@ -15,7 +15,7 @@ namespace surf {
 namespace densetest {
 
 static const std::string kFilePath = "../../../test/words.txt";
-static const int kTestSize = 234369;
+static const int kWordTestSize = 234369;
 static const uint64_t kIntTestStart = 10;
 static const int kIntTestBound = 1000001;
 static const uint64_t kIntTestSkip = 10;
@@ -373,11 +373,67 @@ TEST_F (DenseUnitTest, IteratorDecrementIntTest) {
     delete louds_dense_;
 }
 
+TEST_F (DenseUnitTest, approxCountWordTest) {
+    newBuilder(kReal, 8);
+    builder_->build(words);
+    louds_dense_ = new LoudsDense(builder_);
+    const int num_start_indexes = 5;
+    const int start_indexes[num_start_indexes] =
+	{0, kWordTestSize/4, kWordTestSize/2, 3*kWordTestSize/4, kWordTestSize-1};
+    for (int i = 0; i < num_start_indexes; i++) {
+	int s = start_indexes[i];
+	for (int j = s; j < kWordTestSize; j++) {
+	    LoudsDense::Iter iter(louds_dense_);
+	    louds_dense_->moveToKeyGreaterThan(words[s], true, iter);
+	    LoudsDense::Iter iter2(louds_dense_);
+	    louds_dense_->moveToKeyGreaterThan(words[j], true, iter2);
+	    position_t out_node_num_left = 0, out_node_num_right = 0;
+	    uint64_t count = louds_dense_->approxCount(&iter, &iter2,
+						       out_node_num_left, out_node_num_right);
+	    int error = j - s - count;
+	    if (j > s)
+		error--;
+	    ASSERT_TRUE(error == 0);
+	}
+    }
+    delete builder_;
+    louds_dense_->destroy();
+    delete louds_dense_;
+}
+
+TEST_F (DenseUnitTest, approxCountIntTest) {
+    newBuilder(kReal, 8);
+    builder_->build(ints_);
+    louds_dense_ = new LoudsDense(builder_);
+    const int num_start_indexes = 5;
+    const int start_indexes[num_start_indexes] =
+	{0, kIntTestBound/4, kIntTestBound/2, 3*kIntTestBound/4, kIntTestBound-1};
+    for (int i = 0; i < num_start_indexes; i++) {
+	int s = start_indexes[i];
+	for (int j = s; j < kIntTestBound; j += kIntTestSkip) {
+	    LoudsDense::Iter iter(louds_dense_);
+	    louds_dense_->moveToKeyGreaterThan(uint64ToString(s), true, iter);
+	    LoudsDense::Iter iter2(louds_dense_);
+	    louds_dense_->moveToKeyGreaterThan(uint64ToString(j), true, iter2);
+	    position_t out_node_num_left = 0, out_node_num_right = 0;
+	    uint64_t count = louds_dense_->approxCount(&iter, &iter2,
+						       out_node_num_left, out_node_num_right);
+	    int error = (j - start_indexes[i]) / kIntTestSkip - count;
+	    if (j > s)
+		error--;
+	    ASSERT_TRUE(error == 0);
+	}
+    }
+    delete builder_;
+    louds_dense_->destroy();
+    delete louds_dense_;
+}
+
 void loadWordList() {
     std::ifstream infile(kFilePath);
     std::string key;
     int count = 0;
-    while (infile.good() && count < kTestSize) {
+    while (infile.good() && count < kWordTestSize) {
 	infile >> key;
 	words.push_back(key);
 	count++;

@@ -91,6 +91,10 @@ public:
     // return value indicates potential false positive
     bool moveToKeyGreaterThan(const std::string& key, 
 			      const bool inclusive, LoudsDense::Iter& iter) const;
+    uint64_t approxCount(const LoudsDense::Iter* iter_left,
+			 const LoudsDense::Iter* iter_right,
+			 position_t& out_node_num_left,
+			 position_t& out_node_num_right) const;
 
     uint64_t getHeight() const { return height_; };
     uint64_t serializedSize() const;
@@ -99,6 +103,8 @@ public:
     void serialize(char*& dst) const {
 	memcpy(dst, &height_, sizeof(height_));
 	dst += sizeof(height_);
+	memcpy(dst, level_cuts_, sizeof(position_t) * height_);
+	dst += (sizeof(position_t) * height_);
 	align(dst);
 	label_bitmaps_->serialize(dst);
 	child_indicator_bitmaps_->serialize(dst);
@@ -111,6 +117,10 @@ public:
 	LoudsDense* louds_dense = new LoudsDense();
 	memcpy(&(louds_dense->height_), src, sizeof(louds_dense->height_));
 	src += sizeof(louds_dense->height_);
+	louds_dense->level_cuts_ = new position_t[louds_dense->height_];
+	memcpy(louds_dense->level_cuts_, src,
+	       sizeof(position_t) * (louds_dense->height_));
+	src += (sizeof(position_t) * (louds_dense->height_));
 	align(src);
 	louds_dense->label_bitmaps_ = BitvectorRank::deSerialize(src);
 	louds_dense->child_indicator_bitmaps_ = BitvectorRank::deSerialize(src);
@@ -136,12 +146,15 @@ private:
     bool compareSuffixGreaterThan(const position_t pos, const std::string& key, 
 				  const level_t level, const bool inclusive, 
 				  LoudsDense::Iter& iter) const;
+    void extendPosList(std::vector<position_t>& pos_list,
+		       position_t& out_node_num) const;
 
 private:
     static const position_t kNodeFanout = 256;
     static const position_t kRankBasicBlockSize  = 512;
 
     level_t height_;
+    position_t* level_cuts_; // position of the last bit at each level
 
     BitvectorRank* label_bitmaps_;
     BitvectorRank* child_indicator_bitmaps_;
@@ -155,6 +168,13 @@ LoudsDense::LoudsDense(const SuRFBuilder* builder) {
     std::vector<position_t> num_bits_per_level;
     for (level_t level = 0; level < height_; level++)
 	num_bits_per_level.push_back(builder->getBitmapLabels()[level].size() * kWordSize);
+
+    level_cuts_ = new position_t[height_];
+    position_t bit_count = 0;
+    for (level_t level = 0; level < height_; level++) {
+	bit_count += num_bits_per_level[level];
+	level_cuts_[level] = bit_count - 1;
+    }
 
     label_bitmaps_ = new BitvectorRank(kRankBasicBlockSize, builder->getBitmapLabels(),
 				       num_bits_per_level, 0, height_);
@@ -248,12 +268,108 @@ bool LoudsDense::moveToKeyGreaterThan(const std::string& key,
     return true;
 }
 
+void LoudsDense::extendPosList(std::vector<position_t>& pos_list,
+			       position_t& out_node_num) const {
+    position_t node_num = 0;
+    position_t pos = pos_list[pos_list.size() - 1];
+    for (level_t i = pos_list.size(); i < height_; i++) {
+	node_num = getChildNodeNum(pos);
+	if (!child_indicator_bitmaps_->readBit(pos))
+	    node_num++;
+	pos = (node_num * kNodeFanout);
+	if (pos > level_cuts_[i]) {
+	    pos = kMaxPos;
+	    pos_list.push_back(pos);
+	    break;
+	}
+	pos_list.push_back(pos);
+    }
+    if (pos == kMaxPos) {
+	for (level_t i = pos_list.size(); i < height_; i++)
+	    pos_list.push_back(pos);
+	out_node_num = pos;
+    } else {
+	out_node_num = getChildNodeNum(pos);
+	if (!child_indicator_bitmaps_->readBit(pos))
+	    out_node_num++;
+    }
+}
+
+uint64_t LoudsDense::approxCount(const LoudsDense::Iter* iter_left,
+				 const LoudsDense::Iter* iter_right,
+				 position_t& out_node_num_left,
+				 position_t& out_node_num_right) const {
+    std::vector<position_t> left_pos_list, right_pos_list;
+    for (level_t i = 0; i < iter_left->key_len_; i++)
+	left_pos_list.push_back(iter_left->pos_in_trie_[i]);
+    level_t ori_left_len = left_pos_list.size();
+    extendPosList(left_pos_list, out_node_num_left);
+    
+    for (level_t i = 0; i < iter_right->key_len_; i++)
+	right_pos_list.push_back(iter_right->pos_in_trie_[i]);
+    level_t ori_right_len = right_pos_list.size();
+    extendPosList(right_pos_list, out_node_num_right);
+
+    uint64_t count = 0;
+    for (level_t i = 0; i < height_; i++) {
+	position_t left_pos = left_pos_list[i];
+	if (left_pos == kMaxPos) break;
+	if (i == (ori_left_len - 1) && iter_left->is_at_prefix_key_)
+	    left_pos = (left_pos / kNodeFanout) * kNodeFanout;
+	position_t right_pos = right_pos_list[i];
+	if (right_pos == kMaxPos)
+	    right_pos = level_cuts_[i];
+	if (i == (ori_right_len - 1) && iter_right->is_at_prefix_key_)
+	    right_pos = (right_pos / kNodeFanout) * kNodeFanout;
+	//assert(left_pos <= right_pos);
+	if (left_pos < right_pos) {
+	    if (i >= ori_left_len)
+		left_pos = getNextPos(left_pos);
+	    if (i >= ori_right_len && right_pos != level_cuts_[height_ - 1])
+		right_pos = getNextPos(right_pos);
+	    bool has_prefix_key_left
+		= prefixkey_indicator_bits_->readBit(left_pos / kNodeFanout);
+	    bool has_prefix_key_right
+		= prefixkey_indicator_bits_->readBit(right_pos / kNodeFanout);
+	    position_t rank_left_label = label_bitmaps_->rank(left_pos);
+	    position_t rank_right_label = label_bitmaps_->rank(right_pos);
+	    if (right_pos == level_cuts_[height_ - 1])
+		rank_right_label++;
+	    position_t rank_left_ind = child_indicator_bitmaps_->rank(left_pos);
+	    position_t rank_right_ind = child_indicator_bitmaps_->rank(right_pos);
+	    position_t rank_left_prefix
+		= prefixkey_indicator_bits_->rank(left_pos / kNodeFanout);
+	    position_t rank_right_prefix
+		= prefixkey_indicator_bits_->rank(right_pos / kNodeFanout);
+	    position_t num_leafs = (rank_right_label - rank_left_label)
+		- (rank_right_ind - rank_left_ind)
+		+ (rank_right_prefix - rank_left_prefix);
+	    // offcount in child_indicators
+	    if (child_indicator_bitmaps_->readBit(right_pos))
+		num_leafs++;
+	    if (child_indicator_bitmaps_->readBit(left_pos))
+		num_leafs--;
+	    // offcount in prefix keys
+	    if (i >= ori_right_len && has_prefix_key_right)
+		num_leafs--;
+	    if (i >= ori_left_len && has_prefix_key_left)
+		num_leafs++;
+	    if (iter_left->is_search_complete_ && (i == ori_left_len - 1))
+		num_leafs--;
+	    count += num_leafs;
+	}
+    }
+    return count;
+}
+
 uint64_t LoudsDense::serializedSize() const {
     uint64_t size = sizeof(height_)
-	+ label_bitmaps_->serializedSize()
-	+ child_indicator_bitmaps_->serializedSize()
-	+ prefixkey_indicator_bits_->serializedSize()
-	+ suffixes_->serializedSize();
+	+ (sizeof(position_t) * height_);
+    sizeAlign(size);
+    size += (label_bitmaps_->serializedSize()
+	     + child_indicator_bitmaps_->serializedSize()
+	     + prefixkey_indicator_bits_->serializedSize()
+	     + suffixes_->serializedSize());
     sizeAlign(size);
     return size;
 }
