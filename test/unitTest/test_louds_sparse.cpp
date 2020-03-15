@@ -392,31 +392,31 @@ TEST_F (SparseUnitTest, FirstAndLastLabelInRootTest) {
     delete louds_sparse_;
 }
 
-// TEST_F (SparseUnitTest, approxCountWordTest) {
-//     newBuilder(kReal, 8);
-//     builder_->build(words);
-//     louds_sparse_ = new LoudsSparse(builder_);
-//     const int num_start_indexes = 5;
-//     const int start_indexes[num_start_indexes] =
-// 	{0, kWordTestSize/4, kWordTestSize/2, 3*kWordTestSize/4, kWordTestSize-1};
-//     for (int i = 0; i < num_start_indexes; i++) {
-// 	int s = start_indexes[i];
-// 	for (int j = s; j < kWordTestSize; j++) {
-// 	    LoudsSparse::Iter iter(louds_sparse_);
-// 	    louds_sparse_->moveToKeyGreaterThan(words[s], true, iter);
-// 	    LoudsSparse::Iter iter2(louds_sparse_);
-// 	    louds_sparse_->moveToKeyGreaterThan(words[j], true, iter2);
-// 	    uint64_t count = louds_sparse_->approxCount(&iter, &iter2, 0, 0);
-// 	    int error = j - s - count;
-// 	    if (j > s)
-// 		error--;
-// 	    ASSERT_TRUE(error == 0);
-// 	}
-//     }
-//     delete builder_;
-//     louds_sparse_->destroy();
-//     delete louds_sparse_;
-// }
+TEST_F (SparseUnitTest, approxCountWordTest) {
+    newBuilder(kReal, 8);
+    builder_->build(words);
+    louds_sparse_ = new LoudsSparse(builder_);
+    const int num_start_indexes = 5;
+    const int start_indexes[num_start_indexes] =
+	{0, kWordTestSize/4, kWordTestSize/2, 3*kWordTestSize/4, kWordTestSize-1};
+    for (int i = 0; i < num_start_indexes; i++) {
+	int s = start_indexes[i];
+	for (int j = s; j < kWordTestSize; j++) {
+	    LoudsSparse::Iter iter(louds_sparse_);
+	    louds_sparse_->moveToKeyGreaterThan(words[s], true, iter);
+	    LoudsSparse::Iter iter2(louds_sparse_);
+	    louds_sparse_->moveToKeyGreaterThan(words[j], true, iter2);
+	    uint64_t count = louds_sparse_->approxCount(&iter, &iter2, 0, 0);
+	    int error = j - s - count;
+	    if (j > s)
+		error--;
+	    ASSERT_TRUE(error == 0);
+	}
+    }
+    delete builder_;
+    louds_sparse_->destroy();
+    delete louds_sparse_;
+}
 
 // TEST_F (SparseUnitTest, approxCountIntTest) {
 //     newBuilder(kReal, 8);
