@@ -418,31 +418,31 @@ TEST_F (SparseUnitTest, approxCountWordTest) {
     delete louds_sparse_;
 }
 
-// TEST_F (SparseUnitTest, approxCountIntTest) {
-//     newBuilder(kReal, 8);
-//     builder_->build(ints_);
-//     louds_sparse_ = new LoudsSparse(builder_);
-//     const int num_start_indexes = 5;
-//     const int start_indexes[num_start_indexes] =
-// 	{0, kIntTestBound/4, kIntTestBound/2, 3*kIntTestBound/4, kIntTestBound-1};
-//     for (int i = 0; i < num_start_indexes; i++) {
-// 	int s = start_indexes[i];
-// 	for (int j = s; j < kIntTestBound; j += kIntTestSkip) {
-// 	    LoudsSparse::Iter iter(louds_sparse_);
-// 	    louds_sparse_->moveToKeyGreaterThan(uint64ToString(s), true, iter);
-// 	    LoudsSparse::Iter iter2(louds_sparse_);
-// 	    louds_sparse_->moveToKeyGreaterThan(uint64ToString(j), true, iter2);
-// 	    uint64_t count = louds_sparse_->approxCount(&iter, &iter2, 0, 0);
-// 	    int error = (j - start_indexes[i]) / kIntTestSkip - count;
-// 	    if (j > s)
-// 		error--;
-// 	    ASSERT_TRUE(error == 0);
-// 	}
-//     }
-//     delete builder_;
-//     louds_sparse_->destroy();
-//     delete louds_sparse_;
-// }
+TEST_F (SparseUnitTest, approxCountIntTest) {
+    newBuilder(kReal, 8);
+    builder_->build(ints_);
+    louds_sparse_ = new LoudsSparse(builder_);
+    const int num_start_indexes = 5;
+    const int start_indexes[num_start_indexes] =
+	{0, kIntTestBound/4, kIntTestBound/2, 3*kIntTestBound/4, kIntTestBound-1};
+    for (int i = 0; i < num_start_indexes; i++) {
+	int s = start_indexes[i];
+	for (int j = s; j < kIntTestBound; j += kIntTestSkip) {
+	    LoudsSparse::Iter iter(louds_sparse_);
+	    louds_sparse_->moveToKeyGreaterThan(uint64ToString(s), true, iter);
+	    LoudsSparse::Iter iter2(louds_sparse_);
+	    louds_sparse_->moveToKeyGreaterThan(uint64ToString(j), true, iter2);
+	    uint64_t count = louds_sparse_->approxCount(&iter, &iter2, 0, 0);
+	    int error = (j - start_indexes[i]) / kIntTestSkip - count;
+	    if (j > s)
+		error--;
+	    ASSERT_TRUE(error == 0);
+	}
+    }
+    delete builder_;
+    louds_sparse_->destroy();
+    delete louds_sparse_;
+}
 
 void loadWordList() {
     std::ifstream infile(kFilePath);

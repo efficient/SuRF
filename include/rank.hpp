@@ -31,7 +31,7 @@ public:
     // pos is zero-based; count is one-based.
     // E.g., for bitvector: 100101000, rank(3) = 2
     position_t rank(position_t pos) const {
-        assert(pos < num_bits_);
+        assert(pos <= num_bits_);
         position_t word_per_basic_block = basic_block_size_ / kWordSize;
         position_t block_id = pos / basic_block_size_;
         position_t offset = pos & (basic_block_size_ - 1);

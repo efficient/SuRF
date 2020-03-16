@@ -33,7 +33,7 @@ public:
     // E.g., for bitvector: 100101000, select(3) = 5
     position_t select(position_t rank) const {
 	assert(rank > 0);
-	assert(rank <= num_ones_);
+	assert(rank <= num_ones_ + 1);
 	position_t lut_idx = rank / sample_interval_;
 	position_t rank_left = rank % sample_interval_;
 	// The first slot in select_lut_ stores the position of the first 1 bit.

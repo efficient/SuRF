@@ -590,26 +590,26 @@ TEST_F (SuRFUnitTest, approxCountWordTest) {
     delete surf_;
 }
 
-// TEST_F (SuRFUnitTest, approxCountIntTest) {
-//     surf_ = new SuRF(ints_, kIncludeDense, 256, kReal, 0, 8);
-//     const int num_start_indexes = 5;
-//     const int start_indexes[num_start_indexes] =
-// 	{0, kIntTestBound/4, kIntTestBound/2, 3*kIntTestBound/4, kIntTestBound-1};
-//     for (int i = 0; i < num_start_indexes; i++) {
-// 	int s = start_indexes[i];
-// 	for (int j = s; j < kIntTestBound; j += kIntTestSkip) {
-// 	    SuRF::Iter iter = surf_->moveToKeyGreaterThan(uint64ToString(s), true);
-// 	    SuRF::Iter iter2 = surf_->moveToKeyGreaterThan(uint64ToString(j), true);
-// 	    uint64_t count = surf_->approxCount(&iter, &iter2);
-// 	    int error = (j - start_indexes[i]) / kIntTestSkip - count;
-// 	    if (j > s)
-// 		error--;
-// 	    ASSERT_TRUE(error == 0);
-// 	}
-//     }
-//     surf_->destroy();
-//     delete surf_;
-// }
+TEST_F (SuRFUnitTest, approxCountIntTest) {
+    surf_ = new SuRF(ints_, kIncludeDense, 256, kReal, 0, 8);
+    const int num_start_indexes = 5;
+    const int start_indexes[num_start_indexes] =
+	{0, kIntTestBound/4, kIntTestBound/2, 3*kIntTestBound/4, kIntTestBound-1};
+    for (int i = 0; i < num_start_indexes; i++) {
+	int s = start_indexes[i];
+	for (int j = s; j < kIntTestBound; j += kIntTestSkip) {
+	    SuRF::Iter iter = surf_->moveToKeyGreaterThan(uint64ToString(s), true);
+	    SuRF::Iter iter2 = surf_->moveToKeyGreaterThan(uint64ToString(j), true);
+	    uint64_t count = surf_->approxCount(&iter, &iter2);
+	    int error = (j - start_indexes[i]) / kIntTestSkip - count;
+	    if (j > s)
+		error--;
+	    ASSERT_TRUE(error == 0);
+	}
+    }
+    surf_->destroy();
+    delete surf_;
+}
 
 void loadWordList() {
     std::ifstream infile(kFilePath);
