@@ -24,7 +24,10 @@ public:
 	    num_bytes_ += labels_per_level[level].size();
 
 	//labels_ = new label_t[num_bytes_];
-	labels_ = new label_t[num_bytes_ * (num_bytes_ / kWordSize + 1)];
+	position_t alloc_bytes = num_bytes_ * (num_bytes_ / kWordSize + 1);
+	labels_ = new label_t[alloc_bytes];
+	for (position_t i = 0; i < alloc_bytes; i++)
+	  labels_[i] = 0;
 
 	position_t pos = 0;
 	for (level_t level = start_level; level < end_level; level++) {
