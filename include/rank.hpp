@@ -77,10 +77,19 @@ public:
 	src += sizeof(bv_rank->num_bits_);
 	memcpy(&(bv_rank->basic_block_size_), src, sizeof(bv_rank->basic_block_size_));
 	src += sizeof(bv_rank->basic_block_size_);
-	bv_rank->bits_ = const_cast<word_t*>(reinterpret_cast<const word_t*>(src));
+
+	bv_rank->bits_ = new word_t[bv_rank->numWords()];
+	memcpy(bv_rank->bits_, src, bv_rank->bitsSize());
 	src += bv_rank->bitsSize();
-	bv_rank->rank_lut_ = const_cast<position_t*>(reinterpret_cast<const position_t*>(src));
+	bv_rank->rank_lut_ = new position_t[bv_rank->rankLutSize() / sizeof(position_t)];
+	memcpy(bv_rank->rank_lut_, src, bv_rank->rankLutSize());
 	src += bv_rank->rankLutSize();
+	
+	//bv_rank->bits_ = const_cast<word_t*>(reinterpret_cast<const word_t*>(src));
+	//src += bv_rank->bitsSize();
+	//bv_rank->rank_lut_ = const_cast<position_t*>(reinterpret_cast<const position_t*>(src));
+	//src += bv_rank->rankLutSize();
+	
 	align(src);
 	return bv_rank;
     }

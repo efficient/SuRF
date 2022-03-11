@@ -106,10 +106,18 @@ public:
 	src += sizeof(bv_select->sample_interval_);
 	memcpy(&(bv_select->num_ones_), src, sizeof(bv_select->num_ones_));
 	src += sizeof(bv_select->num_ones_);
-	bv_select->bits_ = const_cast<word_t*>(reinterpret_cast<const word_t*>(src));
+
+	bv_select->bits_ = new word_t[bv_select->numWords()];
+	memcpy(bv_select->bits_, src, bv_select->bitsSize());
 	src += bv_select->bitsSize();
-	bv_select->select_lut_ = const_cast<position_t*>(reinterpret_cast<const position_t*>(src));
+	bv_select->select_lut_ = new position_t[bv_select->selectLutSize() / sizeof(position_t)];
+	memcpy(bv_select->select_lut_, src, bv_select->selectLutSize());
 	src += bv_select->selectLutSize();
+	
+	//bv_select->bits_ = const_cast<word_t*>(reinterpret_cast<const word_t*>(src));
+	//src += bv_select->bitsSize();
+	//bv_select->select_lut_ = const_cast<position_t*>(reinterpret_cast<const position_t*>(src));
+	//src += bv_select->selectLutSize();
 	align(src);
 	return bv_select;
     }

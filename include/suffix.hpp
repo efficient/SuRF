@@ -162,8 +162,12 @@ public:
         memcpy(&(sv->real_suffix_len_), src, sizeof(sv->real_suffix_len_));
 	src += sizeof(sv->real_suffix_len_);
 	if (sv->type_ != kNone) {
-	    sv->bits_ = const_cast<word_t*>(reinterpret_cast<const word_t*>(src));
+	    sv->bits_ = new word_t[sv->numWords()];
+	    memcpy(sv->bits_, src, sv->bitsSize());
 	    src += sv->bitsSize();
+	    
+	    //sv->bits_ = const_cast<word_t*>(reinterpret_cast<const word_t*>(src));
+	    //src += sv->bitsSize();
 	}
 	align(src);
 	return sv;
